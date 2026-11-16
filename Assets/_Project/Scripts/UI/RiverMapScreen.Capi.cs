@@ -899,6 +899,15 @@ namespace AF.UI
         /// <summary>La vista se está corriendo al encuadre final tras un viaje que la cámara siguió (tests).</summary>
         internal bool CameraSettling => _settling;
 
+        // Anula el encuadre final en marcha sin tocar el desplazamiento: lo llaman ApplyView (otra vista o el giro de la pantalla),
+        // «Norte arriba» y «Volver a la canoa», que ponen su propio encuadre. ResetCamera también lo anula, sin RefitAfterJourney:
+        // se llama al cerrar, al volver de segundo plano (que ya encuadra de golpe) y cuando la cámara deja de estar permitida, y
+        // en esos casos la vista que sigue vuelve a colocar los rótulos.
+        private void CancelSettle()
+        {
+            _settling = false;
+        }
+
         // Al acabar un viaje que la cámara siguió: la vista se corre lo justo para que se vean enteras la parada siguiente con su
         // rótulo y la canoa (FrameRemaining, como al abrir) y, ya quieta, los rótulos y las placas se vuelven a encajar en ese
         // encuadre. Al volver de segundo plano o sin cámara, de golpe.
@@ -923,6 +932,14 @@ namespace AF.UI
         {
             if (!_settling)
             {
+                return;
+            }
+
+            if (!CameraAllowed)
+            {
+                // La Cuenca o «Norte arriba» a medias: el destino era de la vista Mundo. Se anula sin tocar el desplazamiento (lo pone
+                // la vista nueva).
+                _settling = false;
                 return;
             }
 

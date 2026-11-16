@@ -1264,8 +1264,7 @@ namespace AF.Presentation
         // el inglete): dos vértices por banda, en mid + axis · u. «up» es la componente vertical (local) de la normal izquierda. Si
         // «connect» ≥ 0, la une con la sección anterior de la misma tira. Devuelve el primer vértice de la sección, o −1 si no cabe
         // en el presupuesto.
-        private int EmitSection(VertexHelper vh, Vector2 mid, Vector2 axis, float up, RunLook look, float half, float rim, int connect,
-            bool foldGuard = true)
+        private int EmitSection(VertexHelper vh, Vector2 mid, Vector2 axis, float up, RunLook look, float half, float rim, int connect)
         {
             int bands = BandCount(look.Split);
             if (vh.currentVertCount + (2 * bands) > _budget)
@@ -1277,12 +1276,12 @@ namespace AF.Presentation
             int start = vh.currentVertCount;
 
             // Observación 3 de la segunda ronda de la 1.1 (las cuñas oscuras en las curvas cerradas): en un codo más cerrado que el
-            // medio ancho, los vértices del lado de dentro retroceden respecto de la sección anterior y la malla se pliega: con el
-            // agua translúcida, el pliegue se pinta dos veces. Un vértice que retrocede (respecto del avance del centro) se queda en
-            // el de la sección anterior: el lado de dentro se recoge en un punto en vez de plegarse. No en la segunda sección de un
-            // bisel, que gira sobre el mismo punto a propósito. Sin asignaciones.
+            // medio ancho, los vértices del lado de dentro caen detrás de la sección anterior y la malla se pliega: con el agua
+            // translúcida, el pliegue se pinta dos veces. Un vértice así va al punto donde la sección nueva cruza la anterior
+            // (Unfold, UnfoldPair). Vale también en la segunda sección de un bisel (medido: sin ella no queda ningún pliegue menos).
+            // Sin asignaciones.
             Vector2 advance = mid - _foldPrevMid;
-            bool guard = foldGuard && !FoldGuardOff && connect >= 0 && advance.sqrMagnitude > 1e-8f;
+            bool guard = !FoldGuardOff && connect >= 0 && advance.sqrMagnitude > 1e-8f;
             _foldPrevMid = mid;
             for (int k = 0; k < bands; k++)
             {
@@ -1316,7 +1315,7 @@ namespace AF.Presentation
         private Vector2 _foldPrevMid;
 
         /// <summary>Solo para las capturas y los tests de «antes»: sin la guarda de los codos (la malla vuelve a plegarse).</summary>
-        public static bool FoldGuardOff { get; set; }
+        internal static bool FoldGuardOff { get; set; }
 
         // El vértice v de la sección nueva (en la recta mid + axis · u) o, si cae detrás del borde de la banda anterior (de a a b) y el
         // triángulo que lo une con ella saldría del revés, el punto donde la sección nueva cruza la anterior: el lado de dentro gira
@@ -1386,13 +1385,13 @@ namespace AF.Presentation
         /// Solo para tests (observación 3 de la segunda ronda de la 1.1): construye la malla y cuenta sus triángulos con área
         /// (<paramref name="total"/>) y los que van del revés respecto de la mayoría (un pliegue: se pintan dos veces). Asigna.
         /// </summary>
-        public int CountFoldedTriangles(out int total)
+        internal int CountFoldedTriangles(out int total)
         {
             return CountFoldedTriangles(out total, out _);
         }
 
         /// <summary>Como <see cref="CountFoldedTriangles(out int)"/>, con el centro del primer triángulo de la minoría (tests).</summary>
-        public int CountFoldedTriangles(out int total, out string where)
+        internal int CountFoldedTriangles(out int total, out string where)
         {
             var vh = new VertexHelper();
             try
@@ -1410,14 +1409,19 @@ namespace AF.Presentation
                     Vector2 b = stream[i + 1].position;
                     Vector2 c = stream[i + 2].position;
                     float area = ((b.x - a.x) * (c.y - a.y)) - ((c.x - a.x) * (b.y - a.y));
-                    string at = "#" + (i / 3) + " " + a + " " + b + " " + c + " área " + area;
                     if (area > 1e-2f)
                     {
-                        firstPos = pos++ == 0 ? at : firstPos;
+                        if (pos++ == 0)
+                        {
+                            firstPos = "#" + (i / 3) + " " + a + " " + b + " " + c + " área " + area;
+                        }
                     }
                     else if (area < -1e-2f)
                     {
-                        firstNeg = neg++ == 0 ? at : firstNeg;
+                        if (neg++ == 0)
+                        {
+                            firstNeg = "#" + (i / 3) + " " + a + " " + b + " " + c + " área " + area;
+                        }
                     }
                 }
 

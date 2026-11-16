@@ -2271,13 +2271,8 @@ namespace AF.UI
                     Rect g = LocalBox(_guide.rectTransform);
                     if (_view == MapView.World && _tucuxi != null && _tucuxi.gameObject.activeInHierarchy)
                     {
-                        // El tucuxi nada TucuxiBesideRosa por detrás y por debajo de Rosa (su pivote, a 0,3 del alto de su caja), como
-                        // en CollectCrewLabelBoxes; su imagen se coloca después (RiverMapScreen.Crew.cs), así que se calcula aquí.
-                        var rosa = new Vector2(g.center.x, g.yMin + (0.3f * g.height));
-                        Vector2 at = rosa + new Vector2(TucuxiBesideRosa.x * _canoeFacing, TucuxiBesideRosa.y);
-                        float tw = RiverCrew.TucuxiDp;
-                        var t = new Rect(at.x - (tw * 0.5f), at.y - (tw * 0.5f), tw, tw);
-                        g = Rect.MinMaxRect(Mathf.Min(g.xMin, t.xMin), Mathf.Min(g.yMin, t.yMin), Mathf.Max(g.xMax, t.xMax), Mathf.Max(g.yMax, t.yMax));
+                        // Su imagen se coloca después (RiverMapScreen.Crew.cs): la caja, como en CollectCrewLabelBoxes.
+                        g = Union(g, TucuxiBoxBeside(g, _canoeFacing));
                     }
 
                     b = Grow(g, BuoyCrewClearDp);

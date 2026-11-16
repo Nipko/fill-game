@@ -284,11 +284,9 @@ namespace AF.Tests.PlayMode
             Canvas.ForceUpdateCanvases();
             Rect view = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
             int next = map.RemainingStopN();
-            if (map.StopRemainingShown)
-            {
-                Assert.Pass("«Faltan N» en la placa de respaldo");
-            }
-
+            Assert.That(next, Is.EqualTo(9), "la parada siguiente, Leticia al atardecer");
+            Assert.That(map.StopRemainingShown, Is.False, "sin la placa de respaldo");
+            Assert.That(map.StopRemainingInLabel, Is.True, "«Faltan N» en el rótulo junto de Leticia");
             TMPro.TextMeshProUGUI label = map.StopLabelOf(next)!;
             Assert.That(label.gameObject.activeInHierarchy, Is.True);
             Rect r = StopCardTests.CanvasRect(label.rectTransform, map.Canvas);
@@ -312,55 +310,217 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheRibbons_DoNotFoldInTheTightBends_OfNautaAndElsewhere()
         {
-            // Las cuñas oscuras en las curvas cerradas (Nauta): ningún triángulo del revés (la malla no se pliega ni se pinta dos veces).
+            // Las cuñas oscuras en las curvas cerradas (Nauta): triángulos del revés (la malla se pliega y se pinta dos veces). Se
+            // miden el tramo en curso (agua y orla), el lleno y el vidrio de todas las líneas, en las dos vistas y con la 1.0.
             yield return MapMarkersTests.OpenApp(171);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
-            foreach (int play in new[] { 171, 51, 271, 381 })
+            RiverMap data = boot.RiverMapData!;
+            foreach (bool v2 in new[] { true, false })
             {
-                MapMarkersTests.Reopen(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
-                Assert.That(map.FrontPieceCount, Is.GreaterThan(0));
-                int before = 0;
-                int after = 0;
-                int afterWater = 0;
-                int total = 0;
-                for (int k = 0; k < map.FrontPieceCount; k++)
+                map.LiveRequested = v2; // Reopen abre el Mapa directamente: la clave, aquí
+                foreach (int play in new[] { 171, 51, 271, 381 })
                 {
-                    foreach (AF.Presentation.RiverRibbonGraphic ribbon in new[] { map.FrontRibbon(k), map.FrontCasingRibbon(k) })
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                    Assert.That(map.LiveActive, Is.EqualTo(v2));
+                    foreach (MapView view in new[] { MapView.World, MapView.Basin })
                     {
-                        AF.Presentation.RiverRibbonGraphic.FoldGuardOff = true;
-                        try
+                        map.SetView(view);
+                        Canvas.ForceUpdateCanvases();
+                        int frontBefore = 0;
+                        int front = 0;
+                        int rest = 0;
+                        int total = 0;
+                        for (int k = 0; k < map.FrontPieceCount; k++)
                         {
-                            before += ribbon.CountFoldedTriangles(out _);
-                        }
-                        finally
-                        {
-                            AF.Presentation.RiverRibbonGraphic.FoldGuardOff = false;
+                            foreach (AF.Presentation.RiverRibbonGraphic ribbon in new[] { map.FrontRibbon(k), map.FrontCasingRibbon(k) })
+                            {
+                                AF.Presentation.RiverRibbonGraphic.FoldGuardOff = true;
+                                try
+                                {
+                                    frontBefore += ribbon.CountFoldedTriangles(out _);
+                                }
+                                finally
+                                {
+                                    AF.Presentation.RiverRibbonGraphic.FoldGuardOff = false;
+                                }
+
+                                front += Folds(ribbon, ref total);
+                            }
                         }
 
-                        int f = ribbon.CountFoldedTriangles(out int n, out string where);
-                        if (f > 0)
+                        for (int i = 0; i < data.Lines.Count; i++)
                         {
-                            Debug.Log("AF_MAP r2 pliegue en " + ribbon.name + ": " + where);
+                            rest += Folds(map.Glass(i), ref total);
+                            if (map.FillRibbon(i).gameObject.activeSelf)
+                            {
+                                rest += Folds(map.FillRibbon(i), ref total);
+                            }
                         }
 
-                        after += f;
-                        afterWater += ribbon == map.FrontRibbon(k) ? f : 0;
-                        total += n;
+                        string at = (v2 ? "v2" : "1.0") + ", jugando el " + play + " en " + view;
+                        Debug.Log("AF_MAP r2 pliegues " + at + ": tramo " + frontBefore + " sin la guarda y " + front
+                            + " con ella; vidrio y lleno, " + rest + "; de " + total);
+
+                        // Antes, 77 en las dos curvas de Nauta en Mundo con el v2 (25 con la 1.0). Con la guarda quedan astillas de unos
+                        // 3 dp² (1 con el v2 y 2 con la 1.0, en la segunda curva): se miden para que no vuelvan a crecer.
+                        Assert.That(front, Is.LessThanOrEqualTo(2), at + ": el tramo, como mucho dos astillas");
+                        Assert.That(rest, Is.LessThanOrEqualTo(RestFoldsAllowed), at + ": el vidrio y el lleno");
+                        if (v2 && play == 171 && view == MapView.World)
+                        {
+                            Assert.That(frontBefore, Is.GreaterThan(10), "sin la guarda, las curvas de Nauta se pliegan (el test lo ve)");
+                        }
                     }
-                }
-
-                Debug.Log("AF_MAP r2 pliegues del tramo jugando el " + play + ": " + before + " sin la guarda, " + after + " con ella, de " + total);
-                // Antes, 77 triángulos del revés en las dos curvas de Nauta (las cuñas oscuras). Con la guarda queda, como mucho, una
-                // astilla de unos 3 dp² en la segunda curva (en el agua) y ninguna más: se mide aquí para que no vuelva a crecer.
-                Assert.That(afterWater, Is.LessThanOrEqualTo(1), "jugando el " + play + ": en el agua del tramo, como mucho una astilla");
-                Assert.That(after, Is.LessThanOrEqualTo(1), "jugando el " + play + ": en todo el tramo, como mucho una astilla");
-                if (play == 171)
-                {
-                    Assert.That(before, Is.GreaterThan(0), "sin la guarda, las curvas de Nauta se pliegan (el test lo ve)");
                 }
             }
 
+            map.LiveRequested = true;
+            map.Close();
+        }
+
+        // Pliegues que se admiten en el vidrio y el lleno de todas las líneas juntas (una apertura y una vista) [medido: 3 en la
+        // Cuenca jugando el 171, 271 y 381, y en el Mundo jugando el 381; astillas de 1 a 3 dp²].
+        private const int RestFoldsAllowed = 3;
+
+        private static int Folds(AF.Presentation.RiverRibbonGraphic ribbon, ref int total)
+        {
+            int f = ribbon.CountFoldedTriangles(out int n, out string where);
+            total += n;
+            if (f > 0)
+            {
+                Debug.Log("AF_MAP r2 pliegue en " + ribbon.name + ": " + where);
+            }
+
+            return f;
+        }
+
+        [UnityTest]
+        public IEnumerator TheFinalFraming_IsCancelled_ByTheBasinMidway()
+        {
+            // Revisión: si el jugador pasa a la Cuenca mientras la vista se corre al encuadre final del viaje del 80, el encuadre se
+            // anula y el desplazamiento es el de la Cuenca.
+            yield return MapMarkersTests.OpenApp(81);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Open(boot, map, 81, 80, 70);
+            for (int ms = 0; ms < 10000 && !map.CameraSettling; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(map.CameraSettling, Is.True, "tras el viaje, la vista se corre al encuadre final");
+            map.SetView(MapView.Basin);
+            Assert.That(map.CameraSettling, Is.False, "la Cuenca lo anula");
+            Vector2 basin = map.ContentOffset;
+            for (int i = 0; i < 30; i++)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(map.CameraSettling, Is.False);
+            Assert.That(Vector2.Distance(map.ContentOffset, basin), Is.LessThan(0.01f), "el desplazamiento, el de la Cuenca");
+
+            // «Volver a la canoa» durante el encuadre también lo anula y manda su propio encuadre.
+            Open(boot, map, 81, 80, 70);
+            for (int ms = 0; ms < 10000 && !map.CameraSettling; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(map.CameraSettling, Is.True);
+            map.BackToCanoe();
+            Assert.That(map.CameraSettling, Is.False, "«Volver a la canoa» lo anula");
+            Vector2 back = map.ContentOffset;
+            for (int i = 0; i < 30; i++)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(Vector2.Distance(map.ContentOffset, back), Is.LessThan(0.01f), "se queda en el encuadre de «Volver a la canoa»");
+            map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator TheJointsOfTheLegInProgress_AndTheFillUnderIt_BlendAtTheScaleOfEachView()
+        {
+            // Jugando el 300: el tramo del Napo, el Amazonas, el Madeira, el Beni y el Madre de Dios, en varias piezas.
+            yield return MapMarkersTests.OpenApp(300);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            RiverMap data = boot.RiverMapData!;
+            Assert.That(map.LiveActive, Is.True);
+            Assert.That(map.FrontPieceCount, Is.GreaterThanOrEqualTo(3), "un tramo de varias piezas");
+            foreach (MapView view in new[] { MapView.World, MapView.Basin })
+            {
+                map.SetView(view);
+                int last = map.FrontPieceCount - 1;
+                for (int k = 0; k <= last; k++)
+                {
+                    float expected = RiverMapScreen.FrontLiveFadeDp;
+                    if (k > 0 && k < last)
+                    {
+                        float w = 0f;
+                        for (int j = k - 1; j <= k + 1; j++)
+                        {
+                            w = Mathf.Max(w, map.MapRibbonWidthDp(view, map.FrontRibbon(j).Line!.Class));
+                        }
+
+                        expected = 0.5f * w;
+                    }
+
+                    string at = "pieza " + k + " (" + map.FrontRibbon(k).Line!.Id + ") en " + view;
+                    Assert.That(map.FrontRibbon(k).EndFadeDp, Is.EqualTo(expected).Within(1e-4f), at);
+                    Assert.That(map.FrontCasingRibbon(k).EndFadeDp, Is.EqualTo(expected).Within(1e-4f), at + ": la orla");
+                }
+            }
+
+            // El fundido cruzado del lleno: jugando el 59, el tramo sale de Manaos río arriba por el Negro, donde acaba su lleno.
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(59, 58, 58), 59);
+            int negro = map.FrontRibbon(0).Line!.Index;
+            AF.Presentation.RiverRibbonGraphic fill = map.FillRibbon(negro);
+            float world = 0f;
+            foreach (MapView view in new[] { MapView.World, MapView.Basin })
+            {
+                map.SetView(view);
+                float cross = RiverMapScreen.FrontLiveFadeDp / (map.Space.DpPerUnit * data.Lines[negro].Length);
+                Assert.That(fill.FillStart, Is.EqualTo(Mathf.Max(0f, map.FillFrom(negro) - cross)).Within(1e-5f), view + ": el lleno, alargado");
+                Assert.That(fill.FillStart, Is.LessThan(map.FillFrom(negro)), view.ToString());
+                if (view == MapView.World)
+                {
+                    world = fill.FillStart;
+                }
+                else
+                {
+                    Assert.That(fill.FillStart, Is.Not.EqualTo(world).Within(1e-6f), "cambia con la escala de la vista");
+                }
+            }
+
+            // Con la 1.0: sin fundidos y el lleno donde acaba.
+            map.Close();
+            map.LiveRequested = false; // Reopen abre el Mapa directamente: la clave, aquí
+            foreach (int play in new[] { 300, 59 })
+            {
+                MapMarkersTests.Reopen(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                Assert.That(map.LiveActive, Is.False);
+                foreach (MapView view in new[] { MapView.World, MapView.Basin })
+                {
+                    map.SetView(view);
+                    for (int k = 0; k < map.FrontPieceCount; k++)
+                    {
+                        Assert.That(map.FrontRibbon(k).EndFadeDp, Is.EqualTo(0f), "1.0, pieza " + k);
+                    }
+
+                    for (int i = 0; i < data.Lines.Count; i++)
+                    {
+                        if (map.FillRibbon(i).gameObject.activeSelf)
+                        {
+                            Assert.That(map.FillRibbon(i).FillStart, Is.EqualTo(map.FillFrom(i)).Within(1e-6f), "1.0, " + data.Lines[i].Id);
+                        }
+                    }
+                }
+            }
+
+            map.LiveRequested = true;
             map.Close();
         }
 

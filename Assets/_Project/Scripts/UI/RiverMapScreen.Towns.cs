@@ -1161,15 +1161,22 @@ namespace AF.UI
                 int max = _progress != null ? Mathf.Clamp(_progress.MaxLevel, 0, WorldTable.LastLevel) : 0;
                 if (CrewRequested && RiverCrew.IsAboardCapped(CrewKind.Tucuxi, max, true))
                 {
-                    // El tucuxi nada TucuxiBesideRosa por detrás y por debajo de Rosa (su pivote, a 0,3 del alto de su caja).
-                    var rosa = new Vector2(g.center.x, g.yMin + (0.3f * g.height));
-                    Vector2 at = rosa + new Vector2(TucuxiBesideRosa.x * _gearFacing, TucuxiBesideRosa.y);
-                    float tw = RiverCrew.TucuxiDp;
-                    g = Union(g, new Rect(at.x - (tw * 0.5f), at.y - (tw * 0.5f), tw, tw));
+                    g = Union(g, TucuxiBoxBeside(g, _gearFacing));
                 }
 
                 _crewLabelBoxes[_crewLabelBoxCount++] = Grow(g, CrewLabelGapDp);
             }
+        }
+
+        // La caja del tucuxi junto a la guía de caja guide (local, dp, y hacia arriba) con la canoa mirando a facing: nada
+        // TucuxiBesideRosa por detrás y por debajo de Rosa (su pivote, a 0,3 del alto de su caja). La usan los rótulos
+        // (CollectCrewLabelBoxes) y el claro de las boyas (UpdateBuoyClear).
+        private static Rect TucuxiBoxBeside(Rect guide, float facing)
+        {
+            var rosa = new Vector2(guide.center.x, guide.yMin + (0.3f * guide.height));
+            Vector2 at = rosa + new Vector2(TucuxiBesideRosa.x * facing, TucuxiBesideRosa.y);
+            float tw = RiverCrew.TucuxiDp;
+            return new Rect(at.x - (tw * 0.5f), at.y - (tw * 0.5f), tw, tw);
         }
 
         // La caja r (local del contenido, dp, y hacia arriba) pisa la canoa con su tripulación.

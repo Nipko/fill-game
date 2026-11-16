@@ -820,6 +820,7 @@ namespace AF.UI
                 return;
             }
 
+            CancelSettle(); // el jugador pide su encuadre: el final del viaje, anulado
             CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
             if (!_hasCanoe)
             {
@@ -1295,6 +1296,7 @@ namespace AF.UI
         // La vista: escala, mallas a esa escala (solo si cambia), la canoa y el encuadre.
         private void ApplyView(MapView view)
         {
+            CancelSettle(); // observación 3 de la segunda ronda de la 1.1: el encuadre final tras el viaje, de la vista anterior
             _view = view;
             _viewWorld.SetSelected(view == MapView.World);
             _viewBasin.SetSelected(view == MapView.Basin);
