@@ -38,7 +38,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             HomeSloth.ManualTickForTests = false;
-            GameBootstrap.ArtDensityCapEnabled = true;
+            GameBootstrap.ArtDensityCapEnabledForTests = true;
             LaunchOptions.Reset();
             GameScreen.SimulatedScreen = null;
             GameScreen.SimulatedPxPerDp = null;
@@ -56,7 +56,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedPxPerDp = density;
             foreach (bool cap in new[] { false, true })
             {
-                GameBootstrap.ArtDensityCapEnabled = cap;
+                GameBootstrap.ArtDensityCapEnabledForTests = cap;
                 string tag = density + "x_";
                 string mode = cap ? "_tope" : "_fija";
                 var clock = new ManualClock(Day0);

@@ -827,7 +827,7 @@ namespace AF.Presentation
                 DrawArrowArc(pc, new Vector2(48f, 44f + oy), 24f, 9f, 15f, 168f, c);
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconRestart(Color glyph, Color shadow)
@@ -844,7 +844,7 @@ namespace AF.Presentation
                 DrawWave(pc, 11f, 67f, 12f + oy, 3f, 19f, 3.3f, c);
             }
 
-            return MakeSprite(pc, "icon_restart", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_restart", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
     }
 }

@@ -442,9 +442,18 @@ namespace AF.Presentation
         /// </summary>
         public Sprite RiverStreaks => _riverStreaks != null ? _riverStreaks : (_riverStreaks = BuildRiverStreaks());
 
+        // Con la caché en disco del panorama (Cached, guía 4.9): al volver al inicio tras soltarlos mientras se juega
+        // (ReleaseHomeScene; memoria.md §9.2), el teléfono los lee de disco en lugar de repintarlos. A 2 px/dp fijos.
+        private Sprite BuildRiverStreaks()
+        {
+            const float k = 2f;
+            return Cached("river_streaks", Mathf.RoundToInt(RiverStreaksWidthDp * k), Mathf.RoundToInt(RiverStreaksHeightDp * k), BuildRiverStreaksCanvas,
+                new Vector2(0.5f, 0.5f), Vector4.zero, k);
+        }
+
         // Trazos deterministas (ArtNoise): más juntos arriba (lejos). Cada trazo, tres cápsulas superpuestas de largo creciente y
         // alfa bajo, para que las puntas se apaguen.
-        private Sprite BuildRiverStreaks()
+        private static PixelCanvas BuildRiverStreaksCanvas()
         {
             const float k = 2f;
             int w = Mathf.RoundToInt(RiverStreaksWidthDp * k);
@@ -472,7 +481,7 @@ namespace AF.Presentation
                 }
             }
 
-            return MakeSprite(pc, "river_streaks", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+            return pc;
         }
 
         // Pez genérico: cuerpo ahusado plateado con el lomo oliva, aleta dorsal, cola en horquilla, ojo y brillo.

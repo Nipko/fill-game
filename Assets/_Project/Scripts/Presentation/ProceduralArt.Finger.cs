@@ -186,7 +186,7 @@ namespace AF.Presentation
             pc.FillCapsule(34f, 92f, 34f, 74f, 1.4f, FingerCrease);
             pc.FillRoundedRect(34f, 110f, 46f, 126f, 5f, FingerCrease);
             pc.FillRoundedRect(36f, 113f, 44f, 124f, 3.5f, Palette.UiPaper);
-            return MakeSprite(pc, "tutorial_finger_hand", FingerTipPivot, Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "tutorial_finger_hand", FingerTipPivot, Vector4.zero, MaxUiPxPerDp);
         }
 
         // La silueta de la mano desplazada (dx, dy) y engordada grow px (el contorno y la sombra).
@@ -207,7 +207,7 @@ namespace AF.Presentation
             var pc = new PixelCanvas(w, h);
             pc.FillTriangle(new Vector2(52f, 30f), new Vector2(2f, 2f), new Vector2(2f, 58f), Palette.UiInk);
             pc.FillTriangle(new Vector2(44f, 30f), new Vector2(7f, 10f), new Vector2(7f, 50f), Palette.UiPaper);
-            return MakeSprite(pc, "tutorial_finger_arrow_head", new Vector2(52f / w, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "tutorial_finger_arrow_head", new Vector2(52f / w, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
     }
 }

@@ -55,20 +55,54 @@ namespace AF.Presentation
         public const float MaxUiPxPerDp = 3f;
 
         private static float s_densityCap;
+        private static ProceduralArt? s_active;
 
         /// <summary>
-        /// Tope de densidad del arte por código (px por dp del lienzo; ≤ 0, sin tope): la del teléfono, que pone
-        /// <c>GameBootstrap</c> antes de crear el arte (<c>docs/dev/memoria.md</c> §7.5, pregunta 1, opción (a), y D-060). Con un tope
+        /// Tope de densidad del arte por código (px por dp del lienzo; ≤ 0, NaN o infinito, sin tope): la del teléfono, que pone
+        /// <c>GameBootstrap</c> al crear el arte (<c>docs/dev/memoria.md</c> §7.5, pregunta 1, opción (a), §9, y D-060). Con un tope
         /// por debajo de la densidad fija de una pieza (3 px/dp la UI y el follaje, 2,25 el panorama y el muelle, 1,5 las superficies
         /// de los modales), la pieza se pinta a la del teléfono: en clase A (720 × 1600 a 2 px/dp) el píxel del arte es el de la
         /// pantalla en lugar de reducirse al dibujarse, y la textura ocupa (2 / 3)² ≈ 44 % de la de 3 px/dp. En el SM-S938B
-        /// (3 px/dp de lienzo) no cambia nada. Se lee al pintar cada pieza: no se cambia con arte vivo (el arranque lo fija antes
-        /// de <c>new ProceduralArt</c> y la clave del arte compartido lo lleva).
+        /// (3 px/dp de lienzo) no cambia nada. Se lee al pintar cada pieza, también las perezosas: lo fija el arte activo (el que se
+        /// creó o se reactivó el último, <see cref="Activate"/>), y cambiarlo a mano con piezas ya pintadas a otra densidad avisa en
+        /// desarrollo.
         /// </summary>
         public static float DensityCap
         {
             get => s_densityCap;
-            set => s_densityCap = value > 0f && !float.IsInfinity(value) && !float.IsNaN(value) ? value : 0f;
+            set
+            {
+                float v = Sanitize(value);
+                ProceduralArt? active = s_active;
+                if (Debug.isDebugBuild && active != null && !active._disposed && active.BuiltDensityCap != v)
+                {
+                    Debug.LogWarning("[AF.ProceduralArt] DensityCap cambia a " + v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+                        + " con arte vivo pintado a " + active.BuiltDensityCap.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)
+                        + ": las piezas perezosas mezclarían densidades.");
+                }
+
+                s_densityCap = v;
+            }
+        }
+
+        private static float Sanitize(float value)
+        {
+            return value > 0f && !float.IsInfinity(value) && !float.IsNaN(value) ? value : 0f;
+        }
+
+        /// <summary>El tope con el que se creó este arte (0, sin tope): el de sus piezas, también las que pinta más tarde.</summary>
+        public float BuiltDensityCap { get; }
+
+        private bool _disposed;
+
+        /// <summary>
+        /// Vuelve a poner el tope de este arte (<see cref="BuiltDensityCap"/>) como el que leen las piezas que se pintan desde ahora:
+        /// al reutilizar el arte compartido en otra escena (<c>GameBootstrap.SharedArt</c>), por si otro arte lo cambió entre medias.
+        /// </summary>
+        public void Activate()
+        {
+            s_active = this;
+            s_densityCap = BuiltDensityCap;
         }
 
         /// <summary>La densidad <paramref name="pxPerDp"/> de una pieza con el tope de <see cref="DensityCap"/>.</summary>
@@ -88,9 +122,21 @@ namespace AF.Presentation
         private readonly Color _water;
         private readonly PanelColors _panel;
 
-        /// <summary>Genera los gráficos comunes para el agua base <paramref name="waterBase"/>.</summary>
+        /// <summary>Genera los gráficos comunes para el agua base <paramref name="waterBase"/>, sin tope de densidad.</summary>
         public ProceduralArt(string waterBase)
+            : this(waterBase, 0f)
         {
+        }
+
+        /// <summary>
+        /// Genera los gráficos comunes para el agua base <paramref name="waterBase"/> con el tope de densidad
+        /// <paramref name="densityCap"/> (px por dp del lienzo; ≤ 0, sin tope; <see cref="DensityCap"/>), que pasa a ser el de las
+        /// piezas que se pinten desde ahora (<see cref="Activate"/>).
+        /// </summary>
+        public ProceduralArt(string waterBase, float densityCap)
+        {
+            BuiltDensityCap = Sanitize(densityCap);
+            Activate();
             Stopwatch watch = Stopwatch.StartNew();
             _water = Palette.WaterBase(waterBase);
             _panel = Palette.Panel;
@@ -253,6 +299,12 @@ namespace AF.Presentation
         /// <summary>Destruye texturas y sprites generados.</summary>
         public void Dispose()
         {
+            _disposed = true;
+            if (s_active == this)
+            {
+                s_active = null;
+            }
+
             AbandonBannerArt(); // el arte del banner que aún se pinta en otro hilo para y se descarta (ProceduralArt.Mascots.cs)
             ForgetAvatarPortrait(); // D-056: el retrato elegido (ProceduralArt.Avatars.cs)
             ForgetAvatarFrameOverlay(); // Q-M6: el marco suelto de la libreta (ProceduralArt.AvatarFrames.cs)

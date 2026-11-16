@@ -226,7 +226,7 @@ namespace AF.Presentation
                 }
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconInfinite()
@@ -249,7 +249,7 @@ namespace AF.Presentation
                 }
             }
 
-            return MakeSprite(pc, "icon_infinite", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_infinite", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private static Vector2 Lemniscate(float a, float t)

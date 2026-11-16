@@ -2467,34 +2467,38 @@ namespace AF.UI
 
         // El arte procedural se genera una vez por sesión y por agua base (guía visual v2, 8: la generación al arrancar
         // cuesta CPU): recargar la escena o pasar de nivel no lo repite. Vive mientras dure la app.
-        // Con el tope de densidad del teléfono (ArtDensityCap): una densidad distinta pinta otro arte.
+        // Con el tope de densidad del teléfono (ArtDensityCap): una densidad distinta pinta otro arte. Al reutilizarlo en otra
+        // escena, vuelve a ser el arte activo (su tope es el de las piezas que pinte desde ahora).
         private static ProceduralArt SharedArt(string waterBase)
         {
             float cap = ArtDensityCap();
-            ProceduralArt.DensityCap = cap;
             string key = waterBase + "@" + cap.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
             if (s_art == null || s_artKey != key)
             {
                 s_art?.Dispose();
-                s_art = new ProceduralArt(waterBase);
+                s_art = new ProceduralArt(waterBase, cap);
                 s_artKey = key;
+            }
+            else
+            {
+                s_art.Activate();
             }
 
             return s_art;
         }
 
         /// <summary>Solo tests: false pinta el arte a la densidad fija de antes (las capturas de antes y después). En el juego, true.</summary>
-        internal static bool ArtDensityCapEnabled { get; set; } = true;
+        internal static bool ArtDensityCapEnabledForTests { get; set; } = true;
 
         /// <summary>
-        /// Tope de densidad del arte por código para esta pantalla (<see cref="ProceduralArt.DensityCap"/>; <c>docs/dev/memoria.md</c>
-        /// §7.5, pregunta 1, opción (a), y D-060): la escala del lienzo (px por dp) con la densidad del teléfono, redondeada hacia
-        /// arriba a 0,05. Sin densidad conocida (el Editor sin pantalla simulada con densidad), 0: sin tope, el arte de siempre. En
-        /// el SM-S938B sale 3 (sin cambio); en clase A (720 × 1600 a 2 px/dp), 2.
+        /// Tope de densidad del arte por código en este dispositivo (<see cref="ProceduralArt.DensityCap"/>; <c>docs/dev/memoria.md</c>
+        /// §7.5, pregunta 1, opción (a), §9, y D-060), con la densidad del teléfono (<see cref="GameScreen.ReadPxPerDp"/>) y la
+        /// resolución del dispositivo entero, no la de la ventana (<see cref="ReadDeviceResolution"/>): <see cref="ArtDensityCapFor"/>.
+        /// Sin densidad conocida (el Editor sin pantalla simulada con densidad) o con el interruptor de los tests apagado, 0.
         /// </summary>
         internal static float ArtDensityCap()
         {
-            if (!ArtDensityCapEnabled)
+            if (!ArtDensityCapEnabledForTests)
             {
                 return 0f;
             }
@@ -2505,14 +2509,60 @@ namespace AF.UI
                 return 0f;
             }
 
-            GameScreen.ReadScreen(out int w, out int h, out Rect safe);
-            float scale = ScreenFrame.Compute(w, h, safe, pxPerDp).Scale;
-            if (!(scale >= 1f) || float.IsInfinity(scale))
+            ReadDeviceResolution(out int w, out int h);
+            return ArtDensityCapFor(w, h, pxPerDp);
+        }
+
+        /// <summary>
+        /// El tope para un dispositivo de <paramref name="deviceWidth"/> × <paramref name="deviceHeight"/> px (la pantalla entera, en
+        /// cualquier orientación) a <paramref name="pxPerDp"/> px por dp físico [P, decisión del integrador]:
+        /// <list type="bullet">
+        /// <item>solo en los teléfonos (<see cref="OrientationPolicy.IsPhone"/> con el lado menor en dp); en tabletas, plegables
+        /// abiertos y Chromebooks, que giran y cambian de ventana, 0 (sin tope);</item>
+        /// <item>en un teléfono, la escala del lienzo del dispositivo en vertical, el mayor de <see cref="GameScreen.CanvasScale(int,
+        /// int, float)"/> con los lados en un orden y en el otro: así la pantalla dividida (una ventana más pequeña) no lo baja, y arrancar
+        /// en horizontal da lo mismo;</item>
+        /// <item>redondeada hacia arriba a 0,05; por debajo de 1 px/dp (una medida rara), 0.</item>
+        /// </list>
+        /// En el SM-S938B sale 3 (sin cambio); en clase A (720 × 1600 a 2 px/dp), 2.
+        /// </summary>
+        internal static float ArtDensityCapFor(int deviceWidth, int deviceHeight, float pxPerDp)
+        {
+            if (!(pxPerDp > 0f) || float.IsInfinity(pxPerDp) || deviceWidth <= 0 || deviceHeight <= 0)
             {
-                return 0f; // una superficie aún sin medir: mejor sin tope que un arte borroso toda la sesión
+                return 0f;
             }
 
-            return Mathf.Ceil(scale * 20f - 0.001f) / 20f;
+            int shortSide = Mathf.Min(deviceWidth, deviceHeight);
+            int longSide = Mathf.Max(deviceWidth, deviceHeight);
+            int smallestWidthDp = Mathf.FloorToInt((shortSide / pxPerDp) + 0.001f);
+            if (!OrientationPolicy.IsPhone(smallestWidthDp))
+            {
+                return 0f;
+            }
+
+            float scale = Mathf.Max(GameScreen.CanvasScale(shortSide, longSide, pxPerDp), GameScreen.CanvasScale(longSide, shortSide, pxPerDp));
+            if (!(scale >= 1f) || float.IsInfinity(scale))
+            {
+                return 0f;
+            }
+
+            return Mathf.Ceil((scale * 20f) - 0.001f) / 20f;
+        }
+
+        // La resolución del dispositivo entero: la pantalla simulada de los tests o, en el reproductor, Screen.currentResolution (la
+        // de la pantalla, no la de la ventana: con la pantalla dividida, Screen.width y Screen.height son los de la ventana).
+        private static void ReadDeviceResolution(out int width, out int height)
+        {
+            if (GameScreen.SimulatedScreen.HasValue)
+            {
+                GameScreen.ReadScreen(out width, out height, out Rect _);
+                return;
+            }
+
+            Resolution r = Screen.currentResolution;
+            width = r.width > 0 ? r.width : Screen.width;
+            height = r.height > 0 ? r.height : Screen.height;
         }
 
         private void OnApplicationQuit()
@@ -2719,7 +2769,6 @@ namespace AF.UI
             if (Current == this)
             {
                 Current = null;
-                ProceduralArt.DensityCap = 0f; // fuera de una escena del juego (los tests que pintan arte suelto), sin tope
             }
         }
 

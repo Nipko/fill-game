@@ -157,6 +157,9 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>Solo tests: la imagen de los destellos del río.</summary>
+        internal Image StreaksImage => _streaks;
+
         /// <summary>
         /// Pone los destellos del río (<paramref name="streaks"/>; null los quita antes de que el arte los suelte mientras se juega,
         /// <see cref="ProceduralArt.ReleaseHomeScene"/>).

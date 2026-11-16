@@ -89,6 +89,15 @@ namespace AF.UI
         /// </summary>
         public static Sprite ToSprite(Color[] pixels, int w, int h, string name, Vector4 border)
         {
+            return ToSprite(pixels, w, h, name, border, PxPerDp);
+        }
+
+        /// <summary>
+        /// Como <see cref="ToSprite(Color[], int, int, string, Vector4)"/>, a <paramref name="pxPerDp"/> px por dp (los sprites de
+        /// tamaño fijo en px, pintados a 3 px/dp: <see cref="ProceduralArt.MaxUiPxPerDp"/>).
+        /// </summary>
+        public static Sprite ToSprite(Color[] pixels, int w, int h, string name, Vector4 border, float pxPerDp)
+        {
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
             {
                 name = name,
@@ -98,7 +107,7 @@ namespace AF.UI
             };
             tex.SetPixels(pixels);
             tex.Apply(false, false);
-            Sprite sprite = Sprite.Create(tex, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0.5f), 100f * PxPerDp, 0, SpriteMeshType.FullRect, border);
+            Sprite sprite = Sprite.Create(tex, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0.5f), 100f * pxPerDp, 0, SpriteMeshType.FullRect, border);
             sprite.name = name;
             sprite.hideFlags = HideFlags.DontSave;
             return sprite;

@@ -792,10 +792,6 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Muestra la pantalla de <paramref name="screen"/>: el inicio, con «El río sigue creciendo» o Sin canoas encima si
-        /// toca; en <see cref="AppScreen.Level"/> se oculta.
-        /// </summary>
-        /// <summary>
         /// Lo que tardó el último repintado del arte propio del inicio al volver de un nivel (ms; -1 si aún no hubo ninguno):
         /// <see cref="RestoreHomeScene"/>.
         /// </summary>
@@ -867,6 +863,10 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Muestra la pantalla de <paramref name="screen"/>: el inicio, con «El río sigue creciendo» o Sin canoas encima si
+        /// toca; en <see cref="AppScreen.Level"/> se oculta.
+        /// </summary>
         public void Show(AppScreen screen)
         {
             _shown = screen;

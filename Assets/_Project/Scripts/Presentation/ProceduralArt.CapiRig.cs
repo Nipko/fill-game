@@ -128,7 +128,7 @@ namespace AF.Presentation
             PaintRigHull(pc, CapiRigCells[(int)CapiRigPiece.Hull], k, ink);
 
             RectInt body = CapiRigCells[(int)CapiRigPiece.Body];
-            DrawCapi(pc, body.x, body.y, body.width);
+            DrawCapi(pc, body.x, body.y, body.width, k); // el contorno, a la densidad fija del atlas
 
             PaintRigPaddle(pc, CapiRigCells[(int)CapiRigPiece.Paddle], k, ink);
             PaintRigPaw(pc, CapiRigCells[(int)CapiRigPiece.Paw], k);

@@ -180,7 +180,7 @@ namespace AF.Presentation
             pc.FillCircle(c, c, r, MurkyFruitDiscRim);
             pc.FillCircle(c, c, r - FruitDiscRimPx, Palette.UiPaper);
             pc.FillEllipseSoft(c, c + (r * 0.42f), r * 0.55f, r * 0.26f, 3f, ColorMath.WithAlpha(Color.white, 0.35f)); // luz de arriba
-            return MakeSprite(pc, "mech_murky_fruit_disc", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "mech_murky_fruit_disc", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildMurkyBadgePill()
@@ -192,7 +192,7 @@ namespace AF.Presentation
             pc.FillRoundedRect(0f, 0f, w, h, r, ColorMath.WithAlpha(Palette.UiPaper, 0.85f));
             pc.FillRoundedRect(3f, 3f, w - 3f, h - 3f, r - 3f, MurkyBadgeFill);
             pc.FillRoundedRectSoft(7f, h * 0.56f, w - 7f, h - 6f, (h * 0.22f) - 1f, 3f, ColorMath.WithAlpha(Color.white, 0.10f)); // brillo de arriba
-            return MakeSprite(pc, "mech_murky_badge_pill", new Vector2(0.5f, 0.5f), new Vector4(r + 1f, 0f, r + 1f, 0f), UiPxPerDp);
+            return MakeSprite(pc, "mech_murky_badge_pill", new Vector2(0.5f, 0.5f), new Vector4(r + 1f, 0f, r + 1f, 0f), MaxUiPxPerDp);
         }
 
         // Glifo i de la insignia en la celda que empieza en ox: 0 «?», 1 «×», 2..10 los dígitos 1-9, en un recuadro de 18 × 28

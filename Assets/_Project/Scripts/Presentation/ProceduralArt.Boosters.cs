@@ -63,7 +63,7 @@ namespace AF.Presentation
                 pc.FillRoundedRect(21f, 15f, 46f, 40f, 7f, inner);
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconVideo()
@@ -73,7 +73,7 @@ namespace AF.Presentation
             pc.FillRoundedRect(3f, 9f, 57f, 51f, 9f, Palette.FamilyWood.Outline);
             pc.FillRoundedRect(6.5f, 12.5f, 53.5f, 47.5f, 6f, Palette.Cream);
             pc.FillTriangle(new Vector2(24f, 20f), new Vector2(24f, 40f), new Vector2(41f, 30f), Palette.FamilyWater.Base);
-            return MakeSprite(pc, "icon_video", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_video", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconClose()
@@ -87,7 +87,7 @@ namespace AF.Presentation
                 pc.FillCapsule(15f, 51f + oy, 51f, 15f + oy, 5.5f, c);
             }
 
-            return MakeSprite(pc, "icon_close", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_close", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildEmptyBasket()
