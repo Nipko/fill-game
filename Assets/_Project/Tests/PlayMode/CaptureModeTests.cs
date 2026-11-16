@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
@@ -30,6 +32,9 @@ namespace AF.Tests.PlayMode
     public sealed class CaptureModeTests
     {
         private const int Level = 17;
+        private const int BannerLevel = 81;
+        private const int BannerWorld = 4;
+        private static readonly string[] BoardPalette = { "acai", "aguaje", "tapereba" };
         private static readonly DateTime T0 = new DateTime(2026, 10, 31, 15, 0, 0, DateTimeKind.Utc);
 
         [TearDown]
@@ -39,6 +44,7 @@ namespace AF.Tests.PlayMode
             CaptureLog.Reset();
             GameBootstrap.ResetCloudOverrides();
             GameBootstrap.AnalyticsResetOverride = null;
+            GameScreen.BannerTravelOverride = null;
         }
 
         [UnityTest]
@@ -101,6 +107,148 @@ namespace AF.Tests.PlayMode
             Assert.That(autoplay.Pours, Is.EqualTo(autoplay.PlanLength - 1));
             Assert.That(boot.Flow!.Session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(boot.Flow.AcceptsBoardInput, Is.True, "el último vertido queda para la toma");
+        }
+
+        [UnityTest]
+        public IEnumerator Autoplay_DismissesTheDifficultyCard_AfterReading_AndPours()
+        {
+            // Observación 3 de la prueba del Moto G23 (2026-11-15): en un Muy difícil, con el HUD a la vista, la tarjeta previa
+            // tapaba el tablero y el juego automático no vertía nunca.
+            LaunchOptions.LevelCardsOverride = true;
+            var options = new CaptureOptions { Active = true, BoardBase64 = Base64(BoardPack(Level, LevelDefinition.LabelVeryHard)), Autoplay = true, StartMs = 100, PauseMs = 120, JitterMs = 0, SelectMs = 80 };
+            yield return LoadCapture(options, ProfileAt(Level));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.Level.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelVeryHard));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "la tarjeta de Muy difícil tapa el tablero");
+            Assert.That(boot.View!.LevelCard.Visible, Is.True);
+
+            // Antes del tiempo de lectura, la tarjeta sigue.
+            var lines = new List<string>();
+            Advance(boot, (int)GameBootstrap.CaptureCardReadMs - 500, lines, null);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "se deja leer");
+            Assert.That(boot.CaptureAutoplayRun!.Pours, Is.EqualTo(0));
+            Assert.That(lines, Is.Empty);
+
+            // Sale de LEVEL_CARD poco después: como mucho 500 ms más tarde que el tiempo de lectura.
+            int more = Advance(boot, 1000, lines, () => flow.Phase != FlowPhase.LevelCard);
+            Assert.That(flow.Phase, Is.Not.EqualTo(FlowPhase.LevelCard), "la tarjeta se cerró sola");
+            Assert.That(more, Is.LessThanOrEqualTo(1000), "≤ CaptureCardReadMs + 500 ms");
+            Assert.That(lines, Has.Count.EqualTo(1));
+            StringAssert.Contains("\"card\":\"level_card\"", lines[0]);
+            Assert.That(ReadMs(lines[0]), Is.GreaterThanOrEqualTo((int)GameBootstrap.CaptureCardReadMs), lines[0]);
+
+            CaptureAutoplay autoplay = Run(boot, 120000);
+            Assert.That(autoplay.EndReason, Is.EqualTo("won"), CaptureLog.LastLine);
+            Assert.That(autoplay.Pours, Is.GreaterThan(0), "el juego automático vierte tras cerrar la tarjeta");
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutAutoplay_TheCardWaitsForTheFinger()
+        {
+            LaunchOptions.LevelCardsOverride = true;
+            yield return LoadCapture(new CaptureOptions { Active = true, BoardBase64 = Base64(BoardPack(Level, LevelDefinition.LabelVeryHard)) }, ProfileAt(Level));
+            GameBootstrap boot = GameBootstrap.Current!;
+            var lines = new List<string>();
+            Advance(boot, 5000, lines, null);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard), "sin el juego automático, la tarjeta espera al dedo");
+            Assert.That(boot.View!.LevelCard.Visible, Is.True);
+            Assert.That(lines, Is.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator Autoplay_WorldBannerThenCard_ReadsEach_AndWins()
+        {
+            // El 81 abre el mundo 4: banner de mundo con el viaje (M3.6) y, detrás, la tarjeta de Difícil.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtSyncOverride = true;
+            GameScreen.BannerTravelOverride = true;
+            var options = new CaptureOptions { Active = true, BoardBase64 = Base64(BannerBoardPack()), Autoplay = true, StartMs = 100, PauseMs = 120, JitterMs = 0, SelectMs = 80 };
+            yield return LoadCapture(options, ProfileAt(BannerLevel));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            WorldBannerView banner = view.WorldBannerView;
+            Assert.That(flow.LevelNumber, Is.EqualTo(BannerLevel));
+            Assert.That(flow.WorldBanner, Is.EqualTo(BannerWorld));
+            Assert.That(flow.WorldBannerThenCard, Is.True, "detrás va la tarjeta de Difícil");
+            Assert.That(banner.Visible && banner.CardShown, Is.True);
+            Assert.That(banner.Travel, Is.Not.Null, "el banner del 81 lleva el viaje");
+
+            // El banner se lee: sigue en pantalla durante el tiempo de lectura.
+            var lines = new List<string>();
+            Advance(boot, (int)GameBootstrap.CaptureCardReadMs - 300, lines, null);
+            Assert.That(lines, Is.Empty);
+            Assert.That(flow.WorldBanner, Is.EqualTo(BannerWorld));
+            Assert.That(banner.Visible && !banner.Dismissing, Is.True, "el banner, a la vista");
+            Assert.That(banner.TravelRunning, Is.True, "el viaje aún va");
+
+            // Primer toque: solo completa el viaje; el banner sigue.
+            Advance(boot, 1000, lines, () => lines.Count > 0);
+            Assert.That(lines, Has.Count.EqualTo(1));
+            StringAssert.Contains("\"card\":\"world_banner_travel\"", lines[0]);
+            Assert.That(ReadMs(lines[0]), Is.GreaterThanOrEqualTo((int)GameBootstrap.CaptureCardReadMs));
+            Assert.That(banner.TravelDone, Is.True);
+            Assert.That(banner.Visible && !banner.Dismissing, Is.True, "el primer toque no cierra");
+            Assert.That(flow.WorldBannerClosing, Is.False);
+
+            // Otra lectura y el segundo toque lo cierra.
+            Advance(boot, (int)GameBootstrap.CaptureCardReadMs - 300, lines, null);
+            Assert.That(lines, Has.Count.EqualTo(1));
+            Assert.That(flow.WorldBanner, Is.EqualTo(BannerWorld));
+            Advance(boot, 1000, lines, () => lines.Count > 1);
+            Assert.That(lines, Has.Count.EqualTo(2));
+            StringAssert.Contains("\"card\":\"world_banner\"", lines[1]);
+
+            // Tras la salida, la tarjeta previa, que también se lee entera.
+            Advance(boot, 2000, lines, () => flow.WorldBanner == 0);
+            Assert.That(flow.WorldBanner, Is.EqualTo(0), "el banner salió");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(flow.LevelCard, Is.Not.Null, "la tarjeta de Difícil");
+            Assert.That(view.LevelCard.Visible, Is.True);
+            Advance(boot, (int)GameBootstrap.CaptureCardReadMs - 300, lines, null);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "la tarjeta se lee entera");
+            Assert.That(lines, Has.Count.EqualTo(2));
+            Advance(boot, 1000, lines, () => flow.Phase != FlowPhase.LevelCard);
+            Assert.That(lines, Has.Count.EqualTo(3));
+            StringAssert.Contains("\"card\":\"level_card\"", lines[2]);
+            Assert.That(ReadMs(lines[2]), Is.GreaterThanOrEqualTo((int)GameBootstrap.CaptureCardReadMs));
+
+            CaptureAutoplay autoplay = Run(boot, 120000);
+            Assert.That(autoplay.EndReason, Is.EqualTo("won"), CaptureLog.LastLine);
+            Assert.That(autoplay.Pours, Is.GreaterThan(0));
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureTapCard_WithoutTheViewCards_GoesStraightToTheFlow()
+        {
+            // Respaldo: si la vista no enseña el banner ni la tarjeta, el toque del juego automático va directo al flujo.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtSyncOverride = true;
+            GameScreen.BannerTravelOverride = false;
+            yield return LoadCapture(new CaptureOptions { Active = true, BoardBase64 = Base64(BannerBoardPack()) }, ProfileAt(BannerLevel));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Assert.That(flow.WorldBanner, Is.EqualTo(BannerWorld));
+
+            view.WorldBannerView.HideNow();
+            Assert.That(view.CaptureTapCard(flow), Is.EqualTo("world_banner"), "DismissWorldBanner");
+            for (int t = 0; t < 3000 && flow.WorldBanner != 0; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.WorldBanner, Is.EqualTo(0));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(flow.LevelCard, Is.Not.Null);
+
+            view.LevelCard.HideNow();
+            Assert.That(view.CaptureTapCard(flow), Is.EqualTo("level_card"), "DismissLevelCard");
+            Assert.That(flow.Phase, Is.Not.EqualTo(FlowPhase.LevelCard), "arranca la intro");
+            Assert.That(view.CaptureTapCard(flow), Is.Null, "fuera de LEVEL_CARD no hace nada");
         }
 
         [UnityTest]
@@ -257,6 +405,35 @@ namespace AF.Tests.PlayMode
             return autoplay;
         }
 
+        // Avanza la vista, el flujo y el modo de captura como Run, hasta maxMs o hasta stop; apunta cada AF_CAPTURE card_dismissed.
+        // Devuelve los ms avanzados.
+        private static int Advance(GameBootstrap boot, int maxMs, List<string> cardLines, Func<bool>? stop)
+        {
+            int t = 0;
+            while (t < maxMs && (stop == null || !stop()))
+            {
+                string? before = CaptureLog.LastLine;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                boot.TickCapture(PlayModeHelpers.FrameMs);
+                t += PlayModeHelpers.FrameMs;
+                string? line = CaptureLog.LastLine;
+                if (line != null && !ReferenceEquals(line, before) && line.Contains("\"event\":\"card_dismissed\""))
+                {
+                    cardLines.Add(line);
+                }
+            }
+
+            return t;
+        }
+
+        // El read_ms de una línea card_dismissed.
+        private static int ReadMs(string line)
+        {
+            Match m = Regex.Match(line, "\"read_ms\":(\\d+)");
+            Assert.That(m.Success, Is.True, line);
+            return int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         private static Profile ProfileAt(int nextLevel)
         {
             Profile profile = Wallet.NewProfile(new ManualClock(T0));
@@ -265,12 +442,21 @@ namespace AF.Tests.PlayMode
             return profile;
         }
 
-        // El tablero del nivel 2 del tutorial (5 cuias, 3 tintes, par 6) puesto en el 17 del mundo 1.
-        private static string BoardPack()
+        // El tablero del nivel 2 del tutorial (5 cuias, 3 tintes, par 6) puesto en el 17 del mundo 1, con la etiqueta pedida.
+        private static string BoardPack(int level = Level, string? label = null)
         {
-            string[] palette = { "acai", "aguaje", "tapereba" };
-            int[][] cuias = { new[] { 4, 8, 4, 4 }, new[] { 3, 3, 3, 4 }, new[] { 3, 8, 8, 8 }, new int[0], new int[0] };
-            return PlayModeHelpers.BoardPack(1, "w01_estuario", "white", Level, palette, cuias);
+            return PlayModeHelpers.BoardPack(1, "w01_estuario", "white", level, BoardPalette, BoardCuias(), label);
+        }
+
+        // El mismo tablero en el 81, el primero del mundo 4 (banner de mundo), con la etiqueta Difícil (tarjeta previa detrás).
+        private static string BannerBoardPack()
+        {
+            return PlayModeHelpers.BoardPack(BannerWorld, "w04_trapecio", "white", BannerLevel, BoardPalette, BoardCuias(), LevelDefinition.LabelHard);
+        }
+
+        private static int[][] BoardCuias()
+        {
+            return new[] { new[] { 4, 8, 4, 4 }, new[] { 3, 3, 3, 4 }, new[] { 3, 8, 8, 8 }, new int[0], new int[0] };
         }
 
         private static string Base64(string json)
