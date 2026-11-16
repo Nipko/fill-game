@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Boosters;
 using AF.Economy;
 using AF.GameFlow;
@@ -178,6 +179,10 @@ namespace AF.UI
             _logbook = service;
             _logbookScreen = new LogbookScreen(transform, _art, OnLogbookChoose, OnLogbookClose);
             WireLogbookFrames(_logbookScreen); // Q-M6: el icono del marco y «Ver tu avatar» (GameBootstrap.AvatarFrames.cs)
+            if (DevProbe.Enabled)
+            {
+                _logbookScreen.LayoutChanged = EmitLogbookLayout; // AF_LAYOUT logbook (observación 7 de la prueba r2b de la 1.1)
+            }
             _logbookCardCanvas = new OverlayCanvas("LogbookCardCanvas", transform, LogbookCardSortingOrder);
             _logbookCard = new LogbookCard(_logbookCardCanvas.Root, _art, () => OpenLogbook(LogbookOpenSource.Card));
             bool sameSession = ReferenceEquals(s_takeoversProfile, profile) && s_carriedTakeovers != null;
@@ -578,6 +583,27 @@ namespace AF.UI
             }
 
             return WorldTable.WorldOf(Mathf.Clamp(level, 1, WorldTable.LastLevel));
+        }
+
+        /// <summary>
+        /// <c>AF_LAYOUT logbook</c> (desarrollo; observación 7 de la prueba r2b de la 1.1): los botones de la libreta a la vista
+        /// (<see cref="LogbookScreen.VisibleButtons"/>), con <c>"source"</c> (de dónde se abrió) y <c>"choosing"</c> (se ven las
+        /// tarjetas) tras <c>sh</c>. Sale cada vez que la libreta recoloca sus botones, también la que sale sola en el inicio, para que
+        /// los toques por adb la vean y cierren antes de seguir.
+        /// </summary>
+        internal void EmitLogbookLayout()
+        {
+            LogbookScreen? screen = _logbookScreen;
+            if (_probe == null || screen == null || !screen.Visible)
+            {
+                return;
+            }
+
+            var ids = new List<string>(6);
+            var rects = new List<RectTransform>(6);
+            screen.VisibleButtons(ids, rects);
+            string extra = ",\"source\":\"" + LogbookScreen.SourceId(screen.Source) + "\",\"choosing\":" + (screen.Choosing ? "true" : "false");
+            _probe.Layout("logbook", 0, null, ids.ToArray(), rects.ToArray(), extra);
         }
 
         // La de la Bitácora va en la fila de las tarjetas del día del muelle (D-050, punto 6), tras la del Reto: PlaceDayCards.
