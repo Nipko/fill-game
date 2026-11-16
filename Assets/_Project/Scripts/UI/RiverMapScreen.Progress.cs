@@ -2291,6 +2291,7 @@ namespace AF.UI
 
         private readonly Rect[] _buoyLabelClear = new Rect[BuoyLabelClearMax];
         private int _buoyLabelClearCount;
+        private bool _buoyClearDirty; // el claro de los rótulos se recalcula en el próximo Tick (RiverMapScreen.Tick)
         private static readonly Vector3[] s_buoyCorners = new Vector3[4];
 
         /// <summary>Cajas de rótulos que las boyas despejan ahora (tests).</summary>

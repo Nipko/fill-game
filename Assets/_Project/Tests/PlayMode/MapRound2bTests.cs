@@ -1,9 +1,8 @@
 #nullable enable
 using System.Collections;
-using AF.Economy;
+using System.Collections.Generic;
+using AF.Levels;
 using AF.GameFlow;
-using AF.Platform;
-using AF.Save;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -27,18 +26,20 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class MapRound2bTests
     {
-        private static readonly System.DateTime T0 = new System.DateTime(2026, 11, 16, 12, 0, 0, System.DateTimeKind.Utc);
+        private static MemoryProgressStore s_progress = null!; // el de WinThe51AndGoHome
 
         [SetUp]
         public void SetUp()
         {
             RiverMapScreen.ResetCapiSession();
+            GameBootstrap.L10SequenceOverride = true; // los helpers de PlayMode la apagan si el test no la pide (PlayModeHelpers)
         }
 
         [TearDown]
         public void TearDown()
         {
             GameBootstrap.MapLiveConfigOverride = null;
+            GameBootstrap.L10SequenceOverride = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -47,25 +48,12 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheTucuxi_AfterTheMapOf10FromTheLobby_JoinsInTheWorldView_WithItsCloseUp_AfterTheSequence()
         {
-            // El perfil de la prueba: el 51 ganado y el Mapa sin ver. Al entrar al inicio sale solo el Mapa del 10 (tras la Bitácora,
-            // si toca), en la Cuenca.
-            yield return LoadApp(52, 51, 0);
+            // El perfil de la prueba: el Mapa sin ver y el 51 por ganar. Se gana, Inicio (tras la Bitácora, si sale) y el inicio abre
+            // solo el Mapa del 10 (L10SequenceRule.OnLobby), en la Cuenca.
+            yield return WinThe51AndGoHome();
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
-            Debug.Log("AF_MAP r2b inicio: pantalla " + boot.App!.Screen + ", Mapa " + map.Visible + ", Bitácora " + (boot.LogbookScreen != null && boot.LogbookScreen.Visible)
-                + ", L10MapDue " + boot.App.L10MapDue);
-            if (!map.Visible && boot.LogbookScreen != null && boot.LogbookScreen.Visible)
-            {
-                // La Bitácora del 10 sale antes (D-033, punto 11): el Mapa del 10, al cerrarla.
-                boot.LogbookScreen.CloseButton.onClick.Invoke();
-            }
-
-            if (!map.Visible)
-            {
-                Assert.That(boot.OpenRiverMap(MapOpenSource.L10), Is.True, "el Mapa del 10, como lo abre el inicio");
-            }
-
-            Assert.That(map.Visible, Is.True);
+            Assert.That(map.Visible, Is.True, "el inicio abre solo el Mapa del 10");
             Assert.That(map.Source, Is.EqualTo(MapOpenSource.L10));
             Assert.That(map.View, Is.EqualTo(MapView.Basin));
             Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi));
@@ -97,7 +85,7 @@ namespace AF.Tests.PlayMode
             Assert.That(top, Is.GreaterThan(RiverMapScreen.CamCloseUpZoom * 0.9f), "con su primer plano");
             Assert.That(map.TucuxiAboardShown, Is.True);
             Assert.That(boot.CloseRiverMap(), Is.True);
-            Assert.That(boot.Profile!.Progress.MapSeenLevel, Is.EqualTo(51), "ya visto");
+            Assert.That(s_progress.MapSeenLevel, Is.EqualTo(51), "ya visto");
 
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
             Assert.That(map.CrewIntroKind, Is.Null, "no se repite");
@@ -119,6 +107,79 @@ namespace AF.Tests.PlayMode
             map.Open(MapOpenSource.Pause, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!, new MemoryProgressStore(52, 51, 50), 52, true);
             Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi));
             AssertJoinsWithCloseUp(map, "desde la pausa");
+            map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator BackFromBackground_MidJourney_TheCompanionIsAboard_WithoutAnimation()
+        {
+            // 02 §14 y D-069, M2-4: al volver de segundo plano el viaje salta al final y quien se unía va a bordo, sin animar.
+            yield return MapMarkersTests.OpenApp(52, 40); // el tucuxi pendiente, con el viaje desde el 41
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi));
+            Assert.That(map.CatchingUp, Is.True);
+            Level10MapTests.Tick(map, 300);
+            Assert.That(map.CrewIntroFired, Is.False, "a mitad del viaje, aún no");
+            Assert.That(map.ResumeFromBackground(), Is.True);
+            bool chip = false;
+            bool arriving = false;
+            float top = 1f;
+            for (int ms = 0; ms < 3000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                chip |= map.CrewChipShown;
+                arriving |= map.CrewArriving;
+                top = Mathf.Max(top, map.CameraCloseUp);
+            }
+
+            Assert.That(map.CrewIntroFired, Is.True);
+            Assert.That(chip, Is.False, "sin chip");
+            Assert.That(arriving, Is.False, "sin llegar volando ni nadando");
+            Assert.That(top, Is.EqualTo(1f), "sin primer plano");
+            Assert.That(map.TucuxiAboardShown, Is.True, "a bordo");
+            boot.CloseRiverMap();
+        }
+
+        [UnityTest]
+        public IEnumerator DuringTheCloseUps_NoLabelOrPlateShows()
+        {
+            // Revisión de la r2b: en el primer plano de la tripulación y en el acercamiento de llegada del viaje del 80, los rótulos y
+            // las placas no se ven desde el primer fotograma (antes crecían con la cámara mientras se desvanecían).
+            yield return MapMarkersTests.OpenApp(52, 50);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.VisibleMapLabelCount(), Is.GreaterThan(0), "fuera del primer plano hay rótulos");
+            int closeFrames = 0;
+            for (int ms = 0; ms < 4000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                if (map.CameraCloseUp > 1.001f)
+                {
+                    closeFrames++;
+                    Assert.That(map.VisibleMapLabelCount(), Is.EqualTo(0), "a los " + ms + " ms del primer plano del tucuxi (×" + map.CameraCloseUp + ")");
+                }
+            }
+
+            Assert.That(closeFrames, Is.GreaterThan(0), "hubo primer plano");
+            Level10MapTests.Tick(map, 1000);
+            Assert.That(map.CameraCloseUp, Is.EqualTo(1f));
+            Assert.That(map.VisibleMapLabelCount(), Is.GreaterThan(0), "y vuelven");
+
+            MapRound2Tests.Open(boot, map, 81, 80, 70); // el viaje del 80, con su acercamiento de llegada
+            int arrivalFrames = 0;
+            for (int ms = 0; ms < 9000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                if (map.CameraCloseUp > 1.001f)
+                {
+                    arrivalFrames++;
+                    Assert.That(map.VisibleMapLabelCount(), Is.EqualTo(0), "a los " + ms + " ms del acercamiento de llegada (×" + map.CameraCloseUp + ")");
+                }
+            }
+
+            Assert.That(arrivalFrames, Is.GreaterThan(0), "hubo acercamiento de llegada");
+            Assert.That(map.VisibleMapLabelCount(), Is.GreaterThan(0), "y vuelven");
             map.Close();
         }
 
@@ -146,19 +207,15 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheMapOf10ClosedInItsSequence_TheNextOpeningPresentsTheCompanion()
         {
-            yield return LoadApp(52, 51, 0);
+            yield return WinThe51AndGoHome();
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
-            if (!map.Visible)
-            {
-                Assert.That(boot.OpenRiverMap(MapOpenSource.L10), Is.True);
-            }
-
+            Assert.That(map.Visible && map.Source == MapOpenSource.L10, Is.True, "el inicio abre solo el Mapa del 10");
             Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi));
             Level10MapTests.Tick(map, 500);
             Assert.That(boot.CloseRiverMap(), Is.True, "Atrás a mitad de la secuencia, sin verlo");
             Assert.That(map.CrewSeenCap, Is.EqualTo(RiverCrew.TucuxiJoinLevel - 1));
-            Assert.That(boot.Profile!.Progress.MapSeenLevel, Is.EqualTo(50), "lo visto, hasta antes de su punto (la llegada a Manaos sí)");
+            Assert.That(s_progress.MapSeenLevel, Is.EqualTo(50), "lo visto, hasta antes de su punto (la llegada a Manaos sí)");
 
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
             Assert.That(map.CrewIntroKind, Is.EqualTo(CrewKind.Tucuxi), "se presenta en la apertura siguiente");
@@ -166,7 +223,7 @@ namespace AF.Tests.PlayMode
             Level10MapTests.Tick(map, 3000);
             Assert.That(map.CrewIntroFired, Is.True);
             Assert.That(boot.CloseRiverMap(), Is.True);
-            Assert.That(boot.Profile.Progress.MapSeenLevel, Is.EqualTo(51));
+            Assert.That(s_progress.MapSeenLevel, Is.EqualTo(51));
 
             // En las demás aperturas, cerrar a medias anota lo visto hasta max_level (M3.5).
             Assert.That(map.CrewSeenCap, Is.EqualTo(int.MaxValue));
@@ -197,10 +254,9 @@ namespace AF.Tests.PlayMode
                         }
 
                         Vector2 p = map.BuoyLocalPoint(i);
-                        for (int k = 0; k < map.BuoyLabelClearCount; k++)
+                        foreach (Rect box in RealLabelBoxes(map))
                         {
-                            Rect box = map.BuoyLabelClear(k);
-                            Assert.That(MapRound2Tests.Hits(box, p, r), Is.False, "max " + max + ": la boya del " + map.BuoyLevel(i) + " sobre un rótulo");
+                            Assert.That(MapRound2Tests.Hits(box, p, r), Is.False, "max " + max + ": la boya del " + map.BuoyLevel(i) + " sobre un rótulo o una placa");
                         }
                     }
                 }
@@ -258,6 +314,12 @@ namespace AF.Tests.PlayMode
 
                 map.SetView(MapView.World);
                 Assert.That(map.CanoeFlagCount, Is.LessThanOrEqualTo(RiverMapScreen.LiveMaxCanoeFlags), "max " + max);
+                RectTransform? prize = map.PrizePill;
+                if (prize != null && prize.gameObject.activeSelf)
+                {
+                    Assert.That(prize.parent.gameObject.activeSelf, Is.True, "max " + max + ": la píldora del Premio del mundo, con su mini cuia");
+                }
+
                 for (int i = 0; i < map.StopMarkerCount; i++)
                 {
                     if (map.StopMarkerBox(i).width > 0f && map.StopMarkerHasLeader(i))
@@ -339,20 +401,69 @@ namespace AF.Tests.PlayMode
             Assert.That(map.TucuxiAboardShown, Is.True, at);
         }
 
-        private static IEnumerator LoadApp(int play, int max, int seen)
+        // El 51 por ganar con el Mapa sin ver (el perfil de la prueba, como el pm clear con af_max_level 50): se gana, se cierra la
+        // Bitácora si sale y se pulsa Inicio; la Bitácora del 10, si sale, se cierra y el inicio abre el Mapa del 10.
+        private static IEnumerator WinThe51AndGoHome()
         {
             if (!GameScreen.SimulatedScreen.HasValue)
             {
                 GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
             }
 
-            Profile profile = Wallet.NewProfile(new ManualClock(T0));
-            profile.Progress.NextLevel = play;
-            profile.Progress.MaxLevel = max;
-            profile.Progress.MapSeenLevel = seen;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
-            yield return null;
-            PlayModeHelpers.TakeClock(GameBootstrap.Current!);
+            s_progress = new MemoryProgressStore(51, 50, 0);
+            yield return PlayModeHelpers.LoadGame(51, s_progress);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            Assert.That(boot.App!.L10MapAvailable, Is.True, "la escena trae el Mapa y la secuencia del 10");
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(boot.RiverMapView!.Visible, Is.False, "la victoria del 51 no lleva «Ver mapa»");
+            CloseLogbook(boot);
+            Assert.That(boot.PressHome(), Is.True);
+            CloseLogbook(boot); // B4-3: Victoria → libreta → Mapa del 10
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby));
+            Debug.Log("AF_MAP r2b inicio: Mapa " + boot.RiverMapView.Visible + " (" + boot.RiverMapView.Source + "), L10MapDue " + boot.App.L10MapDue);
+        }
+
+        private static void CloseLogbook(GameBootstrap boot)
+        {
+            if (boot.LogbookScreen != null && boot.LogbookScreen.Visible)
+            {
+                boot.LogbookScreen.CloseButton.onClick.Invoke();
+            }
+        }
+
+        /// <summary>Las cajas de verdad (locales del contenido) de los rótulos de parada y de pueblo y de las placas que se ven.</summary>
+        internal static List<Rect> RealLabelBoxes(RiverMapScreen map)
+        {
+            var boxes = new List<Rect>();
+            GameBootstrap boot = GameBootstrap.Current!;
+            for (int n = 0; n < boot.RiverStops!.Count; n++)
+            {
+                Rect r = map.StopLabelLocalRect(n);
+                if (r.width > 0f)
+                {
+                    boxes.Add(r);
+                }
+            }
+
+            for (int i = 0; i < map.TownMarkerCount; i++)
+            {
+                Rect r = map.TownLabelLocalRect(i);
+                if (r.width > 0f)
+                {
+                    boxes.Add(r);
+                }
+            }
+
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                if (map.SilhouettePlate(i).enabled)
+                {
+                    boxes.Add(map.SilhouetteLocalBox(i));
+                }
+            }
+
+            return boxes;
         }
     }
 }

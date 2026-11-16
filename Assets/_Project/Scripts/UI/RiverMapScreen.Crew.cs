@@ -95,6 +95,7 @@ namespace AF.UI
         private int _crewAnnounced = -1;
         private bool _crewIntroSeen; // la presentación llegó a verse al menos un fotograma (observación 1 de la r2b)
         private int _crewSeenCap = int.MaxValue; // al cerrar sin verla: hasta dónde se anota lo visto (CrewSeenCap)
+        private bool _crewResumed; // el viaje lo completó la vuelta de segundo plano (CatchUpResume): sin presentación animada
 
         private CrewToucanView? _toucan;
         private CrewToucanView? _toucanHome;
@@ -203,6 +204,7 @@ namespace AF.UI
             _crewAnnounced = -1;
             _crewIntroSeen = false;
             _crewSeenCap = int.MaxValue;
+            _crewResumed = false;
             _crewOn = _live && CrewRequested && _hasCanoe && _progress != null;
             if (!_crewOn)
             {
@@ -373,10 +375,16 @@ namespace AF.UI
             }
 
             float dt = Mathf.Max(0f, dtMs);
-            if (_crewIntro >= 0 && !_crewIntroFired && !_catchUp && !_seqActive && _seqOutMs < 0f)
+            if (_crewIntro >= 0 && !_crewIntroFired && !_catchUp)
             {
-                // El viaje acabó sin presentarlo (la secuencia del 10, en la Cuenca, o la vuelta de segundo plano, 02 §14): sale ya.
-                PresentWaitingCrew();
+                if (_crewResumed)
+                {
+                    _crewIntroFired = true; // al volver de segundo plano (02 §14; D-069, M2-4) el viaje saltó al final: a bordo, sin animar
+                }
+                else if (!_seqActive && _seqOutMs < 0f)
+                {
+                    PresentWaitingCrew(); // observación 1 de la r2b: la que esperaba a que acabara la secuencia del Mapa del 10
+                }
             }
 
             if (_cameoLevel >= 0f && !_cameoFired && _catchUp && _canoeX + 1e-4f >= _cameoLevel)
@@ -420,6 +428,12 @@ namespace AF.UI
         // vista Cuenca con el encuadre del estuario: la canoa sale de él) ni en la Cuenca que puso el Mapa solo; sí en la vista Mundo
         // y en la Cuenca que eligió el jugador (ahí, en la vista actual: el chip y TalkBack, sin el primer plano).
         private bool CrewCanPresent => !_seqActive && (_view == MapView.World || _viewChanges > 0);
+
+        // La vuelta de segundo plano (CatchUpResume) completó el viaje: quien se unía queda a bordo sin animar (02 §14; D-069, M2-4).
+        private void CrewResume()
+        {
+            _crewResumed = true;
+        }
 
         // La presentación que esperaba: si el Mapa está en la Cuenca sin que la eligiera el jugador (la secuencia del 10), pasa a la
         // vista Mundo, encuadrada en la canoa, y la presenta allí con su primer plano.

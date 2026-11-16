@@ -260,6 +260,14 @@ namespace AF.Tests.PlayMode
             Assert.That(map.CanoeFlagCount, Is.EqualTo(RiverMapScreen.LiveMaxCanoeFlags));
             Assert.That(map.CanoeFlag(0) + map.CanoeFlag(1) + map.CanoeFlag(2), Is.EqualTo("PEECBO"),
                 "Bolivia, la más reciente (el Perú vuelve arriba en el 310)");
+
+            // Con la 1.0 (ui_map_v2 apagada), las cinco.
+            map.LiveRequested = false;
+            Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
+            Assert.That(map.LiveActive, Is.False);
+            Assert.That(map.CanoeFlagCount, Is.EqualTo(5));
+            Assert.That(map.CanoeFlag(0) + map.CanoeFlag(1) + map.CanoeFlag(2) + map.CanoeFlag(3) + map.CanoeFlag(4), Is.EqualTo("BRCOPEECBO"));
+            map.LiveRequested = true;
         }
 
         [UnityTest]

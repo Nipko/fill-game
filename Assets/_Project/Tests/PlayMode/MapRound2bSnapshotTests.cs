@@ -39,7 +39,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedPxPerDp = 3f;
 
             // El Mapa abierto desde la pausa con max_level N (como las capturas s23/30-mapa-N de Spark), en la vista Mundo.
-            foreach (int max in new[] { 71, 79, 132, 140, 291, 445, 451 })
+            foreach (int max in new[] { 71, 79, 132, 140, 291, 300, 445, 451 })
             {
                 yield return Load(max + 1, max, max);
                 GameBootstrap boot = GameBootstrap.Current!;

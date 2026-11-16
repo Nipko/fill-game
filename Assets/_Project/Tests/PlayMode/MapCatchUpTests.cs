@@ -164,6 +164,34 @@ namespace AF.Tests.PlayMode
             return plates;
         }
 
+        [UnityTest]
+        public IEnumerator WithTheMapV2_CrossingAGreatStop_TheOnlyPlate_MovesToTheNextWorld()
+        {
+            // Observación 5 de la prueba r2b de la 1.1: con el Mapa v2 sale solo la placa del mundo siguiente; al ponerse al día
+            // cruzando Santarém (el 10), pasa del mundo 2 al 3.
+            yield return MapMarkersTests.OpenApp(13, 5);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.LiveActive, Is.True);
+            Assert.That(map.CatchingUp, Is.True);
+            List<(int World, Rect Box, Vector2 Stop)> before = Plates(map);
+            Assert.That(before.Count, Is.EqualTo(RiverMapScreen.LiveFutureWorldPlates));
+            Assert.That(before[0].World, Is.EqualTo(2));
+            for (int i = 0; i < 40 && map.CatchingUp; i++)
+            {
+                map.Tick(MapConfig.CatchUpPerBuoyMs);
+            }
+
+            map.Tick(MapConfig.ArrivalSampleFillMs);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.CatchingUp, Is.False);
+            List<(int World, Rect Box, Vector2 Stop)> after = Plates(map);
+            Assert.That(after.Count, Is.EqualTo(1), "sigue una sola");
+            Assert.That(after[0].World, Is.EqualTo(3), "la del mundo siguiente");
+            AssertPlatesByTheirWorlds(map, after, "tras ponerse al día hasta 12");
+            map.Close();
+        }
+
         // Cada placa dice su mundo y queda junto a la gran parada de ese mundo (a lo sumo el hueco, el corrimiento vertical de la
         // búsqueda y el hueco con lo fijo del encuadre), sin pisar otra placa.
         private static void AssertPlatesByTheirWorlds(RiverMapScreen map, List<(int World, Rect Box, Vector2 Stop)> plates, string at)

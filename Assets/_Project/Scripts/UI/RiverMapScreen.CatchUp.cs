@@ -244,6 +244,7 @@ namespace AF.UI
             }
 
             _capiSnap = true; // D-069, M2-3: Capi y la cámara saltan al final sin animar (02 §14; RiverMapScreen.Capi.cs)
+            CrewResume(); // D-069, M2-4: y quien se unía, a bordo sin animar (RiverMapScreen.Crew.cs)
             FinishCatchUp(true, JourneyByResume);
             return true;
         }

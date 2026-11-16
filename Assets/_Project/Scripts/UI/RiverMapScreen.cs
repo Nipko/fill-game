@@ -864,7 +864,14 @@ namespace AF.UI
             CapiTick(dtMs, ref animating); // D-069, M2-3: los gestos, la cámara y la luz
             CrewTick(dtMs, ref animating); // D-069, M2-4: la tripulación, el cameo del miquito y el chip
             LiveTick(dtMs); // D-069, M2-1: la corriente, las nubes y el brillo de la siguiente, sin pedir 60 fps
-            UpdateBuoyClear(); // observación 3 de la prueba r2b de la 1.1: las boyas, fuera de los rótulos donde estén ahora
+            // Observación 3 de la prueba r2b de la 1.1: las boyas, fuera de los rótulos donde estén ahora. Solo mientras algo se mueve
+            // (el viaje, la cámara, un arrastre, un fundido) y un fotograma después; en reposo, nada.
+            bool moving = animating || _dragging;
+            if (moving || _buoyClearDirty)
+            {
+                UpdateBuoyClear();
+                _buoyClearDirty = moving;
+            }
             if (_activeMs > 0f)
             {
                 _activeMs -= dtMs;
@@ -1330,6 +1337,7 @@ namespace AF.UI
             _remainingZoomBlocked = false;
             LayoutView(map, view, center, 0);
             UpdateBuoyClear(); // observación 3 de la prueba r2b de la 1.1: con los rótulos y las placas ya colocados
+            _buoyClearDirty = true; // y una vez más en el primer Tick, por si algo los recoloca tras el encuadre
         }
 
         // El zoom del mundo antes de alejarse y si ya no se aleja más (vuelve a él: la placa de respaldo).
