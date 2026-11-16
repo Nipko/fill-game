@@ -44,6 +44,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null; // observación 5 de la prueba r2b: algunos tests miran las placas de la 1.0
             GameScreen.SimulatedScreen = null;
             GameScreen.ArrivalDisabledForTests = false;
             GameScreen.FactLineDisabledForTests = false;
@@ -103,6 +104,9 @@ namespace AF.Tests.PlayMode
         {
             // Visto 5 y max 12: «ponerse al día» cruza Santarém (el 10), la gran parada del mundo 2, cuya placa se va; la caja que
             // la llevaba pasa al mundo 3 (BuildSilhouettes reutiliza las cajas en orden de mundo).
+            // Observación 5 de la prueba r2b de la 1.1: con el Mapa v2 sale solo la placa del mundo siguiente
+            // (RiverMapScreen.LiveFutureWorldPlates; MapRound2bTests); esta regla de una placa por mundo futuro es la de la 1.0.
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
             yield return MapMarkersTests.OpenApp(13, 5);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -454,6 +458,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null; // observación 5 de la prueba r2b: algunos tests miran las placas de la 1.0
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();

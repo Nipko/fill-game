@@ -66,6 +66,12 @@ namespace AF.UI
         public const int MaxCanoeFlags = 8;
 
         /// <summary>
+        /// Banderas del mástil con el Mapa v2 [P] (observación 6 de la prueba r2b de la 1.1: en Bolivia, la pila de cinco junto a la canoa
+        /// cargaba el Mapa): las más recientes, la del país de ahora arriba. Con la 1.0, todas (<see cref="MaxCanoeFlags"/>).
+        /// </summary>
+        public const int LiveMaxCanoeFlags = 3;
+
+        /// <summary>
         /// Escala de las banderas en el mástil de la canoa del Mapa [P]: 1, las 16 × 11 dp del banner (revisión de M3.5: a 0,75 el
         /// escudo de Ecuador no se distinguía en el teléfono).
         /// </summary>
@@ -1538,7 +1544,9 @@ namespace AF.UI
             _markersLevel = max;
             int raw = CanoeFlags(_stops!, max, _flagScratch);
             _flagCount = 0;
-            for (int i = 0; i < raw; i++)
+            // Observación 6 de la prueba r2b de la 1.1: con el Mapa v2, solo las LiveMaxCanoeFlags más recientes en el mástil.
+            int first = _live ? Mathf.Max(0, raw - LiveMaxCanoeFlags) : 0;
+            for (int i = first; i < raw; i++)
             {
                 string iso = _flagScratch[i]!;
                 Sprite? sprite = _art.MapFlag(iso);

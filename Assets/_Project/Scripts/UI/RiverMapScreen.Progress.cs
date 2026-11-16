@@ -2279,8 +2279,82 @@ namespace AF.UI
                 }
             }
 
-            _buoys.SetLook(soft, a, b);
-            _buoysAhead?.SetLook(soft, a, b);
+            // Observación 3 de la prueba r2b de la 1.1 («Let·icia», «Fonte B·oa», «Niv·el 81»): tampoco sobre los rótulos de las paradas
+            // y de los pueblos ni sobre las placas de mundo, con el mismo claro.
+            CollectBuoyLabelClear(soft && !_northUpOn && !_buoysCompact);
+            _buoys.SetLook(soft, a, b, _buoyLabelClear, _buoyLabelClearCount);
+            _buoysAhead?.SetLook(soft, a, b, _buoyLabelClear, _buoyLabelClearCount);
+        }
+
+        /// <summary>Rótulos y placas que las boyas despejan como mucho (observación 3 de la prueba r2b de la 1.1).</summary>
+        public const int BuoyLabelClearMax = 48;
+
+        private readonly Rect[] _buoyLabelClear = new Rect[BuoyLabelClearMax];
+        private int _buoyLabelClearCount;
+        private static readonly Vector3[] s_buoyCorners = new Vector3[4];
+
+        /// <summary>Cajas de rótulos que las boyas despejan ahora (tests).</summary>
+        internal int BuoyLabelClearCount => _buoyLabelClearCount;
+
+        /// <summary>La caja <paramref name="k"/> de <see cref="BuoyLabelClearCount"/>, con su claro, en coordenadas locales de las boyas (tests).</summary>
+        internal Rect BuoyLabelClear(int k)
+        {
+            return _buoyLabelClear[k];
+        }
+
+        // Las cajas (locales de las boyas, con el claro de BuoyCrewClearDp) de los rótulos de parada, los de los pueblos y las placas
+        // de mundo que se ven. Sin asignaciones.
+        private void CollectBuoyLabelClear(bool on)
+        {
+            _buoyLabelClearCount = 0;
+            if (!on || _buoys == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                if (_markers[i].Root.gameObject.activeInHierarchy && _stopLabels[i].Pill.gameObject.activeInHierarchy)
+                {
+                    AddBuoyLabelClear(_stopLabels[i].Pill);
+                }
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (m.Root.gameObject.activeInHierarchy && m.Pill.gameObject.activeInHierarchy)
+                {
+                    AddBuoyLabelClear(m.Pill);
+                }
+            }
+
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                Silhouette sil = _silhouettes[k];
+                if (sil.Root.gameObject.activeInHierarchy && sil.Plate.enabled)
+                {
+                    AddBuoyLabelClear(sil.Root);
+                }
+            }
+        }
+
+        private void AddBuoyLabelClear(RectTransform rt)
+        {
+            if (_buoyLabelClearCount >= _buoyLabelClear.Length)
+            {
+                return;
+            }
+
+            RectTransform frame = _buoys!.rectTransform;
+            rt.GetWorldCorners(s_buoyCorners);
+            Vector2 a = frame.InverseTransformPoint(s_buoyCorners[0]);
+            Vector2 b = frame.InverseTransformPoint(s_buoyCorners[2]);
+            Rect r = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+            if (r.width > 0f && r.height > 0f)
+            {
+                _buoyLabelClear[_buoyLabelClearCount++] = Grow(r, BuoyCrewClearDp);
+            }
         }
 
         // La caja de rt en las coordenadas locales de su padre (dp, y hacia arriba), por su tamaño, su pivote y su volteo (Rosa y el
@@ -2329,6 +2403,13 @@ namespace AF.UI
 
         // ============================================================================================ siluetas y rótulos
 
+        /// <summary>
+        /// Placas «Mundo N · … · Nivel N» de los mundos futuros que salen con el Mapa v2 [P] (observación 5 de la prueba r2b de la 1.1:
+        /// seis seguidas en la Cuenca y tres o cuatro en la vista Mundo tapaban Perú y Bolivia): solo la del mundo siguiente. Con la
+        /// 1.0 (<c>ui_map_v2</c> apagada), una por mundo futuro, como en M3.4.
+        /// </summary>
+        public const int LiveFutureWorldPlates = 1;
+
         // Una silueta por mundo futuro del catálogo con ruta hasta su gran parada (la que aún no se alcanzó: max < 10 · n), en esa
         // parada, con «Mundo {n} · {nombre} · Nivel {primer nivel}» (map_next_world). Su texto se asigna aquí: al abrir y, al
         // ponerse al día, cuando se alcanza una gran parada. True si cambió qué mundo lleva alguna caja o cuáles se ven: entonces
@@ -2345,6 +2426,11 @@ namespace AF.UI
                 if (gate == null || route == null || max >= gate.N * RiverStopCatalog.LevelsPerStop)
                 {
                     continue;
+                }
+
+                if (_live && used >= LiveFutureWorldPlates)
+                {
+                    break; // observación 5 de la prueba r2b de la 1.1: con el Mapa v2, solo la del mundo siguiente
                 }
 
                 Silhouette s = SilhouetteAt(used++);
@@ -2651,6 +2737,8 @@ namespace AF.UI
             private bool _soft;
             private Rect _clearA;
             private Rect _clearB;
+            private readonly Rect[] _clearLabels = new Rect[BuoyLabelClearMax];
+            private int _clearLabelCount;
             private int _hiddenMask;
 
             /// <summary>Boyas dibujadas por esta malla (sin las saltadas ni las del claro de la canoa).</summary>
@@ -2677,8 +2765,22 @@ namespace AF.UI
             /// </summary>
             public void SetLook(bool soft, Rect a, Rect b)
             {
+                SetLook(soft, a, b, Array.Empty<Rect>(), 0);
+            }
+
+            /// <summary>
+            /// Como <see cref="SetLook(bool, Rect, Rect)"/>, con los rótulos y las placas que tampoco pisan (<paramref name="labels"/>,
+            /// las <paramref name="labelCount"/> primeras; observación 3 de la prueba r2b de la 1.1). Sin asignaciones.
+            /// </summary>
+            public void SetLook(bool soft, Rect a, Rect b, Rect[] labels, int labelCount)
+            {
                 _clearA = a;
                 _clearB = b;
+                _clearLabelCount = Mathf.Min(labelCount, _clearLabels.Length);
+                for (int k = 0; k < _clearLabelCount; k++)
+                {
+                    _clearLabels[k] = labels[k];
+                }
                 int mask = HiddenMask(soft);
                 if (soft == _soft && mask == _hiddenMask)
                 {
@@ -2705,6 +2807,16 @@ namespace AF.UI
                     if (DiscHits(_clearA, p, r) || DiscHits(_clearB, p, r))
                     {
                         mask |= 1 << i;
+                        continue;
+                    }
+
+                    for (int k = 0; k < _clearLabelCount; k++)
+                    {
+                        if (DiscHits(_clearLabels[k], p, r))
+                        {
+                            mask |= 1 << i;
+                            break;
+                        }
                     }
                 }
 

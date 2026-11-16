@@ -49,6 +49,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null; // observación 5 de la prueba r2b: algunos tests miran las placas de la 1.0
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
@@ -285,6 +286,9 @@ namespace AF.Tests.PlayMode
             // quedan tantos; las demás se funden con el giro, sin punto, y vuelven, en su sitio, con la vista de siempre. Con los
             // datos de 1-700 (mundos 1-9): max 10 (mundo 2) → 3, 4 y 5; max 58 (mundo 3) → 4, 5 y 6; max 300 (mundo 7) → 8 y 9;
             // max 560 (mundo 9) → ninguna.
+            // Observación 5 de la prueba r2b de la 1.1: con el Mapa v2 sale solo la placa del mundo siguiente
+            // (RiverMapScreen.LiveFutureWorldPlates; MapRound2bTests); esta regla de una placa por mundo futuro es la de la 1.0.
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
             yield return MapMarkersTests.OpenApp(11);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -1240,6 +1244,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null; // observación 5 de la prueba r2b: algunos tests miran las placas de la 1.0
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();

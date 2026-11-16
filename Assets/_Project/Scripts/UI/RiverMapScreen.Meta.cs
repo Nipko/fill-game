@@ -309,10 +309,11 @@ namespace AF.UI
         private static readonly Vector3[] s_prizeCorners = new Vector3[4];
 
         // La píldora con pivot y at sobre la mini cuia (en mv, coordenadas del visor) pisaría «Andes ↑». Sin asignaciones.
+        // Observación 4 de la prueba r2b de la 1.1: con el Mapa v2, también la ventanita de casa («Casa · a unos 3.170 km», fija abajo a
+        // la izquierda), con su retrato y su píldora, como las placas de mundo (PlateFit): la píldora del premio no queda debajo.
         private bool PrizePillHitsAndes(Vector2 mv, RectTransform marker, Vector2 pivot, Vector2 at)
         {
-            TextMeshProUGUI? andes = AndesLabel;
-            if (_prizePill == null || andes == null || !andes.gameObject.activeInHierarchy || andes.text.Length == 0)
+            if (_prizePill == null)
             {
                 return false;
             }
@@ -321,11 +322,32 @@ namespace AF.UI
             Vector2 size = _prizePill.sizeDelta * k;
             Vector2 p = mv + (at * k);
             var pill = new Rect(p.x - (pivot.x * size.x), p.y - (pivot.y * size.y), size.x, size.y);
-            andes.rectTransform.GetWorldCorners(s_prizeCorners);
+            TextMeshProUGUI? andes = AndesLabel;
+            if (andes != null && andes.gameObject.activeInHierarchy && andes.text.Length > 0 && pill.Overlaps(ViewportBox(andes.rectTransform)))
+            {
+                return true;
+            }
+
+            HomeWindow? home = _homeWindow;
+            if (_live && home != null && home.Visible)
+            {
+                if (pill.Overlaps(Grow(ViewportBox(home.Root), HomeWindowGapDp))
+                    || (home.PillRect.gameObject.activeInHierarchy && pill.Overlaps(Grow(ViewportBox(home.PillRect), HomeWindowGapDp))))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // La caja de rt en las coordenadas del visor. Sin asignaciones.
+        private Rect ViewportBox(RectTransform rt)
+        {
+            rt.GetWorldCorners(s_prizeCorners);
             Vector2 a = _viewport.InverseTransformPoint(s_prizeCorners[0]);
             Vector2 b = _viewport.InverseTransformPoint(s_prizeCorners[2]);
-            Rect r = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
-            return pill.Overlaps(r);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
         }
 
         // La píldora con pivot y at sobre la mini cuia (en mv, coordenadas del visor) se saldría por un lado de la vista.

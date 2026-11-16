@@ -47,6 +47,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null; // observación 5 de la prueba r2b: algunos tests miran las placas de la 1.0
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -633,6 +634,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator FutureWorlds_HaveTheirSilhouette_WithMapNextWorld()
         {
+            // Observación 5 de la prueba r2b de la 1.1: con el Mapa v2 sale solo la placa del mundo siguiente
+            // (RiverMapScreen.LiveFutureWorldPlates; MapRound2bTests); esta regla de una placa por mundo futuro es la de la 1.0.
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
             yield return OpenApp(59);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;

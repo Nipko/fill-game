@@ -70,6 +70,13 @@ namespace AF.UI
         // Sitios que prueba el rótulo de una parada: los cuatro lados de su mini cuia, pegados y dos pasos más allá [P].
         private const int StopLabelSpots = 12;
 
+        /// <summary>
+        /// Lo más lejos que va el rótulo de la parada siguiente de su mini cuia (hueco entre las dos cajas, dp) [P] (observación 6 de la
+        /// prueba r2b de la 1.1: en el 451, «Orillas de Rurrenabaque · faltan 9 niveles» quedaba lejos de su parada): el sitio pegado o
+        /// un paso más allá; si no cabe ahí, la placa de respaldo.
+        /// </summary>
+        public const float StopLabelNearDp = 48f;
+
         private readonly MapTownArt _townArt = new MapTownArt();
         private readonly List<TownMarker> _townMarkers = new List<TownMarker>();
         private readonly List<Rect> _townPlaced = new List<Rect>();
@@ -717,6 +724,16 @@ namespace AF.UI
                 StopMarker m = _markers[i];
                 if (!m.Root.gameObject.activeSelf)
                 {
+                    continue;
+                }
+
+                if (m.Buoy != null && m.Buoy.enabled && m.HasLeader)
+                {
+                    // Observación 6 de la prueba r2b de la 1.1 [P]: una parada futura (más allá de la siguiente) que el abanico apartó
+                    // de su punto no sale, ni su línea fina: donde se amontonan (Bolivia), cargaban el Mapa sin decir nada aún.
+                    m.Root.gameObject.SetActive(false);
+                    _cuiaYielded[i] = true;
+                    any = true;
                     continue;
                 }
 
@@ -1651,7 +1668,10 @@ namespace AF.UI
             bool prizeHere = _prizeMarker == i && _prizePill != null && _prizePill.gameObject.activeSelf;
             var below = new Vector2(0f, -(ch * 0.5f) - (size.y * 0.5f) - 2f);
             float side = (cw * 0.5f) + BasketBadgeDp + (size.x * 0.5f) + 2f; // más allá de la cestita de la esquina
-            for (int k = 0; k < StopLabelSpots; k++)
+            // Observación 6 de la prueba r2b de la 1.1: con el Mapa v2, el rótulo de la parada siguiente («Faltan N») va pegado o un paso
+            // más allá (StopLabelNearDp), nunca dos: si no, debajo y, si va en abanico, la placa de respaldo.
+            int spots = _live && _markers[i].N == RemainingStopN() ? 8 : StopLabelSpots;
+            for (int k = 0; k < spots; k++)
             {
                 // De cerca a lejos: debajo, encima, a la derecha y a la izquierda; y después lo mismo un paso más allá (en un abanico,
                 // las vecinas ocupan los cuatro sitios pegados).

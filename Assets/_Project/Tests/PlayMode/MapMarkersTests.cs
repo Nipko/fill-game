@@ -255,8 +255,10 @@ namespace AF.Tests.PlayMode
             Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
             Assert.That(map.GuideId, Is.EqualTo(RiverJourney.GuideBufeo));
             Assert.That(map.GuideImage!.sprite, Is.SameAs(map.Art.MapBufeo));
-            Assert.That(map.CanoeFlagCount, Is.EqualTo(5));
-            Assert.That(map.CanoeFlag(0) + map.CanoeFlag(1) + map.CanoeFlag(2) + map.CanoeFlag(3) + map.CanoeFlag(4), Is.EqualTo("BRCOPEECBO"),
+            // Con el Mapa v2, las 3 más recientes de BR, CO, PE, EC y BO (observación 6 de la prueba r2b de la 1.1).
+            Assert.That(map.LiveActive, Is.True);
+            Assert.That(map.CanoeFlagCount, Is.EqualTo(RiverMapScreen.LiveMaxCanoeFlags));
+            Assert.That(map.CanoeFlag(0) + map.CanoeFlag(1) + map.CanoeFlag(2), Is.EqualTo("PEECBO"),
                 "Bolivia, la más reciente (el Perú vuelve arriba en el 310)");
         }
 

@@ -815,6 +815,12 @@ namespace AF.UI
             }
         }
 
+        /// <summary>La mini cuia <paramref name="i"/> (orden de <see cref="StopMarkerCount"/>) se pinta como boya (tests).</summary>
+        internal bool StopMarkerIsBuoyAt(int i)
+        {
+            return i >= 0 && i < _markerCount && _markers[i].Buoy != null && _markers[i].Buoy!.enabled;
+        }
+
         /// <summary>La parada <paramref name="n"/> se pinta como boya (tests).</summary>
         internal bool StopMarkerIsBuoy(int n)
         {

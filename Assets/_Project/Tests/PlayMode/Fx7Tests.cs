@@ -276,7 +276,8 @@ namespace AF.Tests.PlayMode
                 int plates = map.SilhouetteCount;
                 if (max == 58)
                 {
-                    Assert.That(plates, Is.GreaterThanOrEqualTo(2), "con 58, las placas de los mundos futuros (la del 5, Loreto)");
+                    // Con el Mapa v2, solo la del mundo siguiente (observación 5 de la prueba r2b de la 1.1).
+                    Assert.That(plates, Is.GreaterThanOrEqualTo(map.LiveActive ? RiverMapScreen.LiveFutureWorldPlates : 2), "con 58, las placas de los mundos futuros (la del 5, Loreto)");
                 }
 
                 AssertPlatesClear(map, plates, "max " + max + ", Cuenca");
