@@ -73,7 +73,7 @@ Está bien como está: pasar los efectos a Compressed In Memory ahorraría unos 
 ### 2.4 Heap gestionado y cachés
 
 - Lo medido el 2026-10-26 sigue: el arranque asigna 54-59 MB de basura y deja unos 19 MB vivos; con IL2CPP el heap reservado no baja, así que el pico del arranque se queda toda la sesión.
-- Cachés que no se vacían: ninguna grande. La intro de la marca suelta sus texturas al acabar (en el inicio no queda ninguna), el atlas de avatares se suelta al cerrar su pantalla, el pool del Reto al cerrarlo, y las del Mapa son 0,4 MiB.
+- Cachés que no se vacían: ninguna grande. La intro de la marca suelta sus texturas al acabar (en el inicio no queda ninguna), el atlas de avatares se suelta al cerrar su pantalla, el pool del Reto al cerrarlo, y las del Mapa son 0,4 MiB. Desde el 2026-11-16 (§10), tras la 1.ª apertura del Mapa v2 se queda además un búfer de reserva de 8 MiB para las aperturas siguientes.
 
 ## 3. Ajustes del reproductor Android y de URP
 
@@ -366,3 +366,37 @@ Con el ensayo de release y el `dev.apk` de esta rama, OpenGL ES 3, ART compilado
 5. **El heap gestionado** (`peak_mono_heap_mib` del `dev.apk`) tras el tutorial y el Mapa: el arranque pinta ≈ 40 % menos (§9.1), así que debería bajar de los 71,2.
 6. **`AF_ART home_scene`** al volver de un nivel (§9.2) y **`AF_ART procedural`** en el arranque.
 7. **La imagen:** el inicio, un nivel, el Mapa y los modales a 2 px/dp, para la revisión del dueño (§9.4).
+
+## 10. El heap gestionado del Mapa v2 por vueltas (rama `v11/memoria-mapa-heap`, 2026-11-16)
+
+Por la observación 2 de la prueba r2b de la 1.1 (`docs/dev/traspaso/pruebas-telefono-2026-11-16-1.1-r2b.md` §4): en el S23 Ultra, tres vueltas de abrir y cerrar el Mapa v2 desde la pausa del 67 dieron un PSS de 594,5 → 604,5 → 604,8 → 615,5 MB, con `map_after` limpio (texturas, renderers y vértices a 0, los mismos `obj_*`, `GL mtrack` fijo) y el salto de la 3.ª vuelta en el heap gestionado (`mono_heap_mib` 59,8 → 78,3). La 1.0 quedó estable (557,7 → 557,8 → 556,0).
+
+### 10.1 Lo medido en el Editor (escritorio x64)
+
+`MapMemoryCycleTests.Diagnose_ManagedHeapCycles` (manual: `scripts/unity-test.ps1 -Mode PlayMode -Architecture x86_64 -Filter 'AF.Tests.PlayMode.MapMemoryCycleTests.Diagnose_ManagedHeapCycles' -LogFile Logs/mapheap.log`, y `grep AF_MAPHEAP`), nivel 58, 360 × 780 dp: por vuelta, el heap usado que deja la llamada que abre el Mapa (`Profiler.GetMonoUsedSizeLong`, tras `GC.Collect`), lo que piden y lo que crean los lienzos del arte por código (`PixelBuffers`) y el heap usado tras `GC.Collect` al cerrar. Las vueltas 1-4 sueltan la reserva antes de abrir (como antes de este cambio); las 5-8 la usan.
+
+| Vuelta | Asigna al abrir (KiB) | Lienzos: piden / nuevos (KiB) | Usado tras GC frente a la 1.ª (KiB) |
+|---|---|---|---|
+| 1.ª de la sesión (sin reserva) | 14.924-17.500 | 17.732-19.242 / 12.356-13.294 | 0 |
+| 2.ª-4.ª, antes | 12.432-12.448 | 17.732 / **12.356** | +8 a +52 |
+| 5.ª-8.ª, con la reserva | **908-928** | 17.732 / **836** | +116 a +172 (≈ 25 por vuelta) |
+
+- **El heap usado vuelve**: no hay fuga del Mapa. Tras la 1.ª apertura se quedan ≈ 2,5-2,8 MiB de estructuras del Mapa (la geometría leída y la jerarquía, §9.3) y nada crece salvo unos 25 KiB por vuelta, que en los tests son las líneas de la sonda que guarda el registro de Unity Test Framework (≈ 5.600 caracteres de log por vuelta, con su pila); en el teléfono no se guardan. No se encontraron listas que crezcan, cachés estáticas, delegados sin quitar ni cadenas por apertura que expliquen otra cosa.
+- **Lo que sí pasaba: el pico de cada apertura.** Abrir el Mapa pedía al heap unos 12,4 MiB nuevos, casi todo búferes de lienzos de 16 bytes por píxel: el del atlas de los pueblos (1024 × 512, 8 MiB) y el del río vivo (512², 4 MiB) no se servían uno a otro porque se piden en ese orden (el de 4 MiB no cabe 8 MiB) y, al acabar de abrir, `EndPooling` los soltaba. Fuera del arranque nadie los reutilizaba: cada apertura pedía otros 12 MiB. En el Editor el heap (≈ 1,5 GiB) no se mueve, pero con IL2CPP y el GC incremental, una petición de 8 MiB que llega mientras no se ha recogido la basura de la vuelta anterior (o con el hueco libre partido) hace crecer el heap, que no se devuelve: es lo que se vio en el S23 en dos de las tres vueltas.
+- **El resto de la apertura** asigna ≈ 0,9 MiB (los lienzos pequeños, de menos de 128 × 128 px o de menos de 1/8 de la reserva, como los Andes y la tripulación, y lo demás de abrir): no compensa tocarlo.
+
+### 10.2 Lo aplicado
+
+- **La reserva del Mapa** (`PixelBuffers.EndPooling(true)` en `GameBootstrap.OpenMapPooled`): al acabar de abrir, el búfer libre más grande (el de los pueblos, 8 MiB) se queda de reserva en lugar de soltarse; la apertura siguiente lo presta (`BeginPooling`) y los lienzos grandes lo reutilizan uno tras otro (el río vivo, los primeros planos, Capi y los pueblos). Desde la 2.ª apertura, los lienzos crean **836 KiB** nuevos en vez de 12.356 y la apertura asigna **≈ 0,9 MiB** en vez de 12,4. Si el inicio repinta su escena (§9.2) con la reserva guardada, también la usa y la devuelve. `PixelBuffers.ReserveBytes` la cuenta; `PixelBuffers.ReleaseReserve` la suelta, y lo hace solo `Application.lowMemory`.
+- **Decisión [P]: guardar 8 MiB de heap gestionado de por vida tras la 1.ª apertura del Mapa.** Con IL2CPP el heap no se devuelve: tras la 1.ª apertura esos 8 MiB ya están reservados en el heap y, en el teléfono, sus páginas ya cuentan en el PSS, así que la reserva no suma PSS frente a hoy; a cambio, quita el crecimiento por vueltas (+10 MB en la 1.ª y en la 3.ª en el S23). La alternativa, forzar `GC.Collect` antes de abrir, cuesta una pausa entera del GC en cada apertura y no evita que un hueco de 8 MiB se parta con objetos pequeños; la de pintar los lienzos en `Color32` (4 bytes por píxel) cambiaría el resultado de las mezclas (otra tarea, con capturas). Con el Mapa sin abrir en la sesión no hay reserva.
+- **Test** (`MapMemoryCycleTests.ThreeRounds_TheManagedHeapUsedAfterGc_DoesNotGrow_AndTheBigBuffersAreReused`, PlayMode): tres vueltas; la reserva es el búfer de los pueblos (8 MiB) y no crece; desde la 2.ª, menos de 1,5 MiB de búferes nuevos; ningún búfer libre fuera de la reserva; el heap usado tras GC de la 3.ª, a ≤ 512 KiB del de la 1.ª (medido: ≈ 30-50 KiB). Medido en ese test: 12.356 → 836 → 836 KiB nuevos.
+- **Lo que no cambia:** la retención de la jerarquía y de la geometría (§9.3), `GL mtrack` (el lado gráfico, que la r2b vio fijo) y los ≈ 50 MB que el v2 suma frente a la 1.0 tras la 1.ª apertura (≈ 23,5 MB de `os_graphics_mib`, el resto del heap y nativo: la decisión de D-060 sigue abierta).
+
+### 10.3 Lo que tiene que medir el teléfono
+
+Con el `dev.apk` de esta rama, el guion de la r2b (§4: `pm clear`, `--ei af_mem_os 1 --ei af_max_level 66`, la base y cada vuelta en el nivel 67, pausa › «Mapa» y atrás, un minuto quieto, `dumpsys meminfo -d`), mejor **cinco vueltas** que tres:
+
+1. **`mono_heap_mib`** de `map_after` en cada vuelta: puede subir en la 1.ª (la reserva y las estructuras del Mapa), pero **no después** (criterio: ±1 MB de la 1.ª en la 2.ª-5.ª).
+2. **TOTAL PSS** tras cada vuelta: a ±3 MB de la 1.ª en la 2.ª-5.ª (el criterio de D-069). Se espera la subida de la 1.ª vuelta (≈ +10 MB) y luego plano.
+3. **`GL mtrack`** y `os_graphics_mib`, como en la r2b (fijos).
+4. Lo mismo con la 1.0 (`--ez af_map_v1 true`) como referencia: con la 1.0 no se pintan el río vivo, los pueblos, Capi ni la tripulación, así que la reserva queda pequeña o no existe.

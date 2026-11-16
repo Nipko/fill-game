@@ -25,6 +25,7 @@ namespace AF.UI
         /// <summary>Tiempo tras cerrar el Mapa tras el que sale <c>map_after</c>.</summary>
         public const float MapAfterMs = 2000f;
 
+        private static bool s_lowMemoryHooked;
         private int _mapOpens;
         private float _mapMemMs = -1f;
         private bool _mapMemOpen;
@@ -37,8 +38,21 @@ namespace AF.UI
         /// abre, cada lienzo reutiliza el búfer del anterior si le sirve, y al acabar se sueltan todos (ninguno queda vivo con el Mapa
         /// abierto ni cerrado). Si ya se estaban guardando (el arranque), no lo toca.
         /// </summary>
+        /// <remarks>
+        /// Observación 2 de la prueba r2b de la 1.1 (<c>docs/dev/memoria.md</c> §10): aun así, cada apertura pedía al heap unos 12 MiB
+        /// de búferes nuevos (el atlas de los pueblos, 8 MiB, y el del río vivo, 4 MiB, no se reutilizaban entre sí), y con el GC
+        /// incremental de IL2CPP el heap crecía en algunas vueltas (<c>mono_heap_mib</c> 59,8 → 78,3 en el S23). Ahora, al acabar de
+        /// abrir, el búfer más grande se queda de reserva (<see cref="PixelBuffers.EndPooling(bool)"/>) y la apertura siguiente lo
+        /// reutiliza: desde la 2.ª, el Mapa no pide búferes grandes nuevos. La reserva se suelta si el sistema avisa de memoria baja.
+        /// </remarks>
         private void OpenMapPooled(RiverMapScreen map, MapOpenSource source, RiverStopCatalog stops, IProgressStore progress, int play, bool playAvailable)
         {
+            if (!s_lowMemoryHooked)
+            {
+                s_lowMemoryHooked = true;
+                UnityEngine.Application.lowMemory += PixelBuffers.ReleaseReserve;
+            }
+
             bool pool = !PixelBuffers.Pooling;
             if (pool)
             {
@@ -53,7 +67,7 @@ namespace AF.UI
             {
                 if (pool)
                 {
-                    PixelBuffers.EndPooling();
+                    PixelBuffers.EndPooling(true);
                 }
             }
         }

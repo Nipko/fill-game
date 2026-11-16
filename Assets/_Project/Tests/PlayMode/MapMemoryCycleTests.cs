@@ -164,8 +164,66 @@ namespace AF.Tests.PlayMode
             Assert.That(PixelBuffers.Reused - reused, Is.GreaterThan(0), "los lienzos del Mapa reutilizan búferes mientras se abre");
             Assert.That(freshOpen, Is.LessThan(askedOpen));
             Assert.That(PixelBuffers.Pooling, Is.False, "al acabar de abrir ya no se guardan");
-            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L), "ningún búfer queda vivo");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L), "ningún búfer libre queda vivo, fuera de la reserva");
+            Assert.That(PixelBuffers.ReserveBytes, Is.GreaterThan(0L), "el más grande se queda de reserva para la apertura siguiente (§10)");
             Assert.That(boot.CloseRiverMap(), Is.True);
+        }
+
+        /// <summary>
+        /// Observación 2 de la prueba r2b de la 1.1 (<c>docs/dev/memoria.md</c> §10): en el teléfono, <c>mono_heap_mib</c> subía con
+        /// las vueltas del Mapa v2 porque cada apertura pedía al heap unos 12 MiB de búferes nuevos. Con la reserva, desde la 2.ª
+        /// apertura los lienzos piden menos de 1,5 MiB nuevos (medido: 836 KiB, antes 12.356), la reserva no crece y el heap usado
+        /// tras <c>GC.Collect</c> no pasa de <see cref="MaxUsedGrowthKib"/> por encima de la 1.ª vuelta en la 3.ª (medido en el
+        /// Editor: unos 25 KiB por vuelta, las líneas de la sonda que guarda el registro de los tests).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThreeRounds_TheManagedHeapUsedAfterGc_DoesNotGrow_AndTheBigBuffersAreReused()
+        {
+            yield return LoadAt(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PixelBuffers.ReleaseReserve(); // como en una sesión nueva: la 1.ª apertura la crea
+            long firstUsed = 0;
+            long reserve = 0;
+            for (int round = 1; round <= 3; round++)
+            {
+                long fresh = PixelBuffers.NewBytes;
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+                long freshOpen = PixelBuffers.NewBytes - fresh;
+                yield return Frames(10);
+                Map(boot).ViewBasinButton.onClick.Invoke();
+                yield return Frames(3);
+                Map(boot).ViewWorldButton.onClick.Invoke();
+                yield return Frames(3);
+                Assert.That(boot.CloseRiverMap(), Is.True);
+                yield return Frames(5);
+                long used = UsedAfterGc();
+                Debug.Log("AF_MAPHEAP {\"round\":" + round.ToString(CultureInfo.InvariantCulture) + ",\"canvas_new_kib\":"
+                    + (freshOpen / KiB).ToString(CultureInfo.InvariantCulture) + ",\"used_after_gc_mib\":" + Mib(used) + "}");
+                if (round == 1)
+                {
+                    firstUsed = used;
+                    reserve = PixelBuffers.ReserveBytes;
+                    Assert.That(reserve, Is.EqualTo((long)MapTownArt.AtlasWidthPx * MapTownArt.AtlasHeightPx * 16L),
+                        "se queda de reserva el búfer más grande de la apertura: el del atlas de los pueblos (8 MiB)");
+                    continue;
+                }
+
+                Assert.That(freshOpen, Is.LessThan(1536L * KiB), "vuelta " + round + ": los lienzos grandes reutilizan la reserva");
+                Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(reserve), "vuelta " + round + ": la reserva vuelve y no crece");
+                Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L), "vuelta " + round + ": fuera de la reserva, ningún búfer libre");
+                Assert.That(used - firstUsed, Is.LessThanOrEqualTo(MaxUsedGrowthKib * KiB), "vuelta " + round + ": el heap usado tras GC no crece");
+            }
+
+            PixelBuffers.ReleaseReserve();
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(0L), "con memoria baja se suelta");
+        }
+
+        /// <summary>Tope del crecimiento del heap usado tras GC entre la 1.ª y la 3.ª vuelta (KiB; medido: ≈ 50).</summary>
+        private const long MaxUsedGrowthKib = 512;
+
+        private static RiverMapScreen Map(GameBootstrap boot)
+        {
+            return boot.RiverMapView!;
         }
 
         [UnityTest]
@@ -344,6 +402,75 @@ namespace AF.Tests.PlayMode
                     + ",\"shared_ui_mesh_verts\":" + sharedVerts.ToString(inv) + ",\"shared_ui_mesh_kib\":" + (sharedBytes / KiB).ToString(inv)
                     + ",\"native_alloc_mib\":" + (Profiler.GetTotalAllocatedMemoryLong() / (1024.0 * 1024.0)).ToString("F1", inv) + "}");
             }
+        }
+
+        /// <summary>
+        /// Diagnóstico manual del heap gestionado (observación 2 de la prueba r2b de la 1.1: <c>mono_heap_mib</c> sube con las vueltas
+        /// del Mapa v2 en el teléfono). Por vuelta, una línea <c>AF_MAPHEAP</c> con lo que asigna la apertura (la llamada y los
+        /// fotogramas hasta cerrar), lo que piden los lienzos del arte por código y el heap usado tras <c>GC.Collect</c>.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Diagnóstico manual del heap gestionado del Mapa (docs/dev/memoria.md §10).")]
+        public IEnumerator Diagnose_ManagedHeapCycles()
+        {
+            yield return LoadAt(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            yield return Frames(10);
+            CultureInfo inv = CultureInfo.InvariantCulture;
+            long baseUsed = UsedAfterGc();
+            Debug.Log("AF_MAPHEAP {\"round\":0,\"used_after_gc_mib\":" + Mib(baseUsed) + ",\"mono_heap_mib\":" + Mib(Profiler.GetMonoHeapSizeLong()) + "}");
+            // Vueltas 1-4 sin reserva (como antes de §10: se suelta antes de cada apertura); 5-8, con ella.
+            long logChars = 0;
+            Application.LogCallback count = (c, st, t) => logChars += c.Length + st.Length;
+            Application.logMessageReceived += count;
+            for (int round = 1; round <= 8; round++)
+            {
+                logChars = 0;
+                bool reserve = round > 4;
+                if (!reserve)
+                {
+                    PixelBuffers.ReleaseReserve();
+                }
+
+                UsedAfterGc();
+                long used0 = Profiler.GetMonoUsedSizeLong();
+                long canvas0 = PixelBuffers.CanvasBytes;
+                long fresh0 = PixelBuffers.NewBytes;
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+                long callAlloc = Profiler.GetMonoUsedSizeLong() - used0;
+                yield return Frames(20);
+                boot.RiverMapView!.ViewBasinButton.onClick.Invoke();
+                yield return Frames(5);
+                boot.RiverMapView!.ViewWorldButton.onClick.Invoke();
+                yield return Frames(5);
+                Assert.That(boot.CloseRiverMap(), Is.True);
+                yield return Frames(10);
+                long used = UsedAfterGc();
+                Debug.Log("AF_MAPHEAP {\"round\":" + round.ToString(inv) + ",\"reserve\":" + (reserve ? "true" : "false")
+                    + ",\"open_call_used_delta_kib\":" + (callAlloc / KiB).ToString(inv)
+                    + ",\"canvas_asked_kib\":" + ((PixelBuffers.CanvasBytes - canvas0) / KiB).ToString(inv)
+                    + ",\"canvas_new_kib\":" + ((PixelBuffers.NewBytes - fresh0) / KiB).ToString(inv)
+                    + ",\"reserve_kib\":" + (PixelBuffers.ReserveBytes / KiB).ToString(inv)
+                    + ",\"used_after_gc_mib\":" + Mib(used)
+                    + ",\"used_vs_base_kib\":" + ((used - baseUsed) / KiB).ToString(inv)
+                    + ",\"log_chars\":" + logChars.ToString(inv)
+                    + ",\"mono_heap_mib\":" + Mib(Profiler.GetMonoHeapSizeLong()) + "}");
+            }
+
+            Application.logMessageReceived -= count;
+        }
+
+        private static long UsedAfterGc()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            return GC.GetTotalMemory(true);
+        }
+
+        private static string Mib(long bytes)
+        {
+            return (bytes / 1048576.0).ToString("0.00", CultureInfo.InvariantCulture);
         }
 
         private static double Ms(long start)
