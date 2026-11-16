@@ -54,7 +54,8 @@ namespace AF.UI
         /// banner de mundo (<see cref="OnWorldBannerTapped"/>: completa el viaje o empieza la salida) o la tarjeta previa
         /// (<see cref="OnLevelCardTapped"/>: la de Difícil y Muy difícil, el estreno, la racha o las canoas). Si la vista no
         /// enseña ninguna de las dos, el toque va directo al flujo (<see cref="LevelFlow.DismissLevelCard"/>), como
-        /// <c>TapAnywhere</c>. Devuelve qué se tocó (<c>world_banner</c> o <c>level_card</c>) o null si el toque no hizo nada
+        /// <c>TapAnywhere</c>. Devuelve qué se tocó (<c>world_banner_travel</c> si el toque solo completó el viaje de mundo,
+        /// <c>world_banner</c> o <c>level_card</c>) o null si el toque no hizo nada
         /// (el banner aún espera su arte o ya está saliendo).
         /// </summary>
         internal string? CaptureTapCard(LevelFlow flow)
@@ -71,7 +72,13 @@ namespace AF.UI
                     return null; // aún espera su arte: ningún toque lo cierra
                 }
 
+                bool travel = _worldBanner.TravelRunning;
                 OnWorldBannerTapped();
+                if (travel)
+                {
+                    return "world_banner_travel"; // el toque solo completa el viaje: el banner sigue, y el siguiente lo cierra
+                }
+
                 return "world_banner";
             }
 

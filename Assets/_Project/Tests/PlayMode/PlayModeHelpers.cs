@@ -539,8 +539,11 @@ namespace AF.Tests.PlayMode
                 new MemoryProgressStore(level, level - 1));
         }
 
-        /// <summary>Paquete <c>af-level/1</c> (subconjunto de v0) de un solo nivel con capacidad 4.</summary>
-        public static string BoardPack(int world, string worldId, string water, int level, string[] palette, int[][] board)
+        /// <summary>
+        /// Paquete <c>af-level/1</c> (subconjunto de v0) de un solo nivel con capacidad 4; con <paramref name="label"/>
+        /// (<c>normal</c>, <c>hard</c> o <c>very_hard</c>), su <c>difficulty.label</c>.
+        /// </summary>
+        public static string BoardPack(int world, string worldId, string water, int level, string[] palette, int[][] board, string? label = null)
         {
             var cuias = new System.Text.StringBuilder();
             var caps = new System.Text.StringBuilder();
@@ -565,7 +568,8 @@ namespace AF.Tests.PlayMode
                 + ", \"world_id\": \"" + worldId + "\", \"lap\": 1, \"water_base\": \"" + water + "\", \"levels\": [ { \"id\": \"" + id + "\", "
                 + "\"level\": " + level + ", \"world\": " + world + ", \"lap\": 1, \"water_base\": \"" + water + "\", \"palette\": [\""
                 + string.Join("\", \"", palette) + "\"], \"units_per_color\": 4, \"caps\": [" + caps + "], \"cuias\": [" + cuias + "], \"attrs\": ["
-                + attrs + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
+                + attrs + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1"
+                + (label == null ? string.Empty : ", \"label\": \"" + label + "\"") + " }, \"relief\": [] } ] }";
         }
 
         /// <summary>Paso fijo del reloj manual (≈60 fps, 08 §5.4).</summary>
