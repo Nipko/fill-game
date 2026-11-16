@@ -4598,6 +4598,35 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - Queda fuera la vista Cuenca, que sigue dibujada con polilíneas de esquinas, y es una decisión aparte.
 - **Observación 3 del Moto G23, el juego automático de captura.** Con `af_capture_autoplay`, el banner de mundo y la tarjeta previa se cierran solos tras 2.500 ms de lectura [P], como un toque. Solo pasa en builds de desarrollo y en el modo de captura; el jugador no nota ningún cambio.
 
+### D-069, añadido del 2026-11-16: arreglos de la prueba r2b (Spark, S23 Ultra y S25 Ultra)
+
+- **Origen:** observaciones 1-7 de `docs/dev/traspaso/pruebas-telefono-2026-11-16-1.1-r2b.md`. Ramas `v11/mapa-r2b-arreglos` y `v11/memoria-mapa-heap`.
+- **Obs. 1, el compañero que se une no se veía.**
+  - **Causa:** el Mapa del 10 que se abre solo desde el inicio, en la vista Cuenca, gastaba la presentación sin enseñarla.
+  - **Arreglo:** la presentación espera a que acabe la secuencia del 10. Luego el Mapa pasa a la vista Mundo y presenta al compañero con su primer plano. En la Cuenca elegida por el jugador se presenta en esa vista.
+  - Si se cierra el Mapa del 10 sin verla, lo visto se anota solo hasta el nivel anterior al compañero (20 el tucán, 50 el tucuxi), para que la siguiente apertura la presente.
+  - Al volver de segundo plano, el compañero sigue a bordo sin animar, como dice M2-4 y 02 §14.
+  - La victoria del 51 trae la Bitácora y no «Ver mapa»: es lo previsto, porque solo las victorias de los niveles 10k traen «Ver mapa».
+- **Obs. 2, la memoria del Mapa v2.**
+  - **Diagnóstico:** no es una fuga. El heap usado vuelve a su nivel en cada vuelta. Lo que crecía era el heap reservado, por los 12 MiB de búferes que pedía cada apertura.
+  - **Arreglo:** el búfer grande (8 MiB) queda de reserva entre aperturas, y se suelta con `Application.lowMemory`.
+  - **[P] del integrador:** se aceptan esos 8 MiB vivos tras la 1.ª apertura, porque el heap de IL2CPP no se devuelve y no suman frente a hoy. Se confirma en el teléfono (`memoria.md` §10.3).
+- **Obs. 3-6, el Mapa más limpio.** Todas son [P] del integrador:
+  - las boyas no se dibujan sobre los rótulos ni sobre las placas;
+  - la píldora del Premio esquiva la ventanita de casa;
+  - con el v2, solo sale la placa del mundo siguiente (`LiveFutureWorldPlates` = 1); la 1.0 sigue con una por mundo futuro;
+  - el mástil lleva como mucho las 3 banderas más recientes;
+  - las paradas futuras que el abanico aparta de su sitio no salen (salvo la del Premio del mundo), ni su cestita ni su línea;
+  - el rótulo de la parada siguiente va pegado a su mini cuia, como mucho a dos anillos de sitios (unos 48 dp). Esto suma al conjunto de aperturas con el zoom alejado del añadido del 2026-11-09 las de 302, 352, 447, 542, 547, 622 y 677. La placa de respaldo sigue solo en 452 y 457;
+  - durante el primer plano de la tripulación y el acercamiento de llegada, los rótulos, las placas y la píldora se apagan del todo. Antes se desvanecían y quedaban ampliados (corrige el desvanecido del añadido del 2026-11-08, obs. 8).
+- **Obs. 7:** la Bitácora escribe `AF_LAYOUT logbook`, para las pruebas automáticas.
+- **Obs. 8, la pregunta de Spark:** que el consentimiento se vuelva a pedir al cambiar el país legal (de `default` a `co_1581`) es lo previsto: D-057, Q-B12-15.
+- **Por mirar en el teléfono:**
+  - el compañero por las tres rutas;
+  - el Mapa de Bolivia;
+  - las paradas futuras con rótulo que el abanico sigue ocultando;
+  - la memoria con cinco vueltas.
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
