@@ -68,7 +68,7 @@ namespace AF.Presentation
             PixelCanvas pc = PaintSkinThumb(s, SkinPreviewPixelsPerU);
             Texture2D tex = pc.ToTexture(SkinPreviewPrefix + s.Id);
             pc.Release();
-            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f * UiPxPerDp, 0, SpriteMeshType.FullRect, Vector4.zero);
+            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f * MaxUiPxPerDp, 0, SpriteMeshType.FullRect, Vector4.zero);
             sprite.name = SkinPreviewPrefix + s.Id;
             sprite.hideFlags = HideFlags.DontSave;
             _skinPreview = sprite;
@@ -107,12 +107,12 @@ namespace AF.Presentation
         // luz arriba a la izquierda (07 §1.1).
         private Sprite BuildIconStall()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(StallWidthDp * k);
             int h = Mathf.RoundToInt(StallHeightDp * k);
             var pc = new PixelCanvas(w, h);
             Color ink = Palette.Groove;
-            const float o = 1.2f * k; // contorno (px)
+            float o = 1.2f * k; // contorno (px)
 
             // Postes.
             pc.FillRoundedRect(6f * k - o, 10f * k, 8.6f * k + o, 23f * k, 1f * k, ink);
@@ -176,7 +176,7 @@ namespace AF.Presentation
         // brillo y el mango en diagonal hacia abajo a la derecha, en tinta.
         private Sprite BuildIconZoom()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int n = Mathf.RoundToInt(ZoomDp * k);
             var pc = new PixelCanvas(n, n);
             float c = ZoomDp * 0.5f * k;
@@ -194,7 +194,7 @@ namespace AF.Presentation
 
         private static void DrawStallFruit(PixelCanvas pc, float cxDp, float cyDp, float rDp, Color color, float outlinePx)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             pc.FillCircle(cxDp * k, cyDp * k, (rDp * k) + outlinePx, Palette.Groove);
             Color body = color;
             body.a = 1f;

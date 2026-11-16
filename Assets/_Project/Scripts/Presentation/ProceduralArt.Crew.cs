@@ -141,7 +141,7 @@ namespace AF.Presentation
         /// </summary>
         internal static void PaintCrewAtlas(PixelCanvas pc, FaunaPalette? monkey)
         {
-            const float k = UiPxPerDp;
+            const float k = MaxUiPxPerDp;
             PaintToucanBody(pc, CrewCells[(int)CrewPiece.ToucanBody], k);
             PaintToucanBeak(pc, CrewCells[(int)CrewPiece.ToucanBeakUpper], k, true);
             PaintToucanBeak(pc, CrewCells[(int)CrewPiece.ToucanBeakLower], k, false);

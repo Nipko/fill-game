@@ -137,7 +137,7 @@ namespace AF.UI
             rt.anchorMax = Vector2.zero;
             rt.pivot = ProceduralArt.CrewPivot(piece);
             RectInt c = ProceduralArt.CrewCell(piece);
-            rt.sizeDelta = new Vector2(c.width / ProceduralArt.UiPxPerDp, c.height / ProceduralArt.UiPxPerDp);
+            rt.sizeDelta = new Vector2(c.width / ProceduralArt.MaxUiPxPerDp, c.height / ProceduralArt.MaxUiPxPerDp);
             return img;
         }
     }

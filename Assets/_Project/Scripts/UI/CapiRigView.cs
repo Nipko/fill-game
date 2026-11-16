@@ -31,7 +31,7 @@ namespace AF.UI
         /// <summary>Dónde nace el rabito de la burbuja, sobre la cabeza (dp de diseño).</summary>
         public static readonly Vector2 BubbleAt = new Vector2(37f, 35f);
 
-        private const float Px = ProceduralArt.UiPxPerDp;
+        private const float Px = ProceduralArt.MaxUiPxPerDp;
         private static readonly Vector2 SampleFrom = new Vector2(47f, 20f);
         private static readonly Vector2 SampleTo = new Vector2(12f, 21f);
         private static readonly Vector2 StowedAt = new Vector2(33f, 17f);

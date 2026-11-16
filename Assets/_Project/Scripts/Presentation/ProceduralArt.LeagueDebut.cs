@@ -87,7 +87,7 @@ namespace AF.Presentation
 
         private Sprite BuildLeagueEmblem()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = LeagueEmblemDp;
             int s = Mathf.RoundToInt(size * k);
             var pc = new PixelCanvas(s, s);

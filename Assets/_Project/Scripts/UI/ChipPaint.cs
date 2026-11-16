@@ -14,7 +14,7 @@ namespace AF.UI
     internal static class ChipPaint
     {
         /// <summary>Píxeles por dp de los sprites de UI.</summary>
-        public const float PxPerDp = ProceduralArt.UiPxPerDp;
+        public static float PxPerDp => ProceduralArt.UiPxPerDp;
 
         /// <summary>Cobertura de antialias para una distancia con signo en píxeles (negativa dentro).</summary>
         public static float Coverage(float signedDistancePx)

@@ -99,7 +99,7 @@ namespace AF.Presentation
         // de la pieza del rig) a 19 dp de radio, centrada en (28, 30) dp. Todo en unidades de la cabeza (la celda de 128).
         private Sprite BuildSlothPortrait(bool eyesClosed)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = SlothPortraitDp;
             int s = Mathf.RoundToInt(size * k);
             var pc = new PixelCanvas(s, s);

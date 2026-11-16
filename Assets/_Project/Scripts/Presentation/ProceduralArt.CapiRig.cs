@@ -123,7 +123,7 @@ namespace AF.Presentation
         /// </summary>
         internal static void PaintCapiRigAtlas(PixelCanvas pc)
         {
-            const float k = UiPxPerDp;
+            const float k = MaxUiPxPerDp;
             Color ink = new Color(Palette.Groove.r, Palette.Groove.g, Palette.Groove.b, 0.85f);
             PaintRigHull(pc, CapiRigCells[(int)CapiRigPiece.Hull], k, ink);
 

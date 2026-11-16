@@ -1856,6 +1856,7 @@ namespace AF.UI
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _lobby.Seasons = Seasons; // la LUT de temporada del fondo del inicio, como el tablero (SE2)
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
+            _lobby.HomeSceneHeld = () => _splash != null; // la intro tiene la rama de TiTino: el arte propio del inicio no se suelta aún
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _mapScreen.A11y = _a11y; // D-053 (si el lector ya está; si no, lo pone SetUpA11y)
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
@@ -2466,9 +2467,12 @@ namespace AF.UI
 
         // El arte procedural se genera una vez por sesión y por agua base (guía visual v2, 8: la generación al arrancar
         // cuesta CPU): recargar la escena o pasar de nivel no lo repite. Vive mientras dure la app.
+        // Con el tope de densidad del teléfono (ArtDensityCap): una densidad distinta pinta otro arte.
         private static ProceduralArt SharedArt(string waterBase)
         {
-            string key = waterBase;
+            float cap = ArtDensityCap();
+            ProceduralArt.DensityCap = cap;
+            string key = waterBase + "@" + cap.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
             if (s_art == null || s_artKey != key)
             {
                 s_art?.Dispose();
@@ -2477,6 +2481,38 @@ namespace AF.UI
             }
 
             return s_art;
+        }
+
+        /// <summary>Solo tests: false pinta el arte a la densidad fija de antes (las capturas de antes y después). En el juego, true.</summary>
+        internal static bool ArtDensityCapEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Tope de densidad del arte por código para esta pantalla (<see cref="ProceduralArt.DensityCap"/>; <c>docs/dev/memoria.md</c>
+        /// §7.5, pregunta 1, opción (a), y D-060): la escala del lienzo (px por dp) con la densidad del teléfono, redondeada hacia
+        /// arriba a 0,05. Sin densidad conocida (el Editor sin pantalla simulada con densidad), 0: sin tope, el arte de siempre. En
+        /// el SM-S938B sale 3 (sin cambio); en clase A (720 × 1600 a 2 px/dp), 2.
+        /// </summary>
+        internal static float ArtDensityCap()
+        {
+            if (!ArtDensityCapEnabled)
+            {
+                return 0f;
+            }
+
+            float pxPerDp = GameScreen.ReadPxPerDp();
+            if (pxPerDp <= 0f)
+            {
+                return 0f;
+            }
+
+            GameScreen.ReadScreen(out int w, out int h, out Rect safe);
+            float scale = ScreenFrame.Compute(w, h, safe, pxPerDp).Scale;
+            if (!(scale >= 1f) || float.IsInfinity(scale))
+            {
+                return 0f; // una superficie aún sin medir: mejor sin tope que un arte borroso toda la sesión
+            }
+
+            return Mathf.Ceil(scale * 20f - 0.001f) / 20f;
         }
 
         private void OnApplicationQuit()
@@ -2683,6 +2719,7 @@ namespace AF.UI
             if (Current == this)
             {
                 Current = null;
+                ProceduralArt.DensityCap = 0f; // fuera de una escena del juego (los tests que pintan arte suelto), sin tope
             }
         }
 

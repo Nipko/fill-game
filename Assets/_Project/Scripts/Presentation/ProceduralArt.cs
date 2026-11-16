@@ -47,8 +47,39 @@ namespace AF.Presentation
         /// <summary>Alto de una fila del atlas de patrones: una dosis (1 u, dos teselas).</summary>
         public const int PatternRowPx = 2 * PatternTilePx;
 
-        /// <summary>Densidad de los sprites de UI (px por dp): la del SM-S938B (1080 px / 360 dp).</summary>
-        public const float UiPxPerDp = 3f;
+        /// <summary>
+        /// Densidad de diseño de los sprites de UI (px por dp): la del SM-S938B (1080 px / 360 dp). Sin tope (<see cref="DensityCap"/>),
+        /// la de <see cref="UiPxPerDp"/>. Los atlas de tamaño fijo en px (la fauna, las frutas en vuelo, el rig de Capi y la
+        /// tripulación del Mapa, los glifos de las Aguas turbias, la cuia del Mercado en grande) se quedan a esta densidad.
+        /// </summary>
+        public const float MaxUiPxPerDp = 3f;
+
+        private static float s_densityCap;
+
+        /// <summary>
+        /// Tope de densidad del arte por código (px por dp del lienzo; ≤ 0, sin tope): la del teléfono, que pone
+        /// <c>GameBootstrap</c> antes de crear el arte (<c>docs/dev/memoria.md</c> §7.5, pregunta 1, opción (a), y D-060). Con un tope
+        /// por debajo de la densidad fija de una pieza (3 px/dp la UI y el follaje, 2,25 el panorama y el muelle, 1,5 las superficies
+        /// de los modales), la pieza se pinta a la del teléfono: en clase A (720 × 1600 a 2 px/dp) el píxel del arte es el de la
+        /// pantalla en lugar de reducirse al dibujarse, y la textura ocupa (2 / 3)² ≈ 44 % de la de 3 px/dp. En el SM-S938B
+        /// (3 px/dp de lienzo) no cambia nada. Se lee al pintar cada pieza: no se cambia con arte vivo (el arranque lo fija antes
+        /// de <c>new ProceduralArt</c> y la clave del arte compartido lo lleva).
+        /// </summary>
+        public static float DensityCap
+        {
+            get => s_densityCap;
+            set => s_densityCap = value > 0f && !float.IsInfinity(value) && !float.IsNaN(value) ? value : 0f;
+        }
+
+        /// <summary>La densidad <paramref name="pxPerDp"/> de una pieza con el tope de <see cref="DensityCap"/>.</summary>
+        public static float Capped(float pxPerDp)
+        {
+            float cap = s_densityCap;
+            return cap > 0f && cap < pxPerDp ? cap : pxPerDp;
+        }
+
+        /// <summary>Densidad de los sprites de UI (px por dp): <see cref="MaxUiPxPerDp"/> con el tope del teléfono (<see cref="DensityCap"/>).</summary>
+        public static float UiPxPerDp => Capped(MaxUiPxPerDp);
 
         private readonly List<UnityEngine.Object> _owned = new List<UnityEngine.Object>();
         private readonly Dictionary<int, Sprite> _cuiaBack = new Dictionary<int, Sprite>();
@@ -94,7 +125,7 @@ namespace AF.Presentation
         public Font Font { get; }
 
         /// <summary>Escala del lienzo (px de pantalla por dp), para hornear el vidrio a la densidad real (guía 4.1).</summary>
-        public float ScreenScale { get; set; } = UiPxPerDp;
+        public float ScreenScale { get; set; } = MaxUiPxPerDp;
 
         /// <summary>Tapa de calabaza (07 §4.4): 1,10 u × 0,35 u.</summary>
         public Sprite SealCap { get; }

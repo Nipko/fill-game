@@ -125,6 +125,25 @@ namespace AF.Presentation
         /// <summary>Caja de cuias con su cuerda, pivote al pie.</summary>
         public Sprite DockCrate => _dockCrate != null ? _dockCrate : (_dockCrate = BuildDockCrate());
 
+        /// <summary>
+        /// El arte de escena propio del inicio está pintado (los destellos del río, la rama de TiTino y la caja de cuias; los
+        /// suelta <see cref="ReleaseHomeScene"/>).
+        /// </summary>
+        public bool HomeSceneLoaded => _riverStreaks != null || _homeBranch != null || _dockCrate != null;
+
+        /// <summary>
+        /// Suelta el arte de escena que solo usa el inicio mientras se juega (<c>docs/dev/memoria.md</c> §7.5, punto 3; D-060): los
+        /// destellos del río (<see cref="RiverStreaks"/>, 720 × 400 px), la rama de TiTino (<see cref="HomeBranch"/>) y la caja de
+        /// cuias (<see cref="DockCrate"/>). El panorama, el muelle, el follaje y el atlas de TiTino no: el nivel los pinta también.
+        /// Pedirlos otra vez los repinta (el inicio, al volver). Quien los tenga en una Image los quita antes.
+        /// </summary>
+        public void ReleaseHomeScene()
+        {
+            ReleaseOwned(ref _riverStreaks);
+            ReleaseOwned(ref _homeBranch);
+            ReleaseOwned(ref _dockCrate);
+        }
+
         /// <summary>Icono de la tarjeta del Reto del río: el disco de agua clara (las olas de la banda las pone la tarjeta).</summary>
         public Sprite CardIconDaily => _cardDaily != null ? _cardDaily : (_cardDaily = BuildCardIcon(0));
 
@@ -152,7 +171,7 @@ namespace AF.Presentation
         // hojas genéricas a lo largo y un ramillete en la punta. Coordenadas en px con el origen abajo a la izquierda.
         private Sprite BuildHomeBranch()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(HomeBranchWidthDp * k);
             int h = Mathf.RoundToInt(HomeBranchHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -276,7 +295,7 @@ namespace AF.Presentation
         // Onda: el arco de arriba de una elipse fina, más gruesa en el centro y que se apaga en las puntas.
         private Sprite BuildRiverRipple()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(RiverRippleWidthDp * k);
             int h = Mathf.RoundToInt(RiverRippleHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -329,7 +348,7 @@ namespace AF.Presentation
         // claro y una sombra en el agua; con flower, una flor de pétalos rosas y centro amarillo encima, sin especie reconocible.
         private Sprite BuildRiverLily(bool flower)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(RiverLilyWidthDp * k);
             int h = Mathf.RoundToInt(RiverLilyHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -459,7 +478,7 @@ namespace AF.Presentation
         // Pez genérico: cuerpo ahusado plateado con el lomo oliva, aleta dorsal, cola en horquilla, ojo y brillo.
         private Sprite BuildRiverFish()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(RiverFishWidthDp * k);
             int h = Mathf.RoundToInt(RiverFishHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -516,7 +535,7 @@ namespace AF.Presentation
         // Ave lejana: dos arcos gruesos con las puntas hacia arriba, del verde oscuro de la selva.
         private Sprite BuildRiverBird()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(RiverBirdWidthDp * k);
             int h = Mathf.RoundToInt(RiverBirdHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -557,7 +576,7 @@ namespace AF.Presentation
         // Poste de la parada: tronco redondo con la punta en tejado, dos amarres de cuerda y el pie oscuro y mojado.
         private Sprite BuildStopPost()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(StopPostWidthDp * k);
             int h = Mathf.RoundToInt(StopPostHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -620,7 +639,7 @@ namespace AF.Presentation
         // el agua las pone el código encima (la altura cambia con la pantalla).
         private Sprite BuildGaugeBoard()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = GaugeWidthDp;
             const float hDp = 40f;
             const float border = GaugeBorderDp;
@@ -676,7 +695,7 @@ namespace AF.Presentation
         // en la panza y la luz arriba a la izquierda (07 §1.1). Pivote al pie, con la sombra de contacto incluida.
         private Sprite BuildDockJar()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(DockJarWidthDp * k);
             int h = Mathf.RoundToInt(DockJarHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -842,7 +861,7 @@ namespace AF.Presentation
         // cuerda apoyado a la derecha. Pivote al pie.
         private Sprite BuildDockCrate()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(DockCrateWidthDp * k);
             int h = Mathf.RoundToInt(DockCrateHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -925,7 +944,7 @@ namespace AF.Presentation
         // Iconos de las tarjetas: un disco con canto oscuro y brillo arriba y, encima, el glifo crema.
         private Sprite BuildCardIcon(int kind)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = CardIconDp;
             int s = Mathf.RoundToInt(size * k);
             var pc = new PixelCanvas(s, s);

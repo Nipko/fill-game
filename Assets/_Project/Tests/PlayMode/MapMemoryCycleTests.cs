@@ -278,6 +278,79 @@ namespace AF.Tests.PlayMode
             return DevProbe.SampleGfxInventory();
         }
 
+        /// <summary>
+        /// Diagnóstico manual (memoria.md §7.5 y D-060, «Graphics no baja al cerrar el Mapa»): qué sigue vivo del Mapa tras cerrarlo
+        /// (la jerarquía oculta: objetos, componentes y lo que pesan; las mallas de los textos; la malla compartida de UGUI, que
+        /// crece hasta el mayor <c>Graphic</c> y no se encoge) y lo que cuesta abrirlo la 1.ª, la 2.ª y la 3.ª vez (la llamada de
+        /// <c>OpenRiverMap</c> y los dos fotogramas siguientes, cuando los lienzos hacen sus lotes). Una línea <c>AF_MAPMEM2</c> por
+        /// momento.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Diagnóstico manual de la memoria del Mapa (docs/dev/memoria.md).")]
+        public IEnumerator Diagnose_RetainedAfterClose_AndOpenCost()
+        {
+            yield return LoadAt(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            yield return Frames(10);
+            CultureInfo inv = CultureInfo.InvariantCulture;
+            for (int round = 1; round <= 3; round++)
+            {
+                long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+                double callMs = Ms(t0);
+                yield return null;
+                yield return null;
+                double twoFramesMs = Ms(t0);
+                yield return Frames(20);
+                Assert.That(boot.CloseRiverMap(), Is.True);
+                yield return Frames(10);
+                GC.Collect();
+                Transform root = map.Canvas.transform;
+                Component[] comps = root.GetComponentsInChildren<Component>(true);
+                long compBytes = 0;
+                int gos = root.GetComponentsInChildren<Transform>(true).Length;
+                for (int i = 0; i < comps.Length; i++)
+                {
+                    compBytes += Profiler.GetRuntimeMemorySizeLong(comps[i]);
+                }
+
+                long tmpMesh = 0;
+                int tmpCount = 0;
+                foreach (TMPro.TMP_Text t in root.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                {
+                    if (t.mesh != null)
+                    {
+                        tmpCount++;
+                        tmpMesh += Profiler.GetRuntimeMemorySizeLong(t.mesh);
+                    }
+                }
+
+                int sharedVerts = 0;
+                long sharedBytes = 0;
+                foreach (Mesh m in Resources.FindObjectsOfTypeAll<Mesh>())
+                {
+                    if (m.name == "Shared UI Mesh")
+                    {
+                        sharedVerts = Math.Max(sharedVerts, m.vertexCount);
+                        sharedBytes += Profiler.GetRuntimeMemorySizeLong(m);
+                    }
+                }
+
+                Debug.Log("AF_MAPMEM2 {\"round\":" + round.ToString(inv) + ",\"open_call_ms\":" + callMs.ToString("F1", inv)
+                    + ",\"open_2frames_ms\":" + twoFramesMs.ToString("F1", inv) + ",\"closed_gameobjects\":" + gos.ToString(inv)
+                    + ",\"closed_components\":" + comps.Length.ToString(inv) + ",\"closed_components_kib\":" + (compBytes / KiB).ToString(inv)
+                    + ",\"closed_tmp_meshes\":" + tmpCount.ToString(inv) + ",\"closed_tmp_mesh_kib\":" + (tmpMesh / KiB).ToString(inv)
+                    + ",\"shared_ui_mesh_verts\":" + sharedVerts.ToString(inv) + ",\"shared_ui_mesh_kib\":" + (sharedBytes / KiB).ToString(inv)
+                    + ",\"native_alloc_mib\":" + (Profiler.GetTotalAllocatedMemoryLong() / (1024.0 * 1024.0)).ToString("F1", inv) + "}");
+            }
+        }
+
+        private static double Ms(long start)
+        {
+            return (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        }
+
         private static IEnumerator LoadAt(int playLevel)
         {
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp

@@ -389,7 +389,7 @@ namespace AF.UI
                 return cached;
             }
 
-            const float k = ChipPaint.PxPerDp;
+            float k = ChipPaint.PxPerDp;
             float pillH = compact ? CompactHeightDp : HeightDp;
             float hDp = pillH + ShadowDp;
             int w = Mathf.RoundToInt(PlateSpriteWidthDp * k);

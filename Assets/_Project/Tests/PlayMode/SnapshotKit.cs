@@ -26,6 +26,8 @@ namespace AF.Tests.PlayMode
         public const int Height = 2340;
 
         private static Camera? s_camera;
+        private static int s_width = Width;
+        private static int s_height = Height;
         private static RenderTexture? s_target;
         private static string s_locale = LocLocale.SourceLocale;
 
@@ -59,9 +61,22 @@ namespace AF.Tests.PlayMode
                 Loc.SetLocale(locale);
             }
 
-            GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
+            return PrepareSized(locale, Width, Height);
+        }
+
+        /// <summary>
+        /// Como <see cref="Prepare(string)"/>, con una pantalla y una captura de <paramref name="width"/> × <paramref name="height"/>
+        /// px (las capturas a 2 px/dp de un teléfono de clase A, 720 × 1600; <c>DensityCapSnapshotTests</c>). Los recortes de
+        /// arriba y abajo, los mismos 32 y 16 dp a la densidad del ancho sobre 360 dp.
+        /// </summary>
+        public static string PrepareSized(string locale, int width, int height)
+        {
+            s_width = width;
+            s_height = height;
+            float k = width / 360f;
+            GameScreen.SimulatedScreen = new Vector4(width, height, 32f * k, 16f * k); // 32 dp de cutout arriba, 16 dp de gestos abajo
             AmbientLayer.Frozen = true;
-            s_target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            s_target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             var camGo = new GameObject("SnapshotCamera");
             Object.DontDestroyOnLoad(camGo);
             s_camera = camGo.AddComponent<Camera>();
@@ -103,6 +118,8 @@ namespace AF.Tests.PlayMode
 
             s_camera = null;
             s_target = null;
+            s_width = Width;
+            s_height = Height;
         }
 
         /// <summary>Pinta el lienzo de la pantalla de nivel en la cámara de las capturas.</summary>
@@ -161,8 +178,8 @@ namespace AF.Tests.PlayMode
             s_camera!.Render();
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = s_target;
-            var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+            var tex = new Texture2D(s_width, s_height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, s_width, s_height), 0, 0);
             tex.Apply();
             RenderTexture.active = previous;
             Color32[] pixels = tex.GetPixels32();
@@ -212,8 +229,8 @@ namespace AF.Tests.PlayMode
             s_camera!.Render();
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = s_target;
-            var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+            var tex = new Texture2D(s_width, s_height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, s_width, s_height), 0, 0);
             tex.Apply();
             RenderTexture.active = previous;
             byte[] png = tex.EncodeToPNG();

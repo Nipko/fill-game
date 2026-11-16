@@ -795,6 +795,78 @@ namespace AF.UI
         /// Muestra la pantalla de <paramref name="screen"/>: el inicio, con «El río sigue creciendo» o Sin canoas encima si
         /// toca; en <see cref="AppScreen.Level"/> se oculta.
         /// </summary>
+        /// <summary>
+        /// Lo que tardó el último repintado del arte propio del inicio al volver de un nivel (ms; -1 si aún no hubo ninguno):
+        /// <see cref="RestoreHomeScene"/>.
+        /// </summary>
+        public double LastHomeSceneRebuildMs { get; private set; } = -1;
+
+        /// <summary>El arte propio del inicio está suelto (se juega un nivel): <see cref="ReleaseHomeScene"/>.</summary>
+        internal bool HomeSceneReleased => _homeSceneReleased;
+
+        private bool _homeSceneReleased;
+
+        /// <summary>
+        /// Quien más tiene el arte propio del inicio a la vista (la intro del arranque pone la rama de TiTino, <c>BootSplash</c>):
+        /// mientras devuelva true, no se suelta (se soltará al entrar en el nivel siguiente). Lo pone <c>GameBootstrap</c>.
+        /// </summary>
+        public Func<bool>? HomeSceneHeld { get; set; }
+
+        // Al entrar en un nivel: las Image del inicio sueltan los destellos del río, la rama de TiTino y la caja de cuias, y el arte
+        // libera sus texturas (ProceduralArt.ReleaseHomeScene; ≈ 1,5 MiB a 2 px/dp y ≈ 2 MiB a 3 px/dp). El panorama, el muelle, el
+        // follaje y TiTino se quedan: el nivel los pinta también.
+        private void ReleaseHomeScene()
+        {
+            if (_homeSceneReleased || !_art.HomeSceneLoaded || (HomeSceneHeld != null && HomeSceneHeld()))
+            {
+                return;
+            }
+
+            _river.SetStreaks(null);
+            _branch.sprite = null;
+            _crate.sprite = null;
+            _art.ReleaseHomeScene();
+            _homeSceneReleased = true;
+        }
+
+        // Al volver al inicio: repinta lo que soltó ReleaseHomeScene, con los búferes de los lienzos en préstamo (PixelBuffers, como
+        // el Mapa: el heap gestionado no crece por cada vuelta), y mide lo que tarda (AF_ART home_scene en desarrollo).
+        private void RestoreHomeScene()
+        {
+            if (!_homeSceneReleased)
+            {
+                return;
+            }
+
+            _homeSceneReleased = false;
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            bool pool = !PixelBuffers.Pooling;
+            if (pool)
+            {
+                PixelBuffers.BeginPooling();
+            }
+
+            try
+            {
+                _river.SetStreaks(_art.RiverStreaks);
+                _branch.sprite = _art.HomeBranch;
+                _crate.sprite = _art.DockCrate;
+            }
+            finally
+            {
+                if (pool)
+                {
+                    PixelBuffers.EndPooling();
+                }
+            }
+
+            LastHomeSceneRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("AF_ART home_scene " + LastHomeSceneRebuildMs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " ms");
+            }
+        }
+
         public void Show(AppScreen screen)
         {
             _shown = screen;
@@ -806,9 +878,15 @@ namespace AF.UI
 
             if (!visible)
             {
+                if (screen == AppScreen.Level)
+                {
+                    ReleaseHomeScene(); // mientras se juega, sin el arte que solo usa el inicio (memoria.md §7.5, punto 3; D-060)
+                }
+
                 return;
             }
 
+            RestoreHomeScene();
             _overlay.gameObject.SetActive(screen == AppScreen.ContentEnd);
             if (screen == AppScreen.ContentEnd)
             {

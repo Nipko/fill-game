@@ -56,7 +56,7 @@ namespace AF.UI
         public const float GlyphBackLighten = 0.05f;
 
         // Sprite de la píldora a 3 px/dp: 40 × (26 + 2) dp con 13 dp de 9-slice a cada lado (el radio).
-        private const float PxPerDp = ProceduralArt.UiPxPerDp;
+        private static float PxPerDp => ProceduralArt.UiPxPerDp;
         private const float SpriteWidthDp = 40f;
 
         private static Sprite? s_pill;

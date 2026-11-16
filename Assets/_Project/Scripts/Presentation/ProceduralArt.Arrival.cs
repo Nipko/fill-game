@@ -32,7 +32,7 @@ namespace AF.Presentation
 
         private Sprite BuildArrivalWave()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(ArrivalWavePeriodDp * k);
             int h = Mathf.RoundToInt(ArrivalWaveHeightDp * k);
             var pc = new PixelCanvas(w, h);

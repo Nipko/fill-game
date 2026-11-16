@@ -415,7 +415,7 @@ namespace AF.UI
                 return s_ribbon;
             }
 
-            const float k = ChipPaint.PxPerDp;
+            float k = ChipPaint.PxPerDp;
             const float wDp = ProceduralArt.RibbonTagWidthDp;
             const float hDp = ProceduralArt.RibbonTagHeightDp;
             const float x0 = ProceduralArt.RibbonTagBodyLeftDp;

@@ -116,7 +116,7 @@ namespace AF.Presentation
         public const float BannerSceneSunX = 0.78f;
 
         /// <summary>Densidad de la viñeta (px por dp): la de las mascotas, porque Capi va dibujado en ella.</summary>
-        public const float BannerScenePxPerDp = UiPxPerDp;
+        public static float BannerScenePxPerDp => UiPxPerDp;
 
         /// <summary>Pelaje de Capi #8B6A3E (07 §6.1).</summary>
         public static readonly Color CapiFur = Palette.Hex(0x8B6A3E);
@@ -142,7 +142,7 @@ namespace AF.Presentation
         /// <summary>Alto de la onda de Rosa (dp).</summary>
         public const float RosaRippleHeightDp = 14f;
 
-        private const float MascotPxPerDp = UiPxPerDp;
+        private static float MascotPxPerDp => UiPxPerDp;
 
         // Celdas de la poda de las siluetas (px): solo se evalúan las que pueden tocar la silueta o su contorno.
         private const int SilhouetteCell = 6;

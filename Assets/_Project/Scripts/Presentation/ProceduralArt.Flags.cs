@@ -159,13 +159,13 @@ namespace AF.Presentation
         // redondeadas, para que se lea sobre el agua, la tierra y la madera; un brillo suave arriba (luz de juego, D-003).
         private Sprite BuildMapFlag(string iso2)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(MapFlagWidthDp * k);
             int h = Mathf.RoundToInt(MapFlagHeightDp * k);
             var pc = new PixelCanvas(w, h);
             Color ink = new Color(Palette.Groove.r, Palette.Groove.g, Palette.Groove.b, 0.85f);
-            const float outline = 0.6f * k; // px
-            const float radius = 1.2f * k;
+            float outline = 0.6f * k; // px
+            float radius = 1.2f * k;
             for (int y = 0; y < h; y++)
             {
                 float yd = (y + 0.5f) / k;
@@ -215,7 +215,7 @@ namespace AF.Presentation
 
         private static PixelCanvas DrawMapBufeo()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(MapBufeoWidthDp * k);
             int h = Mathf.RoundToInt(MapBufeoWidthDp * RosaHeightDp / RosaWidthDp * k);
             var pc = new PixelCanvas(w, h);

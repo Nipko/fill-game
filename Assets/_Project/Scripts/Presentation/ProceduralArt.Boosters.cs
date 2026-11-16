@@ -94,7 +94,7 @@ namespace AF.Presentation
         {
             // Cesta tejida de fibra (paleta de la cuerda de las cuias), vacía, con dos semillas caídas a la izquierda: «el
             // premio que no se cobra» (04 §6.6) sin el pedestal de monedas de Magic Sort. 96 × 72 dp a 3 px/dp; y hacia arriba.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(96f * k);
             int h = Mathf.RoundToInt(72f * k);
             var pc = new PixelCanvas(w, h);

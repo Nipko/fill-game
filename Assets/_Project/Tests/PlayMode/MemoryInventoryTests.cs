@@ -38,6 +38,8 @@ namespace AF.Tests.PlayMode
         {
             DevProbe.ResetMem();
             s_lobby = null;
+            GameScreen.SimulatedScreen = null;
+            GameScreen.SimulatedPxPerDp = null;
             GameBootstrap.ResetDailyOverrides();
             LaunchOptions.Reset();
         }
@@ -45,6 +47,25 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         [Explicit("Inventario manual de memoria en el Editor (docs/dev/memoria.md).")]
         public IEnumerator Inventory_Moments()
+        {
+            return Moments("");
+        }
+
+        /// <summary>
+        /// Lo mismo en un teléfono de clase A simulado (720 × 1600 px a 2 px/dp, como el Moto G23; D-060): el lienzo sale a 2 px/dp
+        /// y el arte por código se pinta con su tope de densidad (<c>docs/dev/memoria.md</c> §7.5, pregunta 1). Los momentos llevan
+        /// el sufijo <c>_a</c>.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Inventario manual de memoria en el Editor, clase A (docs/dev/memoria.md).")]
+        public IEnumerator Inventory_Moments_ClassA()
+        {
+            GameScreen.SimulatedScreen = new Vector4(720f, 1600f, 48f, 0f);
+            GameScreen.SimulatedPxPerDp = 2f;
+            return Moments("_a");
+        }
+
+        private IEnumerator Moments(string suffix)
         {
             var before = new HashSet<int>();
             foreach (UnityEngine.Object o in Resources.FindObjectsOfTypeAll<UnityEngine.Object>())
@@ -58,23 +79,74 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(74)));
             GameBootstrap boot = GameBootstrap.Current!;
             yield return Frames(30);
-            s_lobby = Report("lobby", before, null);
+            s_lobby = Report("lobby" + suffix, before, null);
 
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
             yield return Frames(30);
-            Report("map", before, s_lobby);
+            Report("map" + suffix, before, s_lobby);
             Assert.That(boot.CloseRiverMap(), Is.True);
             yield return Frames(10);
 
             Assert.That(boot.OpenAvatarScreen("lobby"), Is.True);
             yield return Frames(60);
-            Report("avatars", before, s_lobby);
+            Report("avatars" + suffix, before, s_lobby);
             Assert.That(boot.CloseAvatarScreen(), Is.True);
             yield return Frames(10);
 
             Assert.That(boot.PressPlay(), Is.True);
             yield return Frames(90);
-            Report("level75", before, s_lobby);
+            Report("level75" + suffix, before, s_lobby);
+            LobbyOnly("level75" + suffix, boot, s_lobby);
+        }
+
+        /// <summary>
+        /// Las texturas del inicio que siguen vivas y que solo usa la jerarquía del inicio (ninguna <see cref="UnityEngine.UI.Image"/>
+        /// ni <see cref="UnityEngine.UI.RawImage"/> fuera de su lienzo las tiene, activa o no): lo que se puede soltar mientras se juega
+        /// (<c>docs/dev/memoria.md</c> §7.5, punto 3). Una línea <c>AF_MEMINV</c> por textura y otra con el total.
+        /// </summary>
+        private static void LobbyOnly(string at, GameBootstrap boot, HashSet<int> lobby)
+        {
+            Transform lobbyRoot = boot.Lobby!.Canvas.transform;
+            var inside = new HashSet<int>();
+            var outside = new HashSet<int>();
+            foreach (UnityEngine.UI.Image img in Resources.FindObjectsOfTypeAll<UnityEngine.UI.Image>())
+            {
+                Texture? t = img.sprite != null ? img.sprite.texture : null;
+                if (t != null && img.gameObject.scene.IsValid())
+                {
+                    (img.transform.IsChildOf(lobbyRoot) ? inside : outside).Add(t.GetInstanceID());
+                }
+            }
+
+            foreach (UnityEngine.UI.RawImage raw in Resources.FindObjectsOfTypeAll<UnityEngine.UI.RawImage>())
+            {
+                if (raw.texture != null && raw.gameObject.scene.IsValid())
+                {
+                    (raw.transform.IsChildOf(lobbyRoot) ? inside : outside).Add(raw.texture.GetInstanceID());
+                }
+            }
+
+            CultureInfo inv = CultureInfo.InvariantCulture;
+            long total = 0;
+            int n = 0;
+            var sb = new StringBuilder();
+            foreach (Texture t in Resources.FindObjectsOfTypeAll<Texture>())
+            {
+                int id = t.GetInstanceID();
+                if (!lobby.Contains(id) || outside.Contains(id))
+                {
+                    continue;
+                }
+
+                long b = Profiler.GetRuntimeMemorySizeLong(t);
+                total += b;
+                n++;
+                sb.AppendLine("AF_MEMINV {\"at\":\"" + at + "\",\"lobby_only\":\"" + Escape(t.name) + "\",\"in_lobby\":" + (inside.Contains(id) ? "true" : "false")
+                    + ",\"w\":" + t.width.ToString(inv) + ",\"h\":" + t.height.ToString(inv) + ",\"kib\":" + (b / 1024).ToString(inv) + "}");
+            }
+
+            Debug.Log(sb.ToString());
+            Debug.Log("AF_MEMINV {\"at\":\"" + at + "\",\"lobby_only_total\":" + n.ToString(inv) + ",\"lobby_only_mib\":" + Mib(total).ToString("0.0", inv) + "}");
         }
 
         private static IEnumerator Frames(int n)

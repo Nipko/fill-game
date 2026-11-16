@@ -144,7 +144,7 @@ namespace AF.Presentation
             for (int tint = 1; tint <= 14; tint++)
             {
                 RectInt cell = FruitCell(tint);
-                Sprite sprite = Sprite.Create(tex, new Rect(cell.x, cell.y, cell.width, cell.height), new Vector2(0.5f, 0.5f), 100f * UiPxPerDp, 0, SpriteMeshType.FullRect);
+                Sprite sprite = Sprite.Create(tex, new Rect(cell.x, cell.y, cell.width, cell.height), new Vector2(0.5f, 0.5f), 100f * MaxUiPxPerDp, 0, SpriteMeshType.FullRect);
                 sprite.name = "fruta_vuelo_" + TintIds[tint];
                 sprite.hideFlags = HideFlags.DontSave;
                 _owned.Add(sprite);

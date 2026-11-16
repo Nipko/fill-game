@@ -424,7 +424,7 @@ namespace AF.Presentation
 
         private Sprite BuildPill(string name, Color color)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 40f;
             const float pillH = LabelPillDp;
             const float hDp = LabelPillDp + LabelPillShadowDp;
@@ -484,7 +484,7 @@ namespace AF.Presentation
 
         private Sprite BuildHeaderBand(string name, Color band)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 296f;
             const float hDp = 40f;
             const float radius = 12f;

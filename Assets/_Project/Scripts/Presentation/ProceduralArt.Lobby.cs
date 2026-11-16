@@ -62,7 +62,7 @@ namespace AF.Presentation
         {
             // Óvalo de 20 × 27 dp inclinado 28°, más estrecho hacia la punta (silueta de semilla de cacao estilizada), luz
             // arriba a la izquierda (07 §1.1), veta central y brillo superior; borde marrón de 1,8 dp.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = 32f;
             int s = Mathf.RoundToInt(size * k);
             var pc = new PixelCanvas(s, s);
@@ -129,7 +129,7 @@ namespace AF.Presentation
         {
             // Casco de 40 dp con los extremos levantados y la proa (derecha) más alta; borda clara, una línea de tablón y
             // contorno oscuro. Vacía: el mismo casco volcado (quilla arriba) en grises. Delante, una línea de agua ondulada.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 44f;
             const float hDp = 26f;
             int w = Mathf.RoundToInt(wDp * k);

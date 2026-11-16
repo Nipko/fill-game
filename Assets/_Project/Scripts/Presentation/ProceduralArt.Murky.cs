@@ -159,7 +159,7 @@ namespace AF.Presentation
             var sprites = new Sprite[BadgeGlyphCount];
             for (int i = 0; i < BadgeGlyphCount; i++)
             {
-                Sprite s = Sprite.Create(tex, new Rect(i * cell, 0, cell, BadgeHeightPx), new Vector2(0.5f, 0.5f), 100f * UiPxPerDp, 0, SpriteMeshType.FullRect);
+                Sprite s = Sprite.Create(tex, new Rect(i * cell, 0, cell, BadgeHeightPx), new Vector2(0.5f, 0.5f), 100f * MaxUiPxPerDp, 0, SpriteMeshType.FullRect);
                 s.name = i == 0 ? "mech_murky_badge_q" : (i == 1 ? "mech_murky_badge_x" : "mech_murky_badge_" + (i - 1));
                 s.hideFlags = HideFlags.DontSave;
                 _owned.Add(s);

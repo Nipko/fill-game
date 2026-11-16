@@ -1092,7 +1092,7 @@ namespace AF.Presentation
             p.Tail3 = base0 + (new Vector2(-0.30f, 0.60f) * k);
         }
 
-        private const float PiecePxPerDp = ProceduralArt.UiPxPerDp; // px por dp de los sprites de las piezas (PPU 300)
+        private const float PiecePxPerDp = ProceduralArt.MaxUiPxPerDp; // px por dp de los sprites de las piezas (PPU 300)
 
         private static Image Piece(string name, Transform parent, Vector2 pivot)
         {

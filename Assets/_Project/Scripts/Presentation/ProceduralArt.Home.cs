@@ -86,7 +86,7 @@ namespace AF.Presentation
         // del marco; luego el marco opaco encima y, al final, el recorte del borde redondeado de fuera.
         private Sprite BuildHomeWindow()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = HomeWindowDp;
             const float border = HomeWindowBorderDp;
             const float outerRadius = 9f;

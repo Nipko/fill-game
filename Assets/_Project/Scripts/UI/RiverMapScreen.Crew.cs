@@ -508,7 +508,7 @@ namespace AF.UI
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = ProceduralArt.CrewPivot(piece);
             RectInt c = ProceduralArt.CrewCell(piece);
-            rt.sizeDelta = new Vector2(c.width / ProceduralArt.UiPxPerDp, c.height / ProceduralArt.UiPxPerDp);
+            rt.sizeDelta = new Vector2(c.width / ProceduralArt.MaxUiPxPerDp, c.height / ProceduralArt.MaxUiPxPerDp);
             img.gameObject.SetActive(false);
             return img;
         }
