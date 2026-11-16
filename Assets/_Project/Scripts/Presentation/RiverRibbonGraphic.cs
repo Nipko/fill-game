@@ -1264,7 +1264,8 @@ namespace AF.Presentation
         // el inglete): dos vértices por banda, en mid + axis · u. «up» es la componente vertical (local) de la normal izquierda. Si
         // «connect» ≥ 0, la une con la sección anterior de la misma tira. Devuelve el primer vértice de la sección, o −1 si no cabe
         // en el presupuesto.
-        private int EmitSection(VertexHelper vh, Vector2 mid, Vector2 axis, float up, RunLook look, float half, float rim, int connect)
+        private int EmitSection(VertexHelper vh, Vector2 mid, Vector2 axis, float up, RunLook look, float half, float rim, int connect,
+            bool foldGuard = true)
         {
             int bands = BandCount(look.Split);
             if (vh.currentVertCount + (2 * bands) > _budget)
@@ -1274,13 +1275,32 @@ namespace AF.Presentation
 
             float alpha = color.a * EndFadeAt(_sectionArc); // añadido de D-069 del 2026-11-08: las puntas difuminadas del frente
             int start = vh.currentVertCount;
+
+            // Observación 3 de la segunda ronda de la 1.1 (las cuñas oscuras en las curvas cerradas): en un codo más cerrado que el
+            // medio ancho, los vértices del lado de dentro retroceden respecto de la sección anterior y la malla se pliega: con el
+            // agua translúcida, el pliegue se pinta dos veces. Un vértice que retrocede (respecto del avance del centro) se queda en
+            // el de la sección anterior: el lado de dentro se recoge en un punto en vez de plegarse. No en la segunda sección de un
+            // bisel, que gira sobre el mismo punto a propósito. Sin asignaciones.
+            Vector2 advance = mid - _foldPrevMid;
+            bool guard = foldGuard && !FoldGuardOff && connect >= 0 && advance.sqrMagnitude > 1e-8f;
+            _foldPrevMid = mid;
             for (int k = 0; k < bands; k++)
             {
                 Band(look, k, rim, half, up, out float u0, out float u1, out Color c, out Color c1);
                 c.a *= alpha;
                 c1.a *= alpha;
-                vh.AddVert(mid + (axis * u0), (Color32)c, Vector4.zero);
-                vh.AddVert(mid + (axis * u1), (Color32)c1, Vector4.zero);
+                Vector2 v0 = mid + (axis * u0);
+                Vector2 v1 = mid + (axis * u1);
+                if (guard)
+                {
+                    int p = connect + (2 * k);
+                    v0 = Unfold(vh, p, p, p + 1, v0, advance, mid, axis);
+                    v1 = Unfold(vh, p + 1, p, p + 1, v1, advance, mid, axis);
+                    v0 = UnfoldPair(vh, p, v0, v1, advance);
+                }
+
+                vh.AddVert(v0, (Color32)c, Vector4.zero);
+                vh.AddVert(v1, (Color32)c1, Vector4.zero);
                 if (connect >= 0)
                 {
                     int p = connect + (2 * k);
@@ -1291,6 +1311,124 @@ namespace AF.Presentation
             }
 
             return start;
+        }
+
+        private Vector2 _foldPrevMid;
+
+        /// <summary>Solo para las capturas y los tests de «antes»: sin la guarda de los codos (la malla vuelve a plegarse).</summary>
+        public static bool FoldGuardOff { get; set; }
+
+        // El vértice v de la sección nueva (en la recta mid + axis · u) o, si cae detrás del borde de la banda anterior (de a a b) y el
+        // triángulo que lo une con ella saldría del revés, el punto donde la sección nueva cruza la anterior: el lado de dentro gira
+        // sobre ese punto, como un abanico, sin solaparse ni dejar hueco. «Detrás» respecto del lado hacia el que avanza el centro.
+        private static Vector2 Unfold(VertexHelper vh, int prev, int a, int b, Vector2 v, Vector2 advance, Vector2 mid, Vector2 axis)
+        {
+            if (prev < 0 || b >= vh.currentVertCount)
+            {
+                return v;
+            }
+
+            UIVertex scratch = default;
+            vh.PopulateUIVertex(ref scratch, prev);
+            var own = (Vector2)scratch.position;
+            vh.PopulateUIVertex(ref scratch, a);
+            var pa = (Vector2)scratch.position;
+            vh.PopulateUIVertex(ref scratch, b);
+            var pb = (Vector2)scratch.position;
+            Vector2 edge = pb - pa;
+            if (edge.sqrMagnitude < 1e-10f)
+            {
+                return Vector2.Dot(v - own, advance) < 0f ? own : v;
+            }
+
+            float ahead = Cross(edge, advance);
+            float side = Cross(edge, v - pa);
+            if (!((ahead > 0f && side < 0f) || (ahead < 0f && side > 0f)))
+            {
+                return v;
+            }
+
+            float den = Cross(axis, edge);
+            if (Mathf.Abs(den) < 1e-8f)
+            {
+                return own;
+            }
+
+            float t = -Cross(mid - pa, edge) / den;
+            return mid + (axis * t);
+        }
+
+        // El segundo triángulo del cuadrilátero de la banda (v1, v0, el vértice a de la anterior) tampoco sale del revés: si la sección
+        // nueva gira más que la anterior, v0 se queda en a (probado: llevarlo al cruce de las secciones pliega más).
+        private static Vector2 UnfoldPair(VertexHelper vh, int a, Vector2 v0, Vector2 v1, Vector2 advance)
+        {
+            if (a < 0 || a + 1 >= vh.currentVertCount)
+            {
+                return v0;
+            }
+
+            UIVertex scratch = default;
+            vh.PopulateUIVertex(ref scratch, a);
+            var pa = (Vector2)scratch.position;
+            vh.PopulateUIVertex(ref scratch, a + 1);
+            var pb = (Vector2)scratch.position;
+            float ahead = Cross(pb - pa, advance);
+            float area = Cross(v0 - v1, pa - v1);
+            return (ahead > 0f && area < -1e-6f) || (ahead < 0f && area > 1e-6f) ? pa : v0;
+        }
+
+        private static float Cross(Vector2 a, Vector2 b)
+        {
+            return (a.x * b.y) - (a.y * b.x);
+        }
+
+        /// <summary>
+        /// Solo para tests (observación 3 de la segunda ronda de la 1.1): construye la malla y cuenta sus triángulos con área
+        /// (<paramref name="total"/>) y los que van del revés respecto de la mayoría (un pliegue: se pintan dos veces). Asigna.
+        /// </summary>
+        public int CountFoldedTriangles(out int total)
+        {
+            return CountFoldedTriangles(out total, out _);
+        }
+
+        /// <summary>Como <see cref="CountFoldedTriangles(out int)"/>, con el centro del primer triángulo de la minoría (tests).</summary>
+        public int CountFoldedTriangles(out int total, out string where)
+        {
+            var vh = new VertexHelper();
+            try
+            {
+                OnPopulateMesh(vh);
+                var stream = new System.Collections.Generic.List<UIVertex>();
+                vh.GetUIVertexStream(stream);
+                int pos = 0;
+                int neg = 0;
+                string firstPos = string.Empty;
+                string firstNeg = string.Empty;
+                for (int i = 0; i + 2 < stream.Count; i += 3)
+                {
+                    Vector2 a = stream[i].position;
+                    Vector2 b = stream[i + 1].position;
+                    Vector2 c = stream[i + 2].position;
+                    float area = ((b.x - a.x) * (c.y - a.y)) - ((c.x - a.x) * (b.y - a.y));
+                    string at = "#" + (i / 3) + " " + a + " " + b + " " + c + " área " + area;
+                    if (area > 1e-2f)
+                    {
+                        firstPos = pos++ == 0 ? at : firstPos;
+                    }
+                    else if (area < -1e-2f)
+                    {
+                        firstNeg = neg++ == 0 ? at : firstNeg;
+                    }
+                }
+
+                total = pos + neg;
+                where = pos < neg ? firstPos : firstNeg;
+                return Mathf.Min(pos, neg);
+            }
+            finally
+            {
+                vh.Dispose();
+            }
         }
 
         // Bisel (trazo suave) en la sección i del plan, si es un codo cuyo inglete pasaría de BevelMiter medios anchos: dos

@@ -76,7 +76,10 @@ namespace AF.Tests.PlayMode
             Assert.That(map.FillFrom(amazonas), Is.GreaterThan(routes.At(7)!.At.S), "Tefé, todavía no");
             Assert.That(map.FillRibbon(negro).gameObject.activeSelf, Is.True);
             Assert.That(map.FillRibbon(negro).Look, Is.EqualTo(RibbonLook.Water));
-            Assert.That(map.FillRibbon(negro).FillStart, Is.EqualTo(map.FillFrom(negro)).Within(1e-6f));
+            // Con el Mapa v2 (observación 3 de la segunda ronda de la 1.1), el lleno se alarga FrontLiveFadeDp por debajo del tramo en
+            // curso, que sale de ahí río arriba, para fundirse con él.
+            float cross = map.LiveActive ? RiverMapScreen.FrontLiveFadeDp / (map.Space.DpPerUnit * data.Lines[negro].Length) : 0f;
+            Assert.That(map.FillRibbon(negro).FillStart, Is.EqualTo(Mathf.Max(0f, map.FillFrom(negro) - cross)).Within(1e-5f));
             Assert.That(map.FillRibbon(negro).FillEnd, Is.EqualTo(1f), "hasta la boca");
 
             // El frente: una cinta de agua sobre el Negro, de Manaos a 8/10 del tramo.

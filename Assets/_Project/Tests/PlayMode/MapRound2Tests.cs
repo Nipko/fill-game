@@ -10,6 +10,7 @@ using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 using UnityEngine.TestTools;
 
 namespace AF.Tests.PlayMode
@@ -140,6 +141,12 @@ namespace AF.Tests.PlayMode
                     Assert.That(ahead.DrawnRadius, Is.EqualTo(ahead.Radius * RiverMapScreen.BuoyLiveDrawScale).Within(1e-4f), at + ": más pequeñas");
                     Rect canoe = StopCardTests.CanvasRect(map.Canoe.rectTransform, map.Canvas);
                     Rect? toucan = map.ToucanAboardShown ? StopCardTests.CanvasRect(map.ToucanRect!, map.Canvas) : (Rect?)null;
+                    // La guía (Rosa o el bufeo) y, a bordo, el tucuxi: tampoco quedan tapados (los compacta la fila corta, que va
+                    // bajo la canoa y no se toca).
+                    Image? guideImage = map.GuideImage;
+                    Rect? guide = guideImage != null && guideImage.gameObject.activeInHierarchy ? StopCardTests.CanvasRect(guideImage.rectTransform, map.Canvas) : (Rect?)null;
+                    Rect? tucuxi = map.TucuxiAboardShown && view == MapView.World ? StopCardTests.CanvasRect(map.TucuxiImage!.rectTransform, map.Canvas) : (Rect?)null;
+                    float clear = RiverMapScreen.BuoyCrewClearDp + 1f;
                     int drawn = 0;
                     for (int i = 0; i < map.BuoyCount; i++)
                     {
@@ -150,15 +157,34 @@ namespace AF.Tests.PlayMode
                         }
 
                         RiverMapScreen.BuoyGraphic g = s == RiverMapScreen.BuoyState.Unlit ? ahead : lit;
+                        Vector3 w = g.rectTransform.TransformPoint(map.BuoyLocalPoint(i));
+                        var root = (RectTransform)map.Canvas.transform;
+                        Vector2 local = root.InverseTransformPoint(w);
+                        var c = new Vector2(local.x - root.rect.xMin, root.rect.yMax - local.y); // como StopCardTests.CanvasRect
+                        float r = g.DrawnRadius * g.rectTransform.lossyScale.x / map.Canvas.transform.lossyScale.x;
                         if (g.IsHidden(i))
                         {
+                            // Contra ocultar de más: solo se oculta la que cae junto a la canoa o la guía.
+                            bool near = Hits(Grow(canoe, clear), c, r) || (!map.BuoysCompact && ((guide.HasValue && Hits(Grow(guide.Value, clear), c, r))
+                                || (tucuxi.HasValue && Hits(Grow(tucuxi.Value, clear), c, r))));
+                            Assert.That(near, Is.True, at + ": la boya del " + map.BuoyLevel(i) + " se oculta lejos de la canoa y de la guía: " + c + " r " + r + ", canoa " + canoe + ", guía " + guide + ", tucuxi " + tucuxi);
                             continue;
                         }
 
                         drawn++;
-                        Vector3 w = g.rectTransform.TransformPoint(map.BuoyLocalPoint(i));
-                        Vector2 c = ((RectTransform)map.Canvas.transform).InverseTransformPoint(w);
-                        float r = g.DrawnRadius * g.rectTransform.lossyScale.x / map.Canvas.transform.lossyScale.x;
+                        if (!map.BuoysCompact)
+                        {
+                            if (guide.HasValue)
+                            {
+                                Assert.That(Hits(guide.Value, c, r), Is.False, at + ": la boya del " + map.BuoyLevel(i) + " sobre la guía");
+                            }
+
+                            if (tucuxi.HasValue)
+                            {
+                                Assert.That(Hits(tucuxi.Value, c, r), Is.False, at + ": la boya del " + map.BuoyLevel(i) + " sobre el tucuxi");
+                            }
+                        }
+
                         Assert.That(Hits(canoe, c, r), Is.False, at + ": la boya del " + map.BuoyLevel(i) + " sobre la canoa");
                         if (toucan.HasValue)
                         {
@@ -190,6 +216,157 @@ namespace AF.Tests.PlayMode
             Assert.That(map.BuoysAhead!.DrawnRadius, Is.EqualTo(map.BuoysAhead.Radius));
             Assert.That(map.BuoysAhead.HiddenCount + map.Buoys!.HiddenCount, Is.EqualTo(0));
             map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator TheMouths_BlendIntoTheirHost_InBothViews_AndNotWithTheMapOf10()
+        {
+            // Observación 3: el vidrio, la orilla y la várzea de cada afluente o brazo se funden en su boca, medio ancho del anfitrión.
+            yield return MapMarkersTests.OpenApp(59);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            RiverMap data = boot.RiverMapData!;
+            Assert.That(map.LiveActive, Is.True);
+            int mouths = 0;
+            foreach (MapView view in new[] { MapView.World, MapView.Basin })
+            {
+                map.SetView(view);
+                for (int i = 0; i < data.Lines.Count; i++)
+                {
+                    RiverLine line = data.Lines[i];
+                    float expected = 0f;
+                    if (line.Mouth.HasValue && line.Mouth.Value.Line != i && line.Mouth.Value.Line >= 0 && line.Mouth.Value.Line < data.Lines.Count)
+                    {
+                        expected = RiverMapScreen.MouthBlendHostWidths * map.MapRibbonWidthDp(view, data.Lines[line.Mouth.Value.Line].Class);
+                        mouths++;
+                    }
+
+                    string at = line.Id + " en " + view;
+                    Assert.That(map.MouthBlendDp(i), Is.EqualTo(expected).Within(1e-4f), at + ": el vidrio");
+                    Assert.That(map.Glass(i).EndFadeDp, Is.EqualTo(expected).Within(1e-4f), at + ": el vidrio");
+                    Assert.That(map.VarzeaRibbons[i].EndFadeDp, Is.EqualTo(expected).Within(1e-4f), at + ": la várzea");
+                    Assert.That(map.BankRibbons[i].EndFadeDp, Is.EqualTo(expected).Within(1e-4f), at + ": la orilla");
+                }
+            }
+
+            Assert.That(mouths, Is.GreaterThan(10), "hay afluentes y brazos con boca");
+
+            // Con el Mapa de la 1.0, sin fundido, también tras una apertura con el v2 (el reinicio de LiveOpen).
+            map.Close();
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            Assert.That(map.LiveActive, Is.False);
+            for (int i = 0; i < data.Lines.Count; i++)
+            {
+                Assert.That(map.MouthBlendDp(i), Is.EqualTo(0f), data.Lines[i].Id + ": la 1.0, sin fundido");
+            }
+
+            map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator AfterTheJourneyOf80_TheLabelsAndPlatesFitTheScreen()
+        {
+            // Lo que vio el integrador en las capturas: tras el viaje del 80 a ×6, el rótulo junto de Leticia quedaba cortado.
+            yield return MapMarkersTests.OpenApp(81);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Open(boot, map, 81, 80, 70);
+            for (int ms = 0; ms < 15000 && (map.JourneyLocked || map.ArrivalCloseUpActive || map.CameraCloseUp > 1f || map.CameraSettling);
+                ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(map.CameraSettling, Is.False);
+            Assert.That(map.CameraZoom, Is.EqualTo(1f));
+            Assert.That(map.JourneyWideFromZoom, Is.GreaterThan(0f), "el viaje con menos zoom");
+            Canvas.ForceUpdateCanvases();
+            Rect view = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
+            int next = map.RemainingStopN();
+            if (map.StopRemainingShown)
+            {
+                Assert.Pass("«Faltan N» en la placa de respaldo");
+            }
+
+            TMPro.TextMeshProUGUI label = map.StopLabelOf(next)!;
+            Assert.That(label.gameObject.activeInHierarchy, Is.True);
+            Rect r = StopCardTests.CanvasRect(label.rectTransform, map.Canvas);
+            Assert.That(Inside(r, view), Is.True, "el rótulo de la parada siguiente, entero a la vista: " + r + " en " + view);
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                Image plate = map.SilhouettePlate(i);
+                if (!plate.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                Rect p = StopCardTests.CanvasRect(plate.rectTransform, map.Canvas);
+                Assert.That(!p.Overlaps(view) || Inside(p, view), Is.True, "la placa " + i + ", entera o fuera: " + p + " en " + view);
+            }
+
+            Debug.Log("AF_MAP r2 tras el viaje del 80: «" + label.text.Replace("\n", " / ") + "» en " + r + ", vista " + view);
+            map.Close();
+        }
+
+        [UnityTest]
+        public IEnumerator TheRibbons_DoNotFoldInTheTightBends_OfNautaAndElsewhere()
+        {
+            // Las cuñas oscuras en las curvas cerradas (Nauta): ningún triángulo del revés (la malla no se pliega ni se pinta dos veces).
+            yield return MapMarkersTests.OpenApp(171);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            foreach (int play in new[] { 171, 51, 271, 381 })
+            {
+                MapMarkersTests.Reopen(boot, new MemoryProgressStore(play, play - 1, play - 1), play);
+                Assert.That(map.FrontPieceCount, Is.GreaterThan(0));
+                int before = 0;
+                int after = 0;
+                int afterWater = 0;
+                int total = 0;
+                for (int k = 0; k < map.FrontPieceCount; k++)
+                {
+                    foreach (AF.Presentation.RiverRibbonGraphic ribbon in new[] { map.FrontRibbon(k), map.FrontCasingRibbon(k) })
+                    {
+                        AF.Presentation.RiverRibbonGraphic.FoldGuardOff = true;
+                        try
+                        {
+                            before += ribbon.CountFoldedTriangles(out _);
+                        }
+                        finally
+                        {
+                            AF.Presentation.RiverRibbonGraphic.FoldGuardOff = false;
+                        }
+
+                        int f = ribbon.CountFoldedTriangles(out int n, out string where);
+                        if (f > 0)
+                        {
+                            Debug.Log("AF_MAP r2 pliegue en " + ribbon.name + ": " + where);
+                        }
+
+                        after += f;
+                        afterWater += ribbon == map.FrontRibbon(k) ? f : 0;
+                        total += n;
+                    }
+                }
+
+                Debug.Log("AF_MAP r2 pliegues del tramo jugando el " + play + ": " + before + " sin la guarda, " + after + " con ella, de " + total);
+                // Antes, 77 triángulos del revés en las dos curvas de Nauta (las cuñas oscuras). Con la guarda queda, como mucho, una
+                // astilla de unos 3 dp² en la segunda curva (en el agua) y ninguna más: se mide aquí para que no vuelva a crecer.
+                Assert.That(afterWater, Is.LessThanOrEqualTo(1), "jugando el " + play + ": en el agua del tramo, como mucho una astilla");
+                Assert.That(after, Is.LessThanOrEqualTo(1), "jugando el " + play + ": en todo el tramo, como mucho una astilla");
+                if (play == 171)
+                {
+                    Assert.That(before, Is.GreaterThan(0), "sin la guarda, las curvas de Nauta se pliegan (el test lo ve)");
+                }
+            }
+
+            map.Close();
+        }
+
+        private static bool Inside(Rect r, Rect view)
+        {
+            return r.xMin >= view.xMin - 0.5f && r.xMax <= view.xMax + 0.5f && r.yMin >= view.yMin - 0.5f && r.yMax <= view.yMax + 0.5f;
         }
 
         // ================================================================================================ ayudas
@@ -231,6 +408,11 @@ namespace AF.Tests.PlayMode
             return path / (map.CatchUpDurationMs / 1000f);
         }
 
+        private static Rect Grow(Rect r, float by)
+        {
+            return new Rect(r.xMin - by, r.yMin - by, r.width + (2f * by), r.height + (2f * by));
+        }
+
         private static bool Hits(Rect box, Vector2 p, float r)
         {
             float dx = Mathf.Max(0f, Mathf.Max(box.xMin - p.x, p.x - box.xMax));
@@ -262,6 +444,7 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Release();
             OnDemandRendering.renderFrameInterval = 1;
             RiverMapScreen.MouthBlendOffForCapture = false;
+            AF.Presentation.RiverRibbonGraphic.FoldGuardOff = false;
         }
 
         [UnityTest]
@@ -328,6 +511,7 @@ namespace AF.Tests.PlayMode
             })
             {
                 RiverMapScreen.MouthBlendOffForCapture = before;
+                AF.Presentation.RiverRibbonGraphic.FoldGuardOff = before;
                 string file = (before ? "antes_" : string.Empty) + name;
                 yield return Load(play, play - 1);
                 boot = GameBootstrap.Current!;

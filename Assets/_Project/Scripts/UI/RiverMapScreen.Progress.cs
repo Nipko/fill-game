@@ -964,6 +964,12 @@ namespace AF.UI
                 }
             }
 
+            if (_live && _progressMap != null)
+            {
+                FillLiveEnds(_progressMap.Lines); // el fundido cruzado del lleno con el tramo, a la escala de esta vista
+                FrontJointsForView(); // y el de las uniones de las piezas del tramo
+            }
+
             PlaceBuoys(space);
             LayoutOrientationLabels(); // antes que las placas: «Norte arriba» se coloca bajo «Andes ↑» si lo pisaría (FX7)
             BasinControlObstacles(); // los controles de la Cuenca, obstáculo de los países y de las placas (FX7)
@@ -1661,7 +1667,7 @@ namespace AF.UI
                     SetFrontPiece(_frontCasing[k], line, _frontCasingBudget[i], piece.S0, end);
                     _front[k].SetAnchors(LineAnchors(line)); // FX12: la misma curva que el vidrio
                     _frontCasing[k].SetAnchors(LineAnchors(line));
-                    FrontLiveLook(k, i == 0, last, piece.S0 <= end);
+                    FrontLiveLook(k, i == 0, last);
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
@@ -1688,6 +1694,7 @@ namespace AF.UI
 
             _frontRoute = route;
             _frontStopMap = route != null ? PlacePoint(map, route.At) : Vector2.zero;
+            FrontJointsForView(); // con todas las piezas ya puestas: el fundido de cada unión mira a sus vecinas
             for (int i = 0; i < BuoysPerLeg; i++)
             {
                 _buoyLevel[i] = route != null ? ((stop - 1) * RiverStopCatalog.LevelsPerStop) + i + 1 : 0;
@@ -1830,30 +1837,72 @@ namespace AF.UI
         public const float FrontLiveFadeDp = 28f;
 
         // Añadido de D-069 del 2026-11-08 (observación 9): con el Mapa v2, el lleno de cada línea se difumina en sus puntas abiertas,
-        // sin el bloque de borde recto sobre el vidrio: río arriba (s menor), salvo donde sigue el tramo en curso, y, en un afluente,
-        // en su boca (s = 1) sobre el río al que llega. Con la 1.0, como siempre.
+        // sin el bloque de borde recto sobre el vidrio: río arriba (s menor) y, en un afluente, en su boca (s = 1) sobre el río al
+        // que llega. Observación 3 de la segunda ronda de la 1.1 (el trozo de borde recto donde acaba el lleno y sigue el tramo en
+        // curso): en la línea del tramo en curso, el lleno se alarga FrontLiveFadeDp río arriba, por debajo del principio del tramo,
+        // y se funde ahí mientras el tramo entra con su propio fundido: un fundido cruzado, sin corte. Depende de la escala de la
+        // vista: lo llaman la reconstrucción del progreso y ProgressSpace. Con la 1.0, como siempre.
         private void FillLiveEnds(IReadOnlyList<RiverLine> lines)
         {
             int frontLine = _frontCount > 0 && _frontRoute != null ? _frontRoute.Path[_frontPathIndex[0]].Line : -1;
+            float dpPerUnit = _space.DpPerUnit;
             for (int i = 0; i < _fill.Count; i++)
             {
                 bool used = i < lines.Count && _fillFrom[i] < 1f;
-                bool up = _live && used && _fillFrom[i] > 0f && i != frontLine;
+                float from = used ? _fillFrom[i] : 1f;
+                bool cross = _live && !MouthBlendOffForCapture && used && i == frontLine && from > 0f && FrontLeavesUpstreamFrom(from);
+                bool up = _live && used && from > 0f && (i != frontLine || cross);
                 bool mouth = _live && used && lines[i].Kind != RiverLineKind.Main;
+                if (cross && dpPerUnit > 0f && lines[i].Length > 0f)
+                {
+                    from = Mathf.Max(0f, from - (FrontLiveFadeDp / (dpPerUnit * lines[i].Length)));
+                }
+
+                if (used)
+                {
+                    ShowRibbon(_fill[i], true, from, 1f);
+                    ShowRibbon(_fillCasing[i], true, from, 1f);
+                }
+
                 float fade = up || mouth ? FrontLiveFadeDp : 0f;
                 _fill[i].SetEndFade(fade, up, mouth);
                 _fillCasing[i].SetEndFade(fade, up, mouth);
             }
         }
 
+        // La primera pieza del tramo en curso sale de s = from río arriba (s decreciente): el lleno puede alargarse por debajo.
+        private bool FrontLeavesUpstreamFrom(float from)
+        {
+            if (_frontCount <= 0 || _frontRoute == null)
+            {
+                return false;
+            }
+
+            RiverPathPiece piece = _frontRoute.Path[_frontPathIndex[0]];
+            return piece.S1 < piece.S0 && Mathf.Abs(piece.S0 - from) < 1e-4f;
+        }
+
         // Con el Mapa v2, la cinta k del frente (y su orla): el tinte del agua y las puntas del tramo difuminadas (la de la parada de
-        // partida en la primera pieza, la de la canoa en la última). forward: la pieza va de s menor a s mayor. Con la 1.0, como siempre.
-        private void FrontLiveLook(int k, bool first, bool last, bool forward)
+        // partida en la primera pieza, la de la canoa en la última). Observación 3 de la
+        // segunda ronda de la 1.1 (el trozo de borde recto en las uniones del tramo, la boca del Coca): las puntas donde una pieza
+        // pasa a la siguiente (una confluencia) también se funden, en medio ancho de la cinta más ancha de las dos, dentro del agua
+        // del río que las une; una pieza con una punta abierta usa FrontLiveFadeDp en las dos. El largo depende de la vista: lo
+        // vuelve a fijar ProgressSpace (FrontJointsForView). Con la 1.0, como siempre.
+        private void FrontLiveLook(int k, bool first, bool last)
         {
             float alpha = _live ? FrontLiveAlpha : 1f;
-            float fade = _live ? FrontLiveFadeDp : 0f;
-            bool atMin = forward ? first : last;
-            bool atMax = forward ? last : first;
+            float fade = _live ? (first || last ? FrontLiveFadeDp : FrontJointFadeDp(k)) : 0f;
+            bool atMin = _live; // cada punta es abierta (la parada de partida, la canoa) o una unión: con el v2, todas se funden
+            bool atMax = _live;
+            if (_live && MouthBlendOffForCapture && !(first && last))
+            {
+                // Las capturas de «antes»: las uniones, sin fundir (solo la punta abierta de la primera o de la última pieza).
+                RiverPathPiece piece = _frontRoute != null && k < _frontCount ? _frontRoute.Path[_frontPathIndex[k]] : default;
+                bool forward = piece.S0 <= piece.S1;
+                fade = FrontLiveFadeDp;
+                atMin = forward ? first : last;
+                atMax = forward ? last : first;
+            }
             var tint = new Color(1f, 1f, 1f, alpha);
             if (_front[k].color != tint)
             {
@@ -1863,6 +1912,37 @@ namespace AF.UI
 
             _front[k].SetEndFade(fade, atMin, atMax);
             _frontCasing[k].SetEndFade(fade, atMin, atMax);
+        }
+
+        // Medio ancho de la cinta más ancha entre la pieza k del frente y sus vecinas (dp, en esta vista).
+        private float FrontJointFadeDp(int k)
+        {
+            float w = 0f;
+            for (int j = Mathf.Max(0, k - 1); j <= k + 1 && j < _frontCount; j++)
+            {
+                RiverLine? line = _front[j].Line;
+                if (line != null)
+                {
+                    w = Mathf.Max(w, MapRibbonWidthDp(_view, line.Class));
+                }
+            }
+
+            return 0.5f * w;
+        }
+
+        // Al cambiar de vista: el largo de los fundidos de las uniones del frente, a la escala nueva (FrontLiveLook).
+        private void FrontJointsForView()
+        {
+            if (!_live || _frontRoute == null)
+            {
+                return;
+            }
+
+            for (int k = 0; k < _frontCount; k++)
+            {
+                int i = _frontPathIndex[k];
+                FrontLiveLook(k, i == 0, k == _frontCount - 1);
+            }
         }
 
         private static void SetFrontPiece(RiverRibbonGraphic ribbon, RiverLine line, int budget, float s0, float s1)
@@ -2189,9 +2269,14 @@ namespace AF.UI
                 if (_guide != null && _guide.gameObject.activeInHierarchy)
                 {
                     Rect g = LocalBox(_guide.rectTransform);
-                    if (_tucuxi != null && _tucuxi.gameObject.activeInHierarchy && _tucuxi.transform.parent == _guide.transform.parent)
+                    if (_view == MapView.World && _tucuxi != null && _tucuxi.gameObject.activeInHierarchy)
                     {
-                        Rect t = LocalBox(_tucuxi.rectTransform);
+                        // El tucuxi nada TucuxiBesideRosa por detrás y por debajo de Rosa (su pivote, a 0,3 del alto de su caja), como
+                        // en CollectCrewLabelBoxes; su imagen se coloca después (RiverMapScreen.Crew.cs), así que se calcula aquí.
+                        var rosa = new Vector2(g.center.x, g.yMin + (0.3f * g.height));
+                        Vector2 at = rosa + new Vector2(TucuxiBesideRosa.x * _canoeFacing, TucuxiBesideRosa.y);
+                        float tw = RiverCrew.TucuxiDp;
+                        var t = new Rect(at.x - (tw * 0.5f), at.y - (tw * 0.5f), tw, tw);
                         g = Rect.MinMaxRect(Mathf.Min(g.xMin, t.xMin), Mathf.Min(g.yMin, t.yMin), Mathf.Max(g.xMax, t.xMax), Mathf.Max(g.yMax, t.yMax));
                     }
 
@@ -2203,12 +2288,16 @@ namespace AF.UI
             _buoysAhead?.SetLook(soft, a, b);
         }
 
-        // La caja de rt en las coordenadas locales de su padre (dp, y hacia arriba), por su tamaño y su pivote.
+        // La caja de rt en las coordenadas locales de su padre (dp, y hacia arriba), por su tamaño, su pivote y su volteo (Rosa y el
+        // bufeo se voltean con la escala x según el sentido de la canoa).
         private static Rect LocalBox(RectTransform rt)
         {
             Vector2 size = rt.sizeDelta;
             Vector2 at = rt.anchoredPosition;
-            return new Rect(at.x - (rt.pivot.x * size.x), at.y - (rt.pivot.y * size.y), size.x, size.y);
+            Vector3 k = rt.localScale;
+            float px = k.x < 0f ? 1f - rt.pivot.x : rt.pivot.x;
+            float py = k.y < 0f ? 1f - rt.pivot.y : rt.pivot.y;
+            return new Rect(at.x - (px * size.x), at.y - (py * size.y), size.x, size.y);
         }
 
         // Boya i de la fila corta de un tramo sin largo a la escala de la vista: una fila horizontal de 10, centrada bajo la parada

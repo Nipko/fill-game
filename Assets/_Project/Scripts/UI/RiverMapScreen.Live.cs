@@ -406,7 +406,10 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Solo para las capturas de «antes» (<c>[Explicit]</c>): sin el fundido de las bocas.</summary>
+        /// <summary>
+        /// Solo para las capturas de «antes» (<c>[Explicit]</c>): sin los arreglos de las uniones de la segunda ronda de la 1.1 (el
+        /// fundido de las bocas y el fundido cruzado del lleno con el tramo en curso).
+        /// </summary>
         internal static bool MouthBlendOffForCapture { get; set; }
 
         /// <summary>El largo del fundido de la boca de la línea <paramref name="i"/> (dp; 0 sin él; tests).</summary>

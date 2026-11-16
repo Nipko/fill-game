@@ -89,6 +89,13 @@ namespace AF.UI
         /// </summary>
         public const float ArrivalCloseUpHoldMs = 2000f;
 
+        /// <summary>
+        /// Constante de tiempo con que la vista se corre, al acabar un viaje que la cámara siguió, hasta el encuadre en que caben la
+        /// parada siguiente con su rótulo y la canoa (ms) [P] (observación 3 de la segunda ronda de la 1.1: el rótulo de Leticia
+        /// quedaba cortado tras el viaje del 80). Por qué 250: unos 0,75 s, dentro del acercamiento de llegada, sin tirón.
+        /// </summary>
+        public const float CamSettleMs = 250f;
+
         /// <summary>Fundido de la luz al cambiar de mundo dentro del Mapa (ms; propuesta §3.3, pendiente de M2-1).</summary>
         public const float LightFadeMs = 600f;
 
@@ -424,7 +431,7 @@ namespace AF.UI
                 if (_capiFollowed)
                 {
                     _capiFollowed = false;
-                    SetOffset(_offset); // «Volver a la canoa», con la canoa ya en su sitio
+                    StartSettle(snap); // el encuadre final, con la parada siguiente y su rótulo enteros a la vista
                 }
             }
 
@@ -435,7 +442,7 @@ namespace AF.UI
             TickLight(dtMs);
             TickTownGlow(dtMs);
             ApplyCapiPose();
-            if (_capi.Animating || _camPhase != 0 || _closeZoom != 1f || _arrivalCloseMs >= 0f || _lightMs >= 0f || _townGlowMs >= 0f)
+            if (_capi.Animating || _camPhase != 0 || _closeZoom != 1f || _arrivalCloseMs >= 0f || _settling || _lightMs >= 0f || _townGlowMs >= 0f)
             {
                 animating = true;
             }
@@ -886,6 +893,92 @@ namespace AF.UI
             ApplyCameraZoom(z);
         }
 
+        private bool _settling;
+        private Vector2 _settleTarget;
+
+        /// <summary>La vista se está corriendo al encuadre final tras un viaje que la cámara siguió (tests).</summary>
+        internal bool CameraSettling => _settling;
+
+        // Al acabar un viaje que la cámara siguió: la vista se corre lo justo para que se vean enteras la parada siguiente con su
+        // rótulo y la canoa (FrameRemaining, como al abrir) y, ya quieta, los rótulos y las placas se vuelven a encajar en ese
+        // encuadre. Al volver de segundo plano o sin cámara, de golpe.
+        private void StartSettle(bool snap)
+        {
+            Vector2 target = _offset;
+            FrameRemaining(ref target);
+            target = new Vector2(ClampAxis(target.x, _contentW, _viewW), ClampAxis(target.y, _contentH, _viewH));
+            if (snap || !CameraAllowed || (target - _offset).sqrMagnitude < 0.25f)
+            {
+                _settling = false;
+                SetOffset(target);
+                RefitAfterJourney();
+                return;
+            }
+
+            _settleTarget = target;
+            _settling = true;
+        }
+
+        private void TickSettle(float dtMs)
+        {
+            if (!_settling)
+            {
+                return;
+            }
+
+            if (_dragging)
+            {
+                _settling = false; // el jugador manda: se queda donde lo deja
+                RefitAfterJourney();
+                return;
+            }
+
+            float k = 1f - Mathf.Exp(-Mathf.Max(0f, dtMs) / CamSettleMs);
+            Vector2 next = _offset + ((_settleTarget - _offset) * k);
+            if ((_settleTarget - next).sqrMagnitude < 0.25f)
+            {
+                _settling = false;
+                SetOffset(_settleTarget);
+                if (_camZoom != 1f)
+                {
+                    ApplyCameraZoom(_camZoom);
+                }
+
+                RefitAfterJourney();
+                return;
+            }
+
+            _offset = next;
+            if (_camZoom == 1f)
+            {
+                _content.anchoredPosition = new Vector2(_offset.x, -_offset.y);
+            }
+
+            LiveOffset();
+        }
+
+        // Los rótulos y las placas, otra vez encajados en el encuadre de ahora (como al final de LayoutView). Una vez por viaje.
+        private void RefitAfterJourney()
+        {
+            if (_view != MapView.World)
+            {
+                return;
+            }
+
+            CuiasRestore();
+            PlatesFitView();
+            RemainingLabelFitView();
+            CuiasYieldToPlates();
+            HeroesAfterFrame();
+            TownLabelsAfterFrame();
+            _closeUpLabelAlpha = -1f; // los rótulos recolocados toman la opacidad del primer plano en marcha (CloseUpLabels)
+            CloseUpLabels();
+            if (Visible)
+            {
+                EmitLayout();
+            }
+        }
+
         private void StartCamera(int phase)
         {
             _camFrom = _camPhaseZoom;
@@ -932,6 +1025,7 @@ namespace AF.UI
                 }
             }
 
+            TickSettle(dtMs); // observación 3 de la segunda ronda de la 1.1: el encuadre final tras el viaje
             CloseUpLabels(); // los rótulos se apagan en el primer plano: a ×2 serían enormes (RiverMapScreen.Towns.cs)
             if (_camPhase == 0)
             {
@@ -1015,6 +1109,7 @@ namespace AF.UI
             _camMs = 0f;
             _closeZoom = 1f;
             _arrivalCloseMs = -1f;
+            _settling = false;
             _camPhaseZoom = 1f;
             CloseUpLabels();
             if (_camZoom != 1f || _content.localScale != Vector3.one)
