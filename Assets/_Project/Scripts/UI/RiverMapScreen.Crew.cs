@@ -93,6 +93,8 @@ namespace AF.UI
         private float _cameoMs = -1f;
         private bool _cameoStill;
         private int _crewAnnounced = -1;
+        private bool _crewIntroSeen; // la presentación llegó a verse al menos un fotograma (observación 1 de la r2b)
+        private int _crewSeenCap = int.MaxValue; // al cerrar sin verla: hasta dónde se anota lo visto (CrewSeenCap)
 
         private CrewToucanView? _toucan;
         private CrewToucanView? _toucanHome;
@@ -122,6 +124,19 @@ namespace AF.UI
 
         /// <summary>La presentación ya salió (o salió sin animar).</summary>
         public bool CrewIntroFired => _crewIntroFired;
+
+        /// <summary>
+        /// La presentación espera a poder verse (observación 1 de la prueba r2b de la 1.1): el compañero ya cruzó su punto, pero el
+        /// Mapa está en la secuencia del 10 o en la vista Cuenca que eligió él mismo, y aún no salió.
+        /// </summary>
+        public bool CrewIntroWaiting => _crewOn && _crewIntro >= 0 && !_crewIntroFired;
+
+        /// <summary>
+        /// Hasta dónde se anota lo visto del Mapa al cerrarlo (<see cref="GameBootstrap.CloseRiverMap"/>): si el compañero que se
+        /// presentaba en el Mapa del 10 no llegó a verse (se cerró en la secuencia), el nivel anterior a su punto, para que la próxima
+        /// apertura lo presente; si no, sin tope (<see cref="int.MaxValue"/>). Vale tras <see cref="Close"/> hasta la apertura siguiente.
+        /// </summary>
+        public int CrewSeenCap => _crewSeenCap;
 
         /// <summary>El compañero está llegando ahora (la animación de la presentación).</summary>
         public bool CrewArriving => _crewIntroMs >= 0f;
@@ -186,6 +201,8 @@ namespace AF.UI
             _cameoMs = -1f;
             _cameoStill = false;
             _crewAnnounced = -1;
+            _crewIntroSeen = false;
+            _crewSeenCap = int.MaxValue;
             _crewOn = _live && CrewRequested && _hasCanoe && _progress != null;
             if (!_crewOn)
             {
@@ -227,7 +244,12 @@ namespace AF.UI
 
             if (moment == CapiMoment.Join && arg == _crewIntro && !_crewIntroFired)
             {
-                StartCrewIntro(!ProgressReduceMotion);
+                if (CrewCanPresent)
+                {
+                    StartCrewIntro(!ProgressReduceMotion);
+                }
+
+                // Si no (la secuencia del 10, en la Cuenca), espera: CrewTick la saca en la vista Mundo al acabar el viaje.
             }
             else if (moment == CapiMoment.Arrival && !ProgressReduceMotion)
             {
@@ -272,7 +294,8 @@ namespace AF.UI
             if (still)
             {
                 // Reducir movimiento (§6.2 y §7.3): sin viaje, el compañero aparece en su sitio y sale el chip; el miquito, quieto.
-                if (_crewIntro >= 0)
+                // En la secuencia del 10, cuando acaba (CrewTick).
+                if (_crewIntro >= 0 && CrewCanPresent)
                 {
                     StartCrewIntro(false);
                 }
@@ -282,7 +305,7 @@ namespace AF.UI
                     StartCameo(true);
                 }
             }
-            else if (_crewIntro >= 0 && !_catchUp)
+            else if (_crewIntro >= 0 && !_catchUp && CrewCanPresent)
             {
                 StartCrewIntro(true); // sin viaje que cruzar su nivel (no debería pasar: con él pendiente siempre hay tramo)
             }
@@ -292,6 +315,12 @@ namespace AF.UI
 
         partial void CrewClose()
         {
+            // Observación 1 de la r2b: el Mapa del 10 cerrado antes de que el compañero se viera (lo tapaba la secuencia), lo visto se
+            // anota hasta el nivel anterior a su punto y la próxima apertura lo presenta (con el viaje de su último tramo). En las
+            // demás aperturas, cerrar a medias completa el viaje y anota lo visto hasta max_level, como siempre (M3.5).
+            _crewSeenCap = _crewOn && _crewIntro >= 0 && !_crewIntroSeen && _source == MapOpenSource.L10
+                ? RiverCrew.Of((CrewKind)_crewIntro).JoinLevel - 1
+                : int.MaxValue;
             HideCrew();
             ClearCrewSprites();
             _crewArt.Release();
@@ -344,9 +373,10 @@ namespace AF.UI
             }
 
             float dt = Mathf.Max(0f, dtMs);
-            if (_crewIntro >= 0 && !_crewIntroFired && !_catchUp)
+            if (_crewIntro >= 0 && !_crewIntroFired && !_catchUp && !_seqActive && _seqOutMs < 0f)
             {
-                _crewIntroFired = true; // al volver de segundo plano (02 §14) el viaje saltó al final: a bordo, sin animar
+                // El viaje acabó sin presentarlo (la secuencia del 10, en la Cuenca, o la vuelta de segundo plano, 02 §14): sale ya.
+                PresentWaitingCrew();
             }
 
             if (_cameoLevel >= 0f && !_cameoFired && _catchUp && _canoeX + 1e-4f >= _cameoLevel)
@@ -358,6 +388,11 @@ namespace AF.UI
             Advance(ref _crewChipMs, dt, CrewChipMs);
             Advance(ref _crewHopMs, dt, CrewHopMs);
             Advance(ref _cameoMs, dt, _cameoStill ? CapiDirector.StillMs + CameoFadeMs : CameoShowMs);
+            if (_crewIntroFired)
+            {
+                _crewIntroSeen = true; // un fotograma en la pantalla
+            }
+
             ApplyCrew(false);
             if (_crewIntroMs >= 0f || _crewChipMs >= 0f || _crewHopMs >= 0f || _cameoMs >= 0f)
             {
@@ -380,6 +415,25 @@ namespace AF.UI
         }
 
         // ============================================================================================ momentos
+
+        // Observación 1 de la prueba r2b de la 1.1: el compañero se presenta donde se le ve. No en la secuencia del Mapa del 10 (la
+        // vista Cuenca con el encuadre del estuario: la canoa sale de él) ni en la Cuenca que puso el Mapa solo; sí en la vista Mundo
+        // y en la Cuenca que eligió el jugador (ahí, en la vista actual: el chip y TalkBack, sin el primer plano).
+        private bool CrewCanPresent => !_seqActive && (_view == MapView.World || _viewChanges > 0);
+
+        // La presentación que esperaba: si el Mapa está en la Cuenca sin que la eligiera el jugador (la secuencia del 10), pasa a la
+        // vista Mundo, encuadrada en la canoa, y la presenta allí con su primer plano.
+        private void PresentWaitingCrew()
+        {
+            if (_view != MapView.World && _viewChanges == 0)
+            {
+                ApplyView(MapView.World);
+                EmitLayout();
+            }
+
+            StartCrewIntro(!ProgressReduceMotion);
+            ApplyCrew(true);
+        }
 
         private void StartCrewIntro(bool animate)
         {
