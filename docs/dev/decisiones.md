@@ -4579,6 +4579,25 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - la fanfarria se acepta como montaje original de muestras CC0, con licencia `cc0`. El encargo pedía obra original con cesión total, y la licencia `cc0` de las fuentes cumple ese fin para anuncios y tráilers.
 - **Pendiente del dueño:** escuchar las tres piezas en el teléfono, que es la condición del encargo. Una que no convenza vuelve a Gemini con su comentario.
 
+### D-069, añadido del 2026-11-15: arreglos de la segunda ronda de la 1.1 en el teléfono
+
+- **Origen:** las observaciones 1-3 del dueño en `docs/dev/traspaso/pruebas-telefono-2026-11-09-1.1-r2.md` y la 3 del Moto G23 (`pruebas-telefono-2026-11-15-moto-g23.md`). El dueño, en el chat del 2026-11-15: «iniciemos pruebas, sube para que spark se encargue». Las ramas son `v11/mapa-r2-arreglos` y `v11/captura-panel`.
+- **Observación 1, el viaje con el zoom alto.** Era la propuesta del dueño: subir con menos zoom y, al llegar, acercarse un par de segundos.
+  - Con el Mapa v2, si el zoom del mundo pasa de ×7,5, el viaje se hace a ×6.
+  - Al llegar, la cámara se acerca al detalle (zoom del mundo ÷ zoom del viaje, como mucho ×2,5) durante 2 s. Después vuelve a la vista del viaje y se encuadra en 250 ms, para que la parada siguiente y su rótulo quepan.
+  - «Jugar» sigue entrando al llegar, como en D-053: `map_play_ready` no se alarga. El viaje sigue durando 4.500 ms, y el toque lo acelera ×6.
+  - Si el jugador arrastra, cambia de vista, pulsa «Norte arriba» o «Volver a la canoa», o tiene activado «Reducir movimiento», el acercamiento y el encuadre se anulan.
+  - Valores [P]: umbral ×7,5, viaje ×6, acercamiento 2.000 ms y encuadre 250 ms.
+  - **[P] del integrador:** «la vista principal» a la que se vuelve es la del viaje (×6), no la del mundo (×15). Se confirma en el teléfono.
+- **Observación 2, las boyas tapaban al tucán.**
+  - Con el v2, las boyas son más pequeñas (×0,75) y translúcidas (0,6), y no se dibujan dentro del claro de 2 dp alrededor de la canoa, la tripulación, Rosa y el tucuxi. La cuenta la sigue dando «Faltan N».
+  - **[P] del integrador:** esto cambia el criterio de la 1.0 («se ven aunque caigan bajo la canoa»), que solo estaba escrito en un test. Se confirma en el teléfono.
+- **Observación 3, las uniones del río.**
+  - Con el v2, las bocas de los afluentes se funden a lo largo de medio ancho del río al que llegan, y lo mismo las uniones entre piezas del tramo en curso. El lleno del tramo en curso se funde con un cruce de 28 dp.
+  - Una guarda en la cinta (`RiverRibbonGraphic`) quita los pliegues de las curvas cerradas. En Nauta pasan de 77 a 1 con el v2, y de 25 a 2 con la 1.0. La guarda vale para todas las cintas, también las de la 1.0 y la del cartel de mundo. Deja astillas de 1 a 3 dp².
+  - Queda fuera la vista Cuenca, que sigue dibujada con polilíneas de esquinas, y es una decisión aparte.
+- **Observación 3 del Moto G23, el juego automático de captura.** Con `af_capture_autoplay`, el banner de mundo y la tarjeta previa se cierran solos tras 2.500 ms de lectura [P], como un toque. Solo pasa en builds de desarrollo y en el modo de captura; el jugador no nota ningún cambio.
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
