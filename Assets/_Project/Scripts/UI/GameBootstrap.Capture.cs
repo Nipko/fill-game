@@ -23,7 +23,9 @@ namespace AF.UI
     /// <see cref="LevelPackReader"/>: <c>BoardBuilder</c> y <c>LevelValidation</c> del núcleo; si no vale, error y los de siempre),
     /// y la app arranca en su primer nivel (o en <c>af_level</c> si está en él);</item>
     /// <item>el HUD del nivel oculto (<see cref="GameScreen.SetCaptureHudHidden"/>), sin tarjeta previa ni banner de mundo;</item>
-    /// <item>la solución del solver reproducida con ritmo «humano» (<see cref="CaptureAutoplay"/>);</item>
+    /// <item>la solución del solver reproducida con ritmo «humano» (<see cref="CaptureAutoplay"/>); con el HUD a la vista, la
+    /// tarjeta previa (Difícil, Muy difícil, estreno, racha, canoas) y el banner de mundo se tocan solos tras
+    /// <see cref="CaptureCardReadMs"/> de lectura, y después empieza el juego;</item>
     /// <item>cámara lenta: el reloj de la presentación y del flujo por <see cref="CaptureOptions.TimeScale"/> (no
     /// <c>Time.timeScale</c>: el juego avanza con el reloj real sin escalar), así que la lógica es la misma, solo más lenta;</item>
     /// <item>la skin de las cuias y el fondo del tablero forzados solo en la vista, sin tocar el perfil;</item>
@@ -36,12 +38,21 @@ namespace AF.UI
         /// <summary>Lo que se espera en el inicio a que la pantalla pedida se pueda abrir antes de darlo por fallido (ms reales).</summary>
         public const float CaptureScreenTimeoutMs = 15000f;
 
+        /// <summary>
+        /// [P] Tiempo de lectura (ms reales) de lo que tapa el tablero antes de empezar (LEVEL_CARD: la tarjeta previa de Difícil y
+        /// Muy difícil, la de estreno de una mecánica, la de racha o la de canoas, y el banner de mundo) antes de que el juego
+        /// automático la toque como un jugador (observación 3 de la prueba del Moto G23, 2026-11-15). Cuenta desde que se ve;
+        /// sin <c>af_capture_autoplay</c>, la tarjeta espera al dedo como siempre.
+        /// </summary>
+        public const float CaptureCardReadMs = 2500f;
+
         private CaptureOptions _capture = CaptureOptions.Inactive;
         private string? _captureBoardJson;
         private CaptureAutoplay? _captureAutoplay;
         private CaptureScreen _captureScreenPending;
         private float _captureScreenWaitMs;
         private CuiaSkin? _captureSkin;
+        private float _captureCardMs;
 
         /// <summary>Opciones del modo de captura de esta partida (<see cref="CaptureOptions.Inactive"/> sin extras y en release).</summary>
         public CaptureOptions Capture => _capture;
@@ -64,6 +75,7 @@ namespace AF.UI
             _captureScreenPending = CaptureScreen.None;
             _captureScreenWaitMs = 0f;
             _captureSkin = null;
+            _captureCardMs = 0f;
             if (!_capture.Active)
             {
                 return;
@@ -240,12 +252,41 @@ namespace AF.UI
 
             if (InLevel && _flow != null && _screen != null)
             {
+                TickCaptureCard(realMs, _flow, _screen);
                 autoplay.Tick(realMs, _flow, _screen.IsViewIdle, this);
             }
             else
             {
                 autoplay.Abort("la app salió del nivel");
             }
+        }
+
+        // Con el juego automático, lo que tapa el tablero antes de empezar (LEVEL_CARD) se toca solo tras CaptureCardReadMs de
+        // lectura, por el mismo camino que el dedo (GameScreen.CaptureTapCard). El reloj vuelve a cero con cada cosa nueva que se
+        // enseña (el banner de mundo y, detrás, la tarjeta previa) y no corre mientras el banner espera su arte o sale.
+        private void TickCaptureCard(float realMs, LevelFlow flow, GameScreen screen)
+        {
+            if (!flow.HasLevel || flow.Phase != FlowPhase.LevelCard || flow.WorldBannerWaiting || flow.WorldBannerClosing)
+            {
+                _captureCardMs = 0f;
+                return;
+            }
+
+            _captureCardMs += realMs;
+            if (_captureCardMs < CaptureCardReadMs)
+            {
+                return;
+            }
+
+            string? what = screen.CaptureTapCard(flow);
+            if (what == null)
+            {
+                return;
+            }
+
+            CaptureLog.Write("card_dismissed", "\"level\":" + flow.LevelNumber.ToString(CultureInfo.InvariantCulture) + ",\"card\":\"" + what
+                + "\",\"read_ms\":" + ((int)_captureCardMs).ToString(CultureInfo.InvariantCulture));
+            _captureCardMs = 0f;
         }
 
         // El paso de la presentación con la cámara lenta (1 sin ella).

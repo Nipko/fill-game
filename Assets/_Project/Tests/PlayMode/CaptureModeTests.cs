@@ -104,6 +104,39 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Autoplay_DismissesTheDifficultyCard_AfterReading_AndPours()
+        {
+            // Observación 3 de la prueba del Moto G23 (2026-11-15): en un Muy difícil, con el HUD a la vista, la tarjeta previa
+            // tapaba el tablero y el juego automático no vertía nunca.
+            LaunchOptions.LevelCardsOverride = true;
+            string veryHard = BoardPack().Replace("\"difficulty\": { \"par\": 1 }", "\"difficulty\": { \"par\": 1, \"label\": \"very_hard\" }");
+            Assert.That(veryHard, Does.Contain("very_hard"), "el paquete lleva la etiqueta");
+            var options = new CaptureOptions { Active = true, BoardBase64 = Base64(veryHard), Autoplay = true, StartMs = 100, PauseMs = 120, JitterMs = 0, SelectMs = 80 };
+            yield return LoadCapture(options, ProfileAt(Level));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.Level.DifficultyLabel, Is.EqualTo("very_hard"));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "la tarjeta de Muy difícil tapa el tablero");
+            Assert.That(boot.View!.LevelCard.Visible, Is.True);
+
+            // Antes del tiempo de lectura, la tarjeta sigue.
+            int reading = (int)GameBootstrap.CaptureCardReadMs - 500;
+            for (int t = 0; t < reading; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                boot.TickCapture(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "se deja leer");
+            Assert.That(boot.CaptureAutoplayRun!.Pours, Is.EqualTo(0));
+
+            CaptureAutoplay autoplay = Run(boot, 120000);
+            Assert.That(autoplay.EndReason, Is.EqualTo("won"), CaptureLog.LastLine);
+            Assert.That(autoplay.Pours, Is.GreaterThan(0), "el juego automático vierte tras cerrar la tarjeta");
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
+        [UnityTest]
         public IEnumerator HideHud_HidesTheHudLayers_AndKeepsTheBoard()
         {
             yield return LoadCapture(new CaptureOptions { Active = true, HideHud = true, BoardBase64 = Base64(BoardPack()) }, ProfileAt(Level));

@@ -1,4 +1,5 @@
 #nullable enable
+using AF.GameFlow;
 using UnityEngine;
 
 namespace AF.UI
@@ -46,6 +47,46 @@ namespace AF.UI
             }
 
             CaptureHudHidden = hidden;
+        }
+
+        /// <summary>
+        /// El toque del juego automático (<c>af_capture_autoplay</c>) sobre lo que tapa el tablero en LEVEL_CARD, como un dedo: el
+        /// banner de mundo (<see cref="OnWorldBannerTapped"/>: completa el viaje o empieza la salida) o la tarjeta previa
+        /// (<see cref="OnLevelCardTapped"/>: la de Difícil y Muy difícil, el estreno, la racha o las canoas). Si la vista no
+        /// enseña ninguna de las dos, el toque va directo al flujo (<see cref="LevelFlow.DismissLevelCard"/>), como
+        /// <c>TapAnywhere</c>. Devuelve qué se tocó (<c>world_banner</c> o <c>level_card</c>) o null si el toque no hizo nada
+        /// (el banner aún espera su arte o ya está saliendo).
+        /// </summary>
+        internal string? CaptureTapCard(LevelFlow flow)
+        {
+            if (flow.Phase != FlowPhase.LevelCard)
+            {
+                return null;
+            }
+
+            if (_cardsBuilt && _worldBanner.Visible && !_worldBanner.Dismissing)
+            {
+                if (!_worldBanner.CardShown)
+                {
+                    return null; // aún espera su arte: ningún toque lo cierra
+                }
+
+                OnWorldBannerTapped();
+                return "world_banner";
+            }
+
+            if (_cardsBuilt && _levelCard.Visible && !_levelCard.Dismissing)
+            {
+                OnLevelCardTapped();
+                return "level_card";
+            }
+
+            if (flow.WorldBanner != 0)
+            {
+                return flow.DismissWorldBanner() ? "world_banner" : null;
+            }
+
+            return flow.DismissLevelCard() ? "level_card" : null;
         }
 
         // El nivel cuyo fondo se pinta: el forzado por la captura o el cargado.
