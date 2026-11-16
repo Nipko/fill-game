@@ -57,6 +57,7 @@ Apunta cualquier texto cortado, partido a mitad de palabra, en otro idioma o que
    - Compila `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Release -Rehearsal`, que deja `com.amazonfill.dev` y es instalable.
    - Repite las medidas: `dumpsys meminfo` en la pantalla de la edad, en el Mapa y en el 340, y `peak_mono_heap_mib`.
    - Con esto se decide D-060.
+   - **Desde `5b60e69e`** el arte por código lleva el tope de densidad del teléfono y el inicio suelta su arte mientras se juega (`docs/dev/memoria.md` §9). Sigue la lista de §9.5: ART compilado (`cmd package compile -m speed-profile`), la orilla, el nivel 106, el Mapa, tres vueltas al Mapa con el v2 y con la 1.0, `Code`, `peak_mono_heap_mib`, las líneas `AF_ART home_scene` y `AF_ART procedural`, y el tope que sale en pantalla dividida. Que el dueño mire si el arte a 2 px/dp se ve bien.
 2. **La segunda apertura:** cierra y vuelve a abrir. Apunta `boot` `splash_ms` y `load_ms`.
 3. **El 340 jugado a mano.** Apunta si el panel de dificultad se cierra bien y los fotogramas.
 4. **Los parones del 386** (observación 2): repítelo sin tocar el teléfono y mira si vuelven.
