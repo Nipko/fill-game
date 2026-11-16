@@ -47,10 +47,13 @@ namespace AF.UI
         /// </remarks>
         private void OpenMapPooled(RiverMapScreen map, MapOpenSource source, RiverStopCatalog stops, IProgressStore progress, int play, bool playAvailable)
         {
+            // Una sola suscripción por dominio (estática, como la reserva). Con la recarga de dominio desactivada (Enter Play Mode
+            // Options) el campo y la suscripción persisten de una sesión de Play Mode a otra, y el campo evita que se dupliquen; con la
+            // recarga, los dos vuelven a empezar a la vez.
             if (!s_lowMemoryHooked)
             {
                 s_lowMemoryHooked = true;
-                UnityEngine.Application.lowMemory += PixelBuffers.ReleaseReserve;
+                UnityEngine.Application.lowMemory += PixelBuffers.ReleaseReserveForLowMemory;
             }
 
             bool pool = !PixelBuffers.Pooling;

@@ -47,6 +47,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             DevProbe.ResetMem();
+            PixelBuffers.ReleaseReserve(); // la reserva del Mapa no se cuela en los tests siguientes que miden NewBytes
         }
 
         [Test]

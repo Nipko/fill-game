@@ -33,9 +33,11 @@ namespace AF.Presentation
         private static volatile bool s_pooling = true;
 
         /// <summary>
-        /// Se guardan búferes al soltarlos (solo durante el arranque: <see cref="BeginPooling"/> y <see cref="EndPooling"/>). Fuera de
-        /// él, <see cref="Return"/> no guarda nada: los lienzos grandes de después (modales, TiTino, el banner del mundo) se tiran como
-        /// siempre y su memoria vuelve al heap, en vez de quedarse un búfer vivo toda la sesión.
+        /// Se guardan búferes al soltarlos: entre <see cref="BeginPooling"/> y <see cref="EndPooling()"/>, durante el arranque, al abrir
+        /// el Mapa (<c>GameBootstrap.OpenMapPooled</c>) y al repintar la escena del inicio (<c>LobbyScreen</c>, <c>docs/dev/memoria.md</c>
+        /// §9.2). Fuera de esas ventanas, <see cref="Return"/> no guarda nada: los lienzos grandes de después (modales, TiTino, el
+        /// banner del mundo) se tiran como siempre y su memoria vuelve al heap; solo queda vivo, si se abrió el Mapa, el búfer de
+        /// reserva (<see cref="ReserveBytes"/>, §10).
         /// </summary>
         public static bool Pooling => s_pooling;
 
@@ -76,6 +78,13 @@ namespace AF.Presentation
             s_pooling = false;
             lock (s_lock)
             {
+                if (keepLargest && s_droppedForLowMemory)
+                {
+                    // Tras un aviso de memoria baja, esta apertura no vuelve a guardar la reserva: la guarda la siguiente.
+                    keepLargest = false;
+                    s_droppedForLowMemory = false;
+                }
+
                 if (keepLargest || s_reserveLent)
                 {
                     int cap = keepLargest ? int.MaxValue : s_reserveLength;
@@ -113,7 +122,7 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Suelta la reserva (memoria baja del sistema y tests): la apertura siguiente vuelve a pedir su búfer.</summary>
+        /// <summary>Suelta la reserva (tests), también si está prestada: la apertura siguiente vuelve a pedir su búfer y la guarda.</summary>
         public static void ReleaseReserve()
         {
             lock (s_lock)
@@ -121,12 +130,34 @@ namespace AF.Presentation
                 s_reserve = null;
                 s_reserveLength = 0;
                 s_reserveLent = false;
+                s_droppedForLowMemory = false;
             }
         }
+
+        /// <summary>
+        /// Suelta la reserva por un aviso de memoria baja del sistema (<c>Application.lowMemory</c>), también si está prestada: el
+        /// <see cref="EndPooling(bool)"/> que sigue (el de la apertura en curso o el de la siguiente) no la vuelve a guardar; la
+        /// guarda la apertura normal posterior.
+        /// </summary>
+        public static void ReleaseReserveForLowMemory()
+        {
+            lock (s_lock)
+            {
+                s_reserve = null;
+                s_reserveLength = 0;
+                s_reserveLent = false;
+                s_droppedForLowMemory = true;
+            }
+        }
+
+        /// <summary>La reserva se soltó por memoria baja y la apertura siguiente no la guardará (tests).</summary>
+        public static bool ReserveDroppedForLowMemory => s_droppedForLowMemory;
+
         private static readonly List<Color[]> s_free = new List<Color[]>(MaxFree + 2);
         private static Color[]? s_reserve;
         private static int s_reserveLength;
         private static bool s_reserveLent;
+        private static bool s_droppedForLowMemory;
         private static long s_canvasBytes;
         private static long s_newBytes;
         private static int s_reused;
