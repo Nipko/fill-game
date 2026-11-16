@@ -208,6 +208,8 @@ El cálculo de §4 suponía que con `Always` había un búfer de color y profund
 
 ### 7.5 Lo que queda, con quién decide
 
+**Aplicado en la 1.1 (rama `v11/memoria-clase-a`, §9):** la pregunta 1 con la opción (a) y el punto 3, corregido (el panorama, el muelle, el follaje y TiTino los pinta también el nivel: lo propio del inicio son ≈ 1,5 MiB, no 13-15).
+
 **Pregunta 1 para el dueño (calidad visible en gama baja).** El arte por código se pinta a una densidad fija (fondos a 2,25 px/dp; follaje, UI y personajes a 3 px/dp; superficies de los modales a 1,5), no a la del teléfono. En clase A (≈ 2 px/dp) ocupa lo mismo que en el S938B (≈ 40-50 MB) y la GPU lo reduce al pintarlo. Pintarlo como mucho a la densidad del teléfono bajaría en clase A unos 15-25 MB de `GL mtrack` (follaje y UI, −55 % de píxeles; fondos, −20 %), sin cambio en el S938B. El píxel final cambia algo: el arte se pinta ya pequeño en lugar de reducirse al dibujarse. Además, la revisión visual del 2026-10-07 pidió subir la densidad porque las orillas salían en escalera al ampliarse. ¿Lo pruebo?
 - (a) sí, con un tope de densidad igual a la del teléfono y la revisión del dueño a 2 px/dp (`wm density 320` en el S938B lo simula). Recomendada: es lo único de las texturas que mueve D-060 en clase A;
 - (b) no: la densidad fija se queda.
@@ -310,3 +312,57 @@ En cada uno, en el inicio, el Mapa y el nivel 75 (un minuto quieto en cada sitio
 - `MemoryInventoryTests.Inventory_Moments` (manual): pasa; sus cifras son las del §2.
 - `scripts/unity-build.ps1 -Method Dev -Architecture x86_64`: OK, `Builds/Android/dev.apk` (73,6 MiB). `ci/size-gate.ps1` solo acepta un `.aab` y BuildDev no lo genera: el APK de desarrollo pesa 73,6 MiB, por debajo de los 80 MB. `ci/check-manifest.ps1 Builds/Android/dev.apk -Mode dev`: OK.
 - El cambio del Blit Type no se ve en el Editor (es un ajuste del reproductor Android): la comprobación visual la hace el portátil en el teléfono.
+
+## 9. Clase A: el tope de densidad, el arte del inicio y el Mapa (rama `v11/memoria-clase-a`, 2026-11-16)
+
+Por la medida del Moto G23 (`docs/dev/traspaso/pruebas-telefono-2026-11-15-moto-g23.md`, el primer teléfono de clase A): el ensayo de release da 484-516 MB de TOTAL PSS frente a los ≤ 450 de D-060, con `Graphics` en 85-102 MB (sube con el Mapa y no baja al volver al nivel) y `Code` en 100-115; el `dev.apk`, 71 MB de heap gestionado frente a ≤ 60. El dueño fue con las recomendadas de §7.5: la pregunta 1 (a), el punto 3 y mirar el Mapa. Los puntos 2 (profundidad y estencil) y 4 (asignadores), y la cadena de presentación, no se tocan: piden el teléfono o una decisión.
+
+### 9.1 El arte por código con el tope de densidad del teléfono (§7.5, pregunta 1, opción (a))
+
+- **Qué cambia.** `ProceduralArt.DensityCap` (px por dp del lienzo; 0 = sin tope) lo fija `GameBootstrap.ArtDensityCap()` antes de crear el arte: la escala del lienzo con la densidad del teléfono (`ScreenFrame.Compute`, la misma que usa la UI), redondeada hacia arriba a 0,05. Cada pieza se pinta a `min(densidad fija, tope)`: `UiPxPerDp` (3), el panorama y el muelle (2,25), el follaje (3) y las superficies de los modales (1,5) pasan a propiedades con `ProceduralArt.Capped`. Como cada sprite lleva PPU = 100 × su densidad, sus medidas en dp y sus bordes 9-slice no cambian: la UI ya escala por dp.
+  - En el SM-S938B y en cualquier pantalla de 3 px/dp de lienzo o más, el tope es 3 o más: **nada cambia** (el nivel sale idéntico byte a byte, §9.4).
+  - En clase A (720 × 1600 a 2 px/dp), la UI, el follaje y los personajes se pintan a 2 px/dp (−56 % de píxeles), y el panorama y el muelle a 2 (−21 %); las superficies de los modales siguen a 1,5.
+  - **Se quedan a su densidad fija** los atlas de tamaño fijo en px, que tienen sus celdas y sus multiplicadores calculados con 3 px/dp (`ProceduralArt.MaxUiPxPerDp`): la fauna y TiTino (`fauna_bradypus_variegatus_provisional` y `arbol_embauba_provisional`, 4 MiB), las frutas en vuelo, el rig de Capi y la tripulación del Mapa, los glifos de las Aguas turbias y la cuia del Mercado en grande. También los destellos del río (2 px/dp fijos), la intro de la marca (`BootSplash` y `BrandEmblemArt`, que se sueltan al acabar) y el vidrio de las cuias, que ya iba a la densidad de la pantalla (`CuiaPixelsPerUFor`).
+  - Sin densidad conocida (el Editor sin pantalla simulada con densidad, los tests que pintan arte suelto) no hay tope: los tests de siempre ven el arte de siempre. La clave del arte compartido lleva el tope y, al destruirse la escena, `DensityCap` vuelve a 0.
+- **Medido en el Editor** (`MemoryInventoryTests`, manuales; `Inventory_Moments_ClassA` simula 720 × 1600 a 2 px/dp con 48 px de recorte arriba). Texturas que crea el juego, en MiB (entre paréntesis, cuántas):
+
+| Momento | Antes (densidad fija: igual en cualquier pantalla) | Después, clase A | Después, 3 px/dp |
+|---|---|---|---|
+| Inicio | 29,4 (128) | **20,7** (122) | 29,4 (igual) |
+| Mapa | 35,1 | **26,2** | 35,1 |
+| Avatares | 32,9 | **24,4** | 32,9 |
+| Nivel 75 | 35,3 (165) | **26,4**; **24,9** con §9.2 | 35,3; ≈ 33,3 con §9.2 |
+| Generación del arte al arrancar (`AF_ART procedural`, Editor) | 2.231-2.270 ms | **1.289-1.310 ms** | igual |
+
+  Son **−8,7 MiB** de texturas en clase A (−30 %), menos que los 15-25 MB estimados en §7.5: los atlas de tamaño fijo (≈ 6 MiB, TiTino sobre todo), las superficies de los modales (1,5 px/dp, ≈ 2 MiB) y los destellos del río no bajan. En el teléfono, la cifra se verá en `tex_cur_mib` y en `GL mtrack`. De paso, el arranque pinta ≈ 40 % menos (en el Editor, −0,9 s de CPU en el bloque `services`), y con ello asigna menos basura en el heap gestionado.
+- **Lo que bajaría más:** pintar los atlas de tamaño fijo con el tope (otra tarea: celdas, pivotes y los multiplicadores de `SlothRig` y `MonkeyRig` en función de la densidad; ≈ −2,2 MiB más en clase A).
+
+### 9.2 El arte propio del inicio, suelto mientras se juega (§7.5, punto 3)
+
+- **Corrección a §7.5:** el panorama, el muelle, los cuatro follajes y el atlas de TiTino **no** son propios del inicio: el nivel los pinta también (`GameScreen`: el fondo de la escena, y TiTino). El inventario lo dice ahora con `lobby_only` (texturas del inicio vivas en el nivel que ninguna `Image` ni `RawImage` fuera del lienzo del inicio tiene): 27 texturas y 2,0 MiB en clase A. De ellas, las que pinta solo el inicio son los destellos del río (`river_streaks`, 720 × 400, 1,1 MiB), la rama de TiTino (`home_branch`), la caja de cuias (`dock_crate`) y piezas del río de pocos KiB; el resto son variantes (los iconos «apagados», el atlas de patrones) que el nivel pone en sus Image cuando hace falta.
+- **Aplicado:** al entrar en un nivel, `LobbyScreen` quita los destellos, la rama y la caja de sus Image y `ProceduralArt.ReleaseHomeScene` destruye sus texturas; al volver al inicio se repintan con los búferes de los lienzos en préstamo (`PixelBuffers`, como el Mapa), y la línea `AF_ART home_scene <ms>` (desarrollo) y `LobbyScreen.LastHomeSceneRebuildMs` dicen lo que costó. Mientras la intro del arranque tiene la rama de TiTino (`BootSplash`), no se suelta (`LobbyScreen.HomeSceneHeld`).
+- **Medido:** nivel 75 en clase A, 26,4 → **24,9 MiB** (−1,5 MiB; ≈ −2 MiB a 3 px/dp). Repintarlo al volver: **59,8 ms** en el Editor a 3 px/dp (el primer repintado de la sesión, sin caché en disco; a 2 px/dp, menos): **por debajo de los ~100 ms**. En el Moto G23 puede ser 2-4 veces más (≈ 120-240 ms), en el fotograma en que aparece el inicio; lo dice la línea `AF_ART home_scene` del `dev.apk`. Si en el teléfono pasa de unos 100 ms, la salida es guardarlos en la caché en disco (`Cached`, guía 4.9), como el panorama.
+- Test: `HomeSceneReleaseTests` (se suelta al jugar, el panorama se queda, se repinta al volver).
+
+### 9.3 El Mapa: lo que retiene al cerrarlo
+
+- **Medido en el Editor** (`MapMemoryCycleTests.Diagnose_RetainedAfterClose_AndOpenCost`, manual, nivel 58, tres vueltas): tras cerrar, del Mapa queda solo su jerarquía oculta, igual en las tres vueltas: 616 GameObjects y 1.796 componentes (784 KiB en Unity), 55 mallas de textos TMP (193 KiB) y los 9 iconos de la 1.0 (0,4 MiB, §2.1). La malla compartida de UGUI (`Shared UI Mesh`) se queda en 4 vértices: no retiene la geometría del Mapa. Las texturas, los lotes de los lienzos, los `CanvasRenderer` activos y los vértices vuelven a cero (como ya decían `MapMemoryCycleTests` y el añadido de D-069), sin RenderTexture ni atlas de fuentes nuevos.
+- **Coste de abrir** (la llamada y los dos fotogramas siguientes, Editor): la 1.ª apertura, 381-399 ms (lee y decodifica la geometría, construye la jerarquía y las capas del v2); la 2.ª y la 3.ª, 230-248 ms.
+- **Decisión [P]: no se destruye la jerarquía al cerrar.** Soltaría ≈ 1 MiB de objetos de Unity (memoria de CPU, no `Graphics`), y cada reapertura costaría como la primera: ≈ +150 ms en el Editor (≈ +0,5 s en el Moto G23), con el riesgo de rehacer una pantalla de ~20.000 líneas que hoy se abre y se cierra con la misma referencia (235 usos en los tests). No explicaría los +16-17 MB de `Graphics` que no bajan en el Moto G23.
+- **Hipótesis para el teléfono** (el Editor no ve la memoria del driver): el Moto G23 lleva una Mali-G52 (OpenGL ES 3 por D-060), y el driver guarda en una reserva por proceso las páginas de las texturas y los búferes que se liberan, para reutilizarlas: siguen contando en `GL mtrack`. El Mapa v2 crea y destruye en cada apertura ≈ 5,5 MiB de texturas (sus atlas: el río vivo, los pueblos, el rig de Capi y la tripulación) y sube la geometría de ≈ 31.500 vértices de sus lienzos; se suman los programas de sombreado que se compilan la primera vez. Nada de eso se suelta destruyendo la jerarquía. Lo bajaría que el Mapa no cree y destruya texturas (guardar sus atlas entre aperturas, con la memoria fija que eso supone) o atlas más pequeños; antes hay que medirlo (§9.5, punto 3).
+
+### 9.4 Capturas (360 dp, densidad 2 y 3)
+
+`DensityCapSnapshotTests` (manual, con gráficos: `unity test . --mode PlayMode --architecture x86_64 --filter AF.Tests.PlayMode.DensityCapSnapshotTests`) deja en `Logs/snapshots/es-419/density_{2|3}x_{inicio|nivel}_{fija|tope}.png` el inicio y el nivel 58 a 720 × 1600 (2 px/dp) y a 1080 × 2400 (3 px/dp), con el arte a la densidad fija (`_fija`, con `GameBootstrap.ArtDensityCapEnabled` = false) y con el tope (`_tope`). A 3 px/dp el nivel sale idéntico byte a byte y el inicio solo cambia por el avatar al azar del perfil; a 2 px/dp no se ve diferencia a tamaño real (el arte ya llegaba a la pantalla a 2 px/dp, reducido por la GPU). **Pendiente:** la revisión del dueño en el teléfono de clase A, o con `wm density 320` en el S938B (§7.5, pregunta 1 (a)).
+
+### 9.5 Lo que tiene que medir el Moto G23 para cerrar D-060
+
+Con el ensayo de release y el `dev.apk` de esta rama, OpenGL ES 3, ART compilado (`adb shell cmd package compile -m speed-profile -f <paquete>`) y un minuto quieto en cada sitio, `dumpsys meminfo -d`:
+
+1. **TOTAL PSS del ensayo** en la orilla (el inicio, que faltó), en el nivel 106 al arrancar, en el Mapa, en el nivel tras volver del Mapa y un minuto después: la tabla de la hoja del 2026-11-15, para comparar. El criterio de D-060: ≤ 450 MB en todos.
+2. **`Graphics` y `GL mtrack`** en esos momentos y, en el `dev.apk`, `tex_cur_mib`: lo esperado son unos −9 MB de texturas frente al 2026-11-15 (§9.1) y −1,5 MB más en el nivel (§9.2).
+3. **El Mapa:** tres vueltas de abrir y cerrar con `--ei af_mem_os 1` (el guion del añadido de D-069 del 2026-11-08), con el v2 y con el de la 1.0 (`--ez af_map_v1 true`). Si `GL mtrack` sube con la 1.ª apertura y no baja, pero no crece en la 2.ª y la 3.ª, es la reserva del driver (§9.3): decisión del dueño entre aceptarla o guardar los atlas del Mapa entre aperturas.
+4. **`Code`** con ART compilado frente al recién instalado (100-115 MB): cuánto es transitorio.
+5. **El heap gestionado** (`peak_mono_heap_mib` del `dev.apk`) tras el tutorial y el Mapa: el arranque pinta ≈ 40 % menos (§9.1), así que debería bajar de los 71,2.
+6. **`AF_ART home_scene`** al volver de un nivel (§9.2) y **`AF_ART procedural`** en el arranque.
+7. **La imagen:** el inicio, un nivel, el Mapa y los modales a 2 px/dp, para la revisión del dueño (§9.4).
