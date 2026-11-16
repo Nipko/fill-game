@@ -57,7 +57,7 @@ Es la medida que pide `DevBench` para sustituir el 8× [P] de `MorphoDeviceFacto
    - **Heap gestionado:** `peak_mono_heap_mib` 71,2 tras el tutorial y el Mapa, frente a ≤ 60.
    - **Texturas:** cumplen, de 35 a 50 MB frente a 120.
    - **Pico de residente (`peak_sys_mib`):** 546 MB.
-   - **Matiz:** según `docs/dev/memoria.md`, el `dev.apk` pesa más que el release (en el SM-S938B, 605-620 MB frente a 545 MB del ensayo). Falta medir el ensayo de release (`BuildRelease.BuildAndroid -afRehearsal`) en este teléfono antes de decidir.
+   - **Matiz:** según `docs/dev/memoria.md`, el `dev.apk` pesa más que el release (en el SM-S938B, 605-620 MB frente a 545 MB del ensayo), y D-060 se juzga con el ensayo. Por eso se midió también el ensayo (sección siguiente): **sigue por encima**.
    - **Cierres por memoria:** `lowmemorykiller` no cerró el juego en ningún momento.
 2. **Media, por confirmar. Dos parones en el 386:** fotogramas de 81,5 s y de 30,4 s.
    - Coinciden con `audio_focus` `none` (t 61.350 → 142.627 y 160.243 → 187.783): otra app tomó el foco, así que parece que el juego pasó a segundo plano y no que se colgara.
@@ -68,10 +68,33 @@ Es la medida que pide `DevBench` para sustituir el 8× [P] de `MorphoDeviceFacto
    - De paso: `af_capture_start_ms` mayor de 10.000 se recorta al tope (`AF_CAPTURE error`); es lo esperado.
 4. **Baja. La primera apertura tarda unos 10 s hasta la pantalla de la edad.** Los servicios se llevan hasta los 6,5 s. Falta medir la segunda apertura.
 
+## La memoria con el ensayo de release
+
+- **El build:** `scripts/unity-build.ps1 -Method Release -Rehearsal -Apk` da `[AF.BuildRelease] OK`, con un `rehearsal.apk` de 58,2 MB.
+- **La instalación:** con `adb install -r` sobre el `dev.apk`, conservando el perfil. Arranca en el nivel 106 (3 filas, 11 cuias), donde lo dejó el bench.
+- **El arranque en caliente:** `am start -W` da `TotalTime` 573 ms.
+- **Cómo se midió:** el ensayo no tiene la sonda, así que la medida es `dumpsys meminfo` tras un minuto quieto en cada sitio. Los volcados están en `Logs/device/motog23/rel-*-meminfo.txt`.
+
+| Momento | TOTAL PSS | Code | Graphics | Native Heap |
+|---|---|---|---|---|
+| Nivel 106, al arrancar | **486,4 MB** | 114,3 | 84,9 | 29,5 |
+| Mapa del río | **516,2 MB** | 115,4 | 101,0 | — |
+| Nivel 106, tras volver del Mapa | **508,2 MB** | 109,4 | 101,0 | 26,2 |
+| Nivel 106, un minuto más | **484,4 MB** | 100,4 | 102,0 | 22,9 |
+
+- **Por encima del presupuesto en todos los momentos:** de 34 a 66 MB sobre los ≤ 450 MB de 08 §5.4 (D-060).
+  - En el Samsung, el ensayo dio 545 MB en la jornada 6. Aquí sale algo menos, pero no basta.
+  - En el nivel 75, también en el Samsung, dio 530 MB en E0 y 494 MB en E1 (`memoria.md`).
+- **Lo que más pesa:**
+  - **`Code`** (100-115 MB): según `memoria.md`, varía ±20 MB con el estado de compilación de ART, y aquí el APK estaba recién instalado.
+  - **`Graphics`** (85-102 MB): sube con el Mapa y no baja al volver al nivel.
+- **Decisión pendiente del dueño:** subir el presupuesto de clase A o atacar la memoria. Una opción ya medida es E1 de `memoria.md`, −36 MB de `GL mtrack`. La segunda medida con ART ya compilado (tras un día de uso o con `cmd package compile -m speed-profile`) diría cuánto de `Code` es transitorio.
+- **Sin medir:** la pantalla de inicio (la orilla). El toque de «Volver a la orilla» no entró y la última medida se tomó en el nivel.
+
 ## Sin probar
 
 - el 340 jugado a mano;
 - el viaje de Capi (con zoom bajo y con zoom alto, el de la observación 1 de la segunda ronda de la 1.1);
-- la segunda apertura;
-- el ensayo de release (memoria);
+- la segunda apertura en frío;
+- el ensayo con ART compilado y en la orilla;
 - el tiempo de GPU por separado.
