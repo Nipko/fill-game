@@ -705,6 +705,8 @@ namespace AF.UI
             _dragging = false;
             _activeMs = 0f;
             _openedAt = Time.realtimeSinceStartup;
+            _journeyWideOpen = false;
+            _journeyWideFrom = 0f;
 
             _canvas.Canvas.gameObject.SetActive(true);
             EnsureGeometry(map);
@@ -785,6 +787,7 @@ namespace AF.UI
             }
 
             _viewChanges++;
+            _journeyWideOpen = false; // el jugador cambia de vista: la vista Mundo vuelve a su zoom de siempre (RiverMapScreen.Capi.cs)
             ApplyView(view);
             EmitLayout();
         }
@@ -1310,9 +1313,11 @@ namespace AF.UI
                     ? GoalZoom(map, goal, _hasCanoe, _canoeMap, _viewW, _viewH, out center) // FX13: el tramo hasta la naciente
                     : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center, NextWorldStop(_stops));
                 SamplesFrame(ref _zoom, ref center);
+                ApplyJourneyWideZoom(ref _zoom); // observación 1 de la segunda ronda de la 1.1: el viaje con menos zoom (RiverMapScreen.Capi.cs)
             }
             else
             {
+                _journeyWideFrom = 0f;
                 _zoom = 1f;
                 center = new Vector2(map.Width * 0.5f, map.Height * 0.5f);
             }

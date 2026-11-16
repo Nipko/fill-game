@@ -45,6 +45,15 @@ namespace AF.UI
         /// <summary>Lado de la boya de vidrio de una parada futura (dp; propuesta §3.1).</summary>
         public const float LiveBuoyDp = 14f;
 
+        /// <summary>
+        /// Observación 3 de la segunda ronda de la 1.1 (2026-11-09, el dueño: «se ve que se pone la pieza que une un brazo o una
+        /// bifurcación muy marcada y mala»): con el Mapa v2, el vidrio, la orilla y la várzea de un afluente o de un brazo se funden
+        /// en su boca a lo largo de esta fracción del ancho del río al que llega [P]. Su punta acaba en el eje de ese río, así que con
+        /// 0,5 (medio ancho) el afluente sigue entero hasta la orilla del anfitrión, tapa su canto, y por dentro de su agua se
+        /// deshace, sin el bloque de borde recto ni sus cantos cruzando el cauce.
+        /// </summary>
+        public const float MouthBlendHostWidths = 0.5f;
+
         /// <summary>Lado del brillo de la parada siguiente (dp) [P].</summary>
         public const float NextGlowDp = 40f;
 
@@ -247,6 +256,11 @@ namespace AF.UI
 
             if (!_live)
             {
+                for (int i = 0; i < _glass.Count; i++)
+                {
+                    _glass[i].SetEndFade(0f, false, false); // la 1.0: sin el fundido de las bocas
+                }
+
                 SetLiveObjectsActive(false);
                 _liveArt.Release();
                 return;
@@ -344,10 +358,61 @@ namespace AF.UI
                 FitLiveRibbon(_bankRibbons[i], space);
             }
 
+            MouthBlend();
+
             _canopy!.SetData(_map!.Vegetation, space, _liveArt.Atlas);
             _canopy.SetRiverClearance((MapRibbonWidthDp(_view, 1) * 0.5f) + (world ? 16f : 2f));
             _parallaxReset = true; // el primer plano vuelve a su esquina con el encuadre nuevo (LiveOffset)
             _liveRegion = Rect.zero; // la región se rehace con el encuadre nuevo (LiveOffset)
+        }
+
+        // Observación 3 de la segunda ronda de la 1.1: cada línea con boca (afluentes y brazos) funde su vidrio, su orilla y su
+        // várzea en sus últimos MouthBlendHostWidths anchos del río al que llega, a la escala de esta vista. Solo al cambiar de vista
+        // (las cintas se rehacen solo si el fundido cambia); sin asignaciones.
+        private void MouthBlend()
+        {
+            RiverMap? map = _map;
+            if (map == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<RiverLine> lines = map.Lines;
+            for (int i = 0; i < lines.Count && i < _glass.Count; i++)
+            {
+                RiverLine line = lines[i];
+                float fade = 0f;
+                if (line.Mouth.HasValue)
+                {
+                    int host = line.Mouth.Value.Line;
+                    if (host >= 0 && host < lines.Count && host != i)
+                    {
+                        fade = MouthBlendHostWidths * MapRibbonWidthDp(_view, lines[host].Class);
+                    }
+                }
+
+                if (MouthBlendOffForCapture)
+                {
+                    fade = 0f;
+                }
+
+                bool on = fade > 0f;
+                _glass[i].SetEndFade(fade, false, on);
+                if (i < _varzea.Count)
+                {
+                    _varzea[i].SetEndFade(fade, false, on);
+                    _bankRibbons[i].SetEndFade(fade, false, on);
+                }
+            }
+        }
+
+        /// <summary>Solo para las capturas de «antes» (<c>[Explicit]</c>): sin el fundido de las bocas.</summary>
+        internal static bool MouthBlendOffForCapture { get; set; }
+
+        /// <summary>El largo del fundido de la boca de la línea <paramref name="i"/> (dp; 0 sin él; tests).</summary>
+        internal float MouthBlendDp(int i)
+        {
+            return i >= 0 && i < _glass.Count ? _glass[i].EndFadeDp : 0f;
         }
 
         private void FitLiveRibbon(RiverRibbonGraphic ribbon, MapSpace space)

@@ -1160,7 +1160,7 @@ namespace AF.UI
             }
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
-            _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
+            _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom, map.JourneyWideFromZoom);
             MapMemOpened(play); // la vuelta y la línea map_settled (GameBootstrap.MapMemory.cs; observación 5 de la prueba de la 1.1)
             DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() + map.CrewMemJson() + map.GfxMemJson(_mapOpens) : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)

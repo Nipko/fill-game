@@ -2735,6 +2735,8 @@ namespace AF.UI
                     f.localRotation = upright;
                 }
             }
+
+            UpdateBuoyClear(); // observación 2 de la segunda ronda de la 1.1: el claro de las boyas sigue a la canoa (RiverMapScreen.Progress.cs)
         }
 
         // La canoa en canoeMap con level niveles ganados (fraccionario) y flags banderas: dónde se pinta, dónde nada el guía

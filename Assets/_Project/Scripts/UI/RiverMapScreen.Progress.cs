@@ -189,6 +189,27 @@ namespace AF.UI
         /// <summary>Silueta de un mundo futuro: <c>panel_alto</c> (#234452, el azul petróleo del panel, D-004; propuesta §3.5).</summary>
         public static readonly Color SilhouetteColor = Palette.Panel.Top;
 
+        /// <summary>
+        /// Observación 2 de la segunda ronda de la 1.1 (2026-11-09, el dueño: «los puntos son muy marcados, no deja ver bien el
+        /// tucán»): con el Mapa v2, cada boya se dibuja a esta fracción de su radio de colocación [P]. Por qué 0,75: en la Cuenca, el
+        /// disco de 2,5 dp baja a menos de 2, un punto que se sigue leyendo como hilera sin competir con la canoa de 40 dp; en el Mundo,
+        /// de 4 a 3 dp. El radio de colocación (el que esquivan rótulos y placas) no cambia.
+        /// </summary>
+        public const float BuoyLiveDrawScale = 0.75f;
+
+        /// <summary>
+        /// Con el Mapa v2, opacidad de las boyas [P] (observación 2 de la segunda ronda de la 1.1). Por qué 0,6: el mismo tinte que el
+        /// tramo en curso (<see cref="FrontLiveAlpha"/>), para que la hilera acompañe al agua en vez de marcarse sobre ella.
+        /// </summary>
+        public const float BuoyLiveAlpha = 0.6f;
+
+        /// <summary>
+        /// Con el Mapa v2, el claro alrededor de la canoa con su tripulación y del guía con el tucuxi (dp) [P] (observación 2 de la
+        /// segunda ronda de la 1.1): una boya cuyo disco cae en su caja crecida esto no se dibuja; la cuenta la da «Faltan N». Por qué
+        /// 2 dp: la fila corta de los tramos sin largo va ya a <see cref="BuoyCompactGapDp"/> (3 dp) bajo la canoa y se sigue viendo.
+        /// </summary>
+        public const float BuoyCrewClearDp = 2f;
+
         /// <summary>Boya encendida: <c>destello</c> (#FFF4D2) con el canto de madera del marco.</summary>
         public static readonly Color BuoyLitColor = Palette.Glint;
 
@@ -373,6 +394,12 @@ namespace AF.UI
 
         /// <summary>Boyas dibujadas entre las dos mallas (sin las saltadas, que llevan a Rosa).</summary>
         public int BuoysDrawn => (_buoys != null ? _buoys.DrawnCount : 0) + (_buoysAhead != null ? _buoysAhead.DrawnCount : 0);
+
+        /// <summary>
+        /// Boyas que no se dibujan por caer en el claro de la canoa con su tripulación o del guía (observación 2 de la segunda ronda
+        /// de la 1.1; solo con el Mapa v2): con <see cref="BuoysDrawn"/>, las del tramo sin las saltadas.
+        /// </summary>
+        public int BuoysCleared => (_buoys != null ? _buoys.HiddenCount : 0) + (_buoysAhead != null ? _buoysAhead.HiddenCount : 0);
 
         /// <summary>
         /// Las boyas del frente van en la fila corta bajo la parada (<see cref="BuoyCompactBelowDp"/>): el tramo, a la escala de la
@@ -2136,7 +2163,52 @@ namespace AF.UI
                 _buoysAhead.SetBuoys(_buoyLocal, _buoyState, _buoyCount, radius);
             }
 
+            UpdateBuoyClear();
+
             PlaceSource(space, radius); // el hito y el rótulo de la naciente (revisión de FX13)
+        }
+
+        // Observación 2 de la segunda ronda de la 1.1: con el Mapa v2, las boyas, más discretas (BuoyLiveDrawScale y BuoyLiveAlpha) y
+        // sin dibujarse sobre la canoa con su tripulación ni sobre el guía con el tucuxi (un claro de BuoyCrewClearDp alrededor). Lo
+        // llaman la colocación de las boyas y la de la canoa (también en el viaje: solo rehace la malla si cambia qué boya se oculta).
+        // Con la 1.0 o con «Norte arriba», como siempre. Sin asignaciones.
+        private void UpdateBuoyClear()
+        {
+            if (_buoys == null)
+            {
+                return;
+            }
+
+            bool soft = _live;
+            Rect a = default;
+            Rect b = default;
+            if (soft && !_northUpOn && !_buoysCompact && _hasCanoe && _canoe.gameObject.activeSelf)
+            {
+                // La fila corta de un tramo sin largo ya va bajo la canoa, con su hueco (CompactBuoy): nada que despejar.
+                a = Grow(CanoeBoxLocal, BuoyCrewClearDp);
+                if (_guide != null && _guide.gameObject.activeInHierarchy)
+                {
+                    Rect g = LocalBox(_guide.rectTransform);
+                    if (_tucuxi != null && _tucuxi.gameObject.activeInHierarchy && _tucuxi.transform.parent == _guide.transform.parent)
+                    {
+                        Rect t = LocalBox(_tucuxi.rectTransform);
+                        g = Rect.MinMaxRect(Mathf.Min(g.xMin, t.xMin), Mathf.Min(g.yMin, t.yMin), Mathf.Max(g.xMax, t.xMax), Mathf.Max(g.yMax, t.yMax));
+                    }
+
+                    b = Grow(g, BuoyCrewClearDp);
+                }
+            }
+
+            _buoys.SetLook(soft, a, b);
+            _buoysAhead?.SetLook(soft, a, b);
+        }
+
+        // La caja de rt en las coordenadas locales de su padre (dp, y hacia arriba), por su tamaño y su pivote.
+        private static Rect LocalBox(RectTransform rt)
+        {
+            Vector2 size = rt.sizeDelta;
+            Vector2 at = rt.anchoredPosition;
+            return new Rect(at.x - (rt.pivot.x * size.x), at.y - (rt.pivot.y * size.y), size.x, size.y);
         }
 
         // Boya i de la fila corta de un tramo sin largo a la escala de la vista: una fila horizontal de 10, centrada bajo la parada
@@ -2492,9 +2564,80 @@ namespace AF.UI
             private readonly BuoyState[] _states = new BuoyState[BuoysPerLeg];
             private int _count;
             private float _radius;
+            private bool _soft;
+            private Rect _clearA;
+            private Rect _clearB;
+            private int _hiddenMask;
 
-            /// <summary>Boyas dibujadas por esta malla (sin las saltadas).</summary>
+            /// <summary>Boyas dibujadas por esta malla (sin las saltadas ni las del claro de la canoa).</summary>
             public int DrawnCount { get; private set; }
+
+            /// <summary>
+            /// Boyas de esta malla que no se dibujan por caer en el claro de la canoa con su tripulación o del guía (observación 2
+            /// de la segunda ronda de la 1.1; solo con el Mapa v2).
+            /// </summary>
+            public int HiddenCount { get; private set; }
+
+            /// <summary>Radio con que se dibuja cada disco (dp): el de colocación o, con el Mapa v2, por <see cref="BuoyLiveDrawScale"/>.</summary>
+            public float DrawnRadius => _soft ? _radius * BuoyLiveDrawScale : _radius;
+
+            /// <summary>La boya <paramref name="i"/> cae en el claro de la canoa o del guía (tests).</summary>
+            public bool IsHidden(int i)
+            {
+                return (_hiddenMask & (1 << i)) != 0;
+            }
+
+            /// <summary>
+            /// El acabado del Mapa v2 (<paramref name="soft"/>: más pequeñas y translúcidas) y los claros <paramref name="a"/> y
+            /// <paramref name="b"/> (cajas locales; vacías, ninguno). Solo rehace la malla si cambia algo visible. Sin asignaciones.
+            /// </summary>
+            public void SetLook(bool soft, Rect a, Rect b)
+            {
+                _clearA = a;
+                _clearB = b;
+                int mask = HiddenMask(soft);
+                if (soft == _soft && mask == _hiddenMask)
+                {
+                    return;
+                }
+
+                _soft = soft;
+                _hiddenMask = mask;
+                SetVerticesDirty();
+            }
+
+            private int HiddenMask(bool soft)
+            {
+                if (!soft)
+                {
+                    return 0;
+                }
+
+                float r = _radius * BuoyLiveDrawScale;
+                int mask = 0;
+                for (int i = 0; i < _count; i++)
+                {
+                    Vector2 p = _points[i];
+                    if (DiscHits(_clearA, p, r) || DiscHits(_clearB, p, r))
+                    {
+                        mask |= 1 << i;
+                    }
+                }
+
+                return mask;
+            }
+
+            private static bool DiscHits(Rect box, Vector2 p, float r)
+            {
+                if (box.width <= 0f || box.height <= 0f)
+                {
+                    return false;
+                }
+
+                float dx = Mathf.Max(Mathf.Max(box.xMin - p.x, p.x - box.xMax), 0f);
+                float dy = Mathf.Max(Mathf.Max(box.yMin - p.y, p.y - box.yMax), 0f);
+                return (dx * dx) + (dy * dy) < r * r;
+            }
 
             /// <summary>
             /// Esta malla dibuja las boyas por ganar (va encima de la canoa); si no, las encendidas (detrás de ella). Se fija al
@@ -2527,6 +2670,7 @@ namespace AF.UI
                     _states[i] = states[i];
                 }
 
+                _hiddenMask = HiddenMask(_soft);
                 SetVerticesDirty();
             }
 
@@ -2535,10 +2679,14 @@ namespace AF.UI
             {
                 vh.Clear();
                 DrawnCount = 0;
+                HiddenCount = 0;
                 if (_radius <= 0f)
                 {
                     return;
                 }
+
+                float r = DrawnRadius;
+                float alpha = _soft ? BuoyLiveAlpha : 1f;
 
                 for (int i = 0; i < _count; i++)
                 {
@@ -2548,11 +2696,23 @@ namespace AF.UI
                         continue;
                     }
 
+                    if (IsHidden(i))
+                    {
+                        HiddenCount++;
+                        continue;
+                    }
+
                     bool lit = state == BuoyState.Lit;
-                    Disc(vh, _points[i], _radius, lit ? Palette.Frame : Palette.Panel.Top);
-                    Disc(vh, _points[i], _radius * 0.66f, lit ? BuoyLitColor : BuoyUnlitColor);
+                    Disc(vh, _points[i], r, Faded(lit ? Palette.Frame : Palette.Panel.Top, alpha));
+                    Disc(vh, _points[i], r * 0.66f, Faded(lit ? BuoyLitColor : BuoyUnlitColor, alpha));
                     DrawnCount++;
                 }
+            }
+
+            private static Color Faded(Color c, float alpha)
+            {
+                c.a *= alpha;
+                return c;
             }
 
             private void Disc(VertexHelper vh, Vector2 c, float r, Color tint)
