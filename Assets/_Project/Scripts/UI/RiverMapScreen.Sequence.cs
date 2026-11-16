@@ -376,6 +376,7 @@ namespace AF.UI
                 if (a <= 0f)
                 {
                     HideL10Pieces();
+                    PlatesAfterL10Frame(); // observación 3 de la r2c: con la placa del destino en su sitio, todas enteras a la vista
                 }
             }
 
@@ -484,6 +485,7 @@ namespace AF.UI
             bool titino = _houseShown && _houseSloth != null;
             _seqHomeGrown = titino;
             FrameL10(); // TiTino (a su tamaño de la secuencia), Belém y Santarém a la vista: con la casa dentro, el bocadillo
+            PlatesAfterL10Frame(); // observación 3 de la prueba r2c de la 1.1: las placas, enteras con este encuadre (no la del destino)
             SetL10HomeScale(titino && ProgressReduceMotion ? L10HomeScale : 1f); // con movimiento, crece con su rebote
             _seqDim = 1f; // «Norte arriba» fuera y los rótulos que pisa la secuencia, atenuados (se deciden al colocar)
             if (_catchUp)
@@ -569,6 +571,10 @@ namespace AF.UI
             else
             {
                 HideL10Pieces();
+                if (fade)
+                {
+                    PlatesAfterL10Frame(); // observación 3 de la r2c (al cerrar el Mapa, fade es false: nada que encajar)
+                }
             }
 
             L10SequenceEnded?.Invoke();

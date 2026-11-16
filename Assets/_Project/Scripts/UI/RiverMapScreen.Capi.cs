@@ -985,6 +985,7 @@ namespace AF.UI
             CuiasRestore();
             PlatesFitView();
             RemainingLabelFitView();
+            StopLabelsAvoidHomeWindow(); // observación 1 de la prueba r2c de la 1.1
             CuiasYieldToPlates();
             HeroesAfterFrame();
             TownLabelsAfterFrame();

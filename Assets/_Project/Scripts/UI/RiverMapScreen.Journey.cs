@@ -81,8 +81,24 @@ namespace AF.UI
         private int _journeyTaps;
         private int _journeyPulse = -1;
         private string _journeyBy = string.Empty;
-        private int _playOrder = -1;
-        private int _headerOrder = -1;
+
+        // Lo que la llegada en el Mapa del 10 sube encima del área que salta lo que queda de la secuencia («Jugar», la cabecera y el
+        // selector de vista, observación 2 de la prueba r2c de la 1.1), con su sitio de antes entre los hijos de la raíz.
+        private readonly Transform?[] _raised = new Transform?[5];
+        private readonly int[] _raisedOrder = new int[5];
+        private int _raisedCount;
+
+        // El selector de vista (la cápsula y sus dos pestañas) atenuado mientras el viaje no deja tocarlo (observación 2 de la r2c).
+        private CanvasGroup? _viewSwitchGroup;
+        private CanvasGroup? _viewWorldGroup;
+        private CanvasGroup? _viewBasinGroup;
+
+        /// <summary>
+        /// Opacidad del selector de vista (Mundo / Cuenca) mientras el viaje de D-053 está en marcha y no lo deja tocar [P]
+        /// (observación 2 de la prueba r2c de la 1.1: no parece habilitado mientras no responde); vuelve a 1 con la entrada de
+        /// «Jugar», cuando ya responde.
+        /// </summary>
+        public const float JourneyViewSwitchAlpha = 0.5f;
 
         /// <summary>El lector de pantalla (TalkBack) para anunciar la llegada (D-053); lo pone <see cref="GameBootstrap"/>.</summary>
         internal A11yService? A11y { get; set; }
@@ -164,6 +180,10 @@ namespace AF.UI
             _journeyTouch.gameObject.SetActive(false);
             _playGroup = Group(_play.Button.gameObject);
             _backGroup = Group(_back.Button.gameObject);
+            _viewSwitchGroup = Group(_viewSwitch.gameObject);
+            _viewSwitchGroup.blocksRaycasts = false; // la cápsula no recibe toques: los reciben sus pestañas
+            _viewWorldGroup = Group(_viewWorld.Button.gameObject);
+            _viewBasinGroup = Group(_viewBasin.Button.gameObject);
         }
 
         partial void JourneyOpen(MapOpenSource source)
@@ -197,6 +217,7 @@ namespace AF.UI
             _catchSpeed = 1f;
             _play.Button.gameObject.SetActive(false);
             _back.Button.gameObject.SetActive(false);
+            SetViewSwitchAlpha(JourneyViewSwitchAlpha); // observación 2 de la r2c: no parece habilitado mientras no responde
             if (_journeyTouch != null)
             {
                 _journeyTouch.gameObject.SetActive(true);
@@ -302,12 +323,16 @@ namespace AF.UI
 
             // Encima del área que salta lo que queda del Mapa del 10 (la placa del dato): «Jugar · Nivel 11» y «←» responden ya.
             // Solo el tiempo que dura esa secuencia: al cerrar (o al volver a abrir) vuelven a su sitio (RestoreJourneyOrder).
-            if (_seqActive && _playOrder < 0)
+            // Observación 2 de la prueba r2c de la 1.1: también el selector de vista, que ya se ve habilitado; su toque acaba lo que
+            // queda de la secuencia y cambia de vista (SetView).
+            if (_seqActive && _raisedCount == 0)
             {
-                _playOrder = _play.Button.transform.GetSiblingIndex();
-                _headerOrder = _headerPlate.transform.GetSiblingIndex();
-                _play.Button.transform.SetAsLastSibling();
-                _headerPlate.transform.SetAsLastSibling();
+                RaiseOverSequence(_viewSwitch.transform);
+                RaiseOverSequence(_viewWorld.Button.transform);
+                RaiseOverSequence(_viewBasin.Button.transform);
+                RaiseOverSequence(_play.Button.transform);
+                RaiseOverSequence(_headerPlate.transform);
+                RaiseSorted();
             }
 
             bool reduce = ProgressReduceMotion;
@@ -428,38 +453,86 @@ namespace AF.UI
                 _backGroup.alpha = alpha;
             }
 
+            SetViewSwitchAlpha(Mathf.Lerp(JourneyViewSwitchAlpha, 1f, alpha));
+
             _play.Face.parent.localScale = scale;
             _back.Face.parent.localScale = scale;
         }
 
-        // «Jugar» y la cabecera vuelven a su orden de construcción, si la llegada en el Mapa del 10 los subió (primero el que estaba
-        // antes, para que los índices guardados sigan valiendo).
-        private void RestoreJourneyOrder()
+        // Apunta t para subirlo encima del área que salta el Mapa del 10 (RaiseSorted), con su sitio de ahora. Sin asignaciones.
+        private void RaiseOverSequence(Transform t)
         {
-            if (_playOrder < 0 && _headerOrder < 0)
+            if (_raisedCount >= _raised.Length)
             {
                 return;
             }
 
-            if (_headerOrder >= 0 && (_playOrder < 0 || _headerOrder < _playOrder))
+            _raised[_raisedCount] = t;
+            _raisedOrder[_raisedCount] = t.GetSiblingIndex();
+            _raisedCount++;
+        }
+
+        // Ordena lo apuntado por su sitio de antes y lo sube al final en ese orden: entre ellos no cambia nada (la cápsula del
+        // selector sigue debajo de sus pestañas). Inserción sobre 5 como mucho; sin asignaciones.
+        private void RaiseSorted()
+        {
+            for (int i = 1; i < _raisedCount; i++)
             {
-                _headerPlate.transform.SetSiblingIndex(_headerOrder);
-                if (_playOrder >= 0)
+                Transform? t = _raised[i];
+                int order = _raisedOrder[i];
+                int j = i - 1;
+                while (j >= 0 && _raisedOrder[j] > order)
                 {
-                    _play.Button.transform.SetSiblingIndex(_playOrder);
+                    _raised[j + 1] = _raised[j];
+                    _raisedOrder[j + 1] = _raisedOrder[j];
+                    j--;
                 }
-            }
-            else
-            {
-                _play.Button.transform.SetSiblingIndex(_playOrder);
-                if (_headerOrder >= 0)
-                {
-                    _headerPlate.transform.SetSiblingIndex(_headerOrder);
-                }
+
+                _raised[j + 1] = t;
+                _raisedOrder[j + 1] = order;
             }
 
-            _playOrder = -1;
-            _headerOrder = -1;
+            for (int i = 0; i < _raisedCount; i++)
+            {
+                _raised[i]!.SetAsLastSibling();
+            }
+        }
+
+        // Lo que subió la llegada en el Mapa del 10 vuelve a su orden de construcción: de menor a mayor sitio de antes, así cada
+        // uno cae en el suyo (los de antes ya están en el suyo).
+        private void RestoreJourneyOrder()
+        {
+            for (int i = 0; i < _raisedCount; i++)
+            {
+                _raised[i]!.SetSiblingIndex(_raisedOrder[i]);
+                _raised[i] = null;
+            }
+
+            _raisedCount = 0;
+        }
+
+        /// <summary>La cápsula del selector de vista y sus pestañas están encima del área que salta el Mapa del 10 (tests).</summary>
+        internal bool ViewSwitchRaised => _raisedCount > 0;
+
+        /// <summary>Opacidad del selector de vista (atenuado mientras el viaje no deja tocarlo; tests).</summary>
+        internal float ViewSwitchAlpha => _viewWorldGroup != null ? _viewWorldGroup.alpha : 1f;
+
+        private void SetViewSwitchAlpha(float a)
+        {
+            if (_viewSwitchGroup != null && _viewSwitchGroup.alpha != a)
+            {
+                _viewSwitchGroup.alpha = a;
+            }
+
+            if (_viewWorldGroup != null && _viewWorldGroup.alpha != a)
+            {
+                _viewWorldGroup.alpha = a;
+            }
+
+            if (_viewBasinGroup != null && _viewBasinGroup.alpha != a)
+            {
+                _viewBasinGroup.alpha = a;
+            }
         }
 
         private static CanvasGroup Group(GameObject go)

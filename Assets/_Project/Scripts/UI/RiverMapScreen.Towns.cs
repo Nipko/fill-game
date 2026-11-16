@@ -523,7 +523,7 @@ namespace AF.UI
         // El rótulo del pueblo self en r (local) pisa algo que manda más que él o a otro pueblo (ver TownLabelsAfterFrame).
         private bool TownLabelTaken(int self, Rect r)
         {
-            if (HitsBuoys(r) || HitsPlate(r) || HitsCrew(r))
+            if (HitsBuoys(r) || HitsPlate(r) || HitsCrew(r) || HomeWindowCovers(r)) // observación 1 de la r2c: la ventanita de casa
             {
                 return true;
             }
@@ -1308,6 +1308,82 @@ namespace AF.UI
         private Rect _labelView;
         private Rect _labelOld;
 
+        // Observación 1 de la prueba r2c de la 1.1: con el Mapa v2, la caja r (local del contenido) queda, con el encuadre de ahora,
+        // debajo de la ventanita de casa (el retrato y su píldora «Casa · a unos N km», fija abajo a la izquierda cuando la casa no se
+        // ve), con HomeWindowGapDp de hueco. Sin asignaciones.
+        private bool HomeWindowCovers(Rect r)
+        {
+            if (!_live || _homeWindow == null || !_homeWindow.Ready || _northUpOn || _northUpT > 0f || HomeInViewAt(_offset))
+            {
+                return false;
+            }
+
+            return InView(r, _offset).Overlaps(Grow(HomeWindowInView(), HomeWindowGapDp));
+        }
+
+        /// <summary>
+        /// La caja <paramref name="local"/> (coordenadas locales del contenido) en las de la zona visible del mapa (dp, y hacia abajo),
+        /// con el encuadre de ahora, como <see cref="HomeWindowViewRect"/> (tests).
+        /// </summary>
+        internal Rect LocalToView(Rect local)
+        {
+            return InView(local, _offset);
+        }
+
+        /// <summary>Rótulos de parada que la ventanita de casa movió (o, sin sitio, quitó) en el último encuadre (tests).</summary>
+        internal int StopLabelsMovedForHomeWindow { get; private set; }
+
+        // Observación 1 de la prueba r2c de la 1.1: con el encuadre ya decidido (tras RemainingLabelFitView, que ya la esquiva con el
+        // de la parada siguiente), un rótulo de otra parada que queda debajo de la ventanita de casa pasa al primero de sus sitios que
+        // quede entero a la vista y libre; si ninguno, no sale con este encuadre [P] (el encuadre siguiente lo vuelve a colocar). No
+        // se mueve al arrastrar, como los demás rótulos. Sin asignaciones salvo las de la lista de lo colocado.
+        private void StopLabelsAvoidHomeWindow()
+        {
+            StopLabelsMovedForHomeWindow = 0;
+            if (!_live || _view != MapView.World)
+            {
+                return;
+            }
+
+            int next = StopMarkerIndexOf(RemainingStopN());
+            _labelView = new Rect(2f, 2f, _viewW - 4f, _viewH - 4f);
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                RectTransform pill = _stopLabels[i].Pill;
+                if (i == next || !_markers[i].Root.gameObject.activeSelf || !pill.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                Vector2 c = _markers[i].Root.anchoredPosition;
+                Rect old = PillRect(c, pill);
+                if (!HomeWindowCovers(old))
+                {
+                    continue;
+                }
+
+                StopLabelsMovedForHomeWindow++;
+                int own = _stopLabelPlaced.IndexOf(old);
+                if (own >= 0)
+                {
+                    _stopLabelPlaced.RemoveAt(own);
+                }
+
+                _labelOld = old;
+                _labelFitView = true;
+                bool placed = PlaceStopLabel(i);
+                _labelFitView = false;
+                if (placed)
+                {
+                    _stopLabelPlaced.Add(PillRect(c, pill));
+                }
+                else
+                {
+                    pill.gameObject.SetActive(false); // sin sitio fuera de la ventanita con este encuadre [P]
+                }
+            }
+        }
+
         // Añadido de D-069 del 2026-11-08 (observación 4): con el encuadre ya decidido (ApplyView), el rótulo de la parada siguiente,
         // que lleva «Faltan N», se cambia al primero de sus sitios que quede entero a la vista si el suyo se sale (una parada junto al
         // borde del Mapa). Si ninguno cabe, se queda donde estaba. No se mueve al arrastrar: solo al abrir y al cambiar de vista.
@@ -1337,7 +1413,8 @@ namespace AF.UI
                 old = PillRect(c, pill); // venía de la placa (otro encuadre de esta apertura): con «Faltan N» otra vez, ¿cabe?
             }
 
-            if (Inside(InView(old, _offset), _labelView) && !HitsPlate(old)) // las placas se encajan tras el encuadre (PlatesFitView)
+            // Observación 1 de la prueba r2c de la 1.1: tampoco debajo de la ventanita de casa («Trinidad … iveles» en el 521).
+            if (Inside(InView(old, _offset), _labelView) && !HitsPlate(old) && !HomeWindowCovers(old)) // las placas se encajan tras el encuadre (PlatesFitView)
             {
                 SyncRemainingPlate();
                 return;
@@ -1830,9 +1907,9 @@ namespace AF.UI
             if (_labelFitView)
             {
                 // Con el encuadre ya decidido: entero a la vista, sin pisar los pueblos ni sus rótulos (salvo su propio sitio de antes).
-                if (!Inside(InView(rect, _offset), _labelView))
+                if (!Inside(InView(rect, _offset), _labelView) || HomeWindowCovers(rect))
                 {
-                    return false;
+                    return false; // observación 1 de la r2c: ni debajo de la ventanita de casa
                 }
 
                 for (int j = 0; j < _townPlaced.Count; j++)

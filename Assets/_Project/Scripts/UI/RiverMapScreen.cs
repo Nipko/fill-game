@@ -786,6 +786,14 @@ namespace AF.UI
                 return;
             }
 
+            // Observación 2 de la prueba r2c de la 1.1: con la canoa ya llegada, lo que queda de la secuencia del Mapa del 10 (el
+            // bocadillo y la placa del dato) acaba como con un toque, y la vista cambia (antes el área que la salta se quedaba el toque
+            // y, si no, la secuencia volvía a su encuadre de la Cuenca).
+            if (L10SequenceActive && !JourneyLocked)
+            {
+                SkipL10Sequence();
+            }
+
             _viewChanges++;
             _journeyWideOpen = false; // el jugador cambia de vista: la vista Mundo vuelve a su zoom de siempre (RiverMapScreen.Capi.cs)
             ApplyView(view);
@@ -1428,6 +1436,7 @@ namespace AF.UI
             SetOffset(offset);
             PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
             RemainingLabelFitView(); // añadido de D-069 del 2026-11-08: el rótulo con «Faltan N», entero a la vista (RiverMapScreen.Towns.cs)
+            StopLabelsAvoidHomeWindow(); // observación 1 de la prueba r2c de la 1.1: ningún rótulo de parada bajo la ventanita de casa
             CuiasYieldToPlates(); // añadido de D-069 del 2026-11-09: ninguna mini cuia sobre una placa ni un país
             HeroesAfterFrame(); // añadido de D-069 del 2026-11-09: la ciudad con hito, nunca debajo de una placa
             TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09: el pueblo cede ante las boyas, las placas y los rótulos
