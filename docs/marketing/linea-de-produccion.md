@@ -46,7 +46,7 @@ Qué significa:
 
 Por eso se descartan los 30 s del himno (F8) como base.
 
-## 2. Los ocho formatos de Tintalú
+## 2. Los formatos de Tintalú
 
 Cada formato tiene su referencia medida, su eje y su material del banco de tomas (`C:\AI\marketing\tomas\2026-11-04`).
 
@@ -61,11 +61,15 @@ Cada formato tiene su referencia medida, su eje y su material del banco de tomas
 | F7 | **Microhistoria de un personaje** (meme o rótulos) | Cuenta de Block Blast 2,25 M; Rent Please 239 k | microhistoria | TiTino en casa, Capi remando, Rosa río arriba, con un rótulo «relatable» por golpe | 8-15 s | Personajes · sábado (impares) |
 | ~~F8~~ | ~~**Viaje sobre el himno**~~: **descartado por el dueño el 2026-11-05** (los 5 montados no se publican) | Merge and Dig 403 k | progreso | — | — | el miércoles pasa a F3 |
 | F9 | **El nivel enorme** (una toma sin cortes; semana 46) | Magic Sort 2,91 M, 2,04 M y 1,98 M en la UE (el más visto del género) | medidor | `s2-grande-l303` (90 s, 22 vertidos) sin la intro y con H1 en «quedan»; plantilla 6 de `guiones-que-funcionan.md` | 40-60 s | Satisfying · domingo (sustituye a «F1 lento») |
+| F10 | **El espejo del juego** (antegancho de una sola cuia y corte al nivel enorme; semana 47) | Magic Sort 4,33 M y 3,45 M en la UE (su espejo es una estantería física con gente: nosotros, la cuia del propio juego) | medidor | `s2-sellado-lento-l42` (0-3 s) + `s2-grande-l303`; plantilla 8 | 40-60 s | Satisfying · domingo, alterna con F9 |
+| F11 | **Solución del nivel N** (serie numerada para la búsqueda de YouTube; semana 47) | «Magic Sort Level 359 Solution» 24 k; series numeradas de bloques hasta 14,5 M | reto | `director.py` con la secuencia de `resolver.py`, toques (H8) y H1; plantilla 9 | 20-40 s | Reto · solo YouTube, sin día fijo (1-2 por semana) |
 
 **Antegancho de revelado (semana 46), variante de F2:**
 - Royal Match (1,25 M) y Block Blast P07 (790 k) abren con 2-4 s de algo que se revela o se limpia.
 - Nosotros lo hacemos con una mecánica propia: la Luciérnaga sobre aguas turbias (`s3-luciernaga-l100`) o el Barro (`s2-mec-barro-l123`), con un corte seco al tablero.
 - Es la plantilla 7. Para probar, se cambia solo el antegancho.
+
+**El antegancho decide el público (semana 47):** con la misma toma, Magic Sort llega a un 69-87 % de mujeres con el antegancho de la calle y a un 73 % de hombres sin antegancho y en paleta oscura (386 k). Para el público de hombres, F9 puede ir con un mundo de paleta oscura y sin antegancho.
 
 **Público:** el agua llega a mujeres de 35-64; el flujo y los rescates, a hombres de 25-44.
 - Para el público de mujeres: F1, F2 y F3.
@@ -88,6 +92,8 @@ Orden pensado para salir con lo que ya existe y sumar formatos según lleguen la
 | 7 | **TiTino «Yo esperando a que vuelvas…»**, 10 s, tono ligero | F7 | por grabar | tomas de personajes (H6); voz narrada opcional (H7) |
 | 8 | **«El nivel enorme»**: el nivel 303 entero en una toma, del primer vertido a la victoria, con «Quedan» bajando; 40-60 s (propuesto en la semana 46) | F9 | por montar (la toma es-ES ya existe; faltan en y pt) | `montar_himno.py` con una sola toma larga y `contador` en «quedan» |
 | 9 | **«Se aclara el río»**: la Luciérnaga ilumina la cuia turbia (0-3 s) y corte seco a los vertidos del nivel 100; 20-25 s (semana 46) | F2 (antegancho de revelado) | por montar | `montar_himno.py`; la toma `s3-luciernaga-l100` ya existe en los tres idiomas |
+| 10 | **«Una cuia, cuarenta»**: la cuia del nivel 42 sellándose a cámara lenta (0-3 s) y corte seco al nivel 303 entero con «Quedan»; 45-60 s (semana 47) | F10 | por montar (las dos tomas existen en es; l303 falta en en y pt, H11) | `montar_himno.py` con dos planos y `contador` en «quedan» |
+| 11 | **«Solución del nivel 46»**: el reto del 46 resuelto por el solver con toques y contador; 20-30 s, solo YouTube (semana 47) | F11 | por grabar (`director.py` con la secuencia de `resolver.py`) | ya existe; es la parte 2 del vídeo 3 |
 
 pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada vídeo, una vez montado, pasa por tu visto bueno antes de ir a la cola. Nada se publica sin él.
 
@@ -117,7 +123,7 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 | **H1. Contador en pantalla** (vertidos o cuias selladas) | **hecho 2026-11-05** (`efectos.py`, `"contador"` en el brief) | — | Rótulo animado en `plantillas.py`, alimentado por los eventos `pour` de la toma | pequeño |
 | **H2. Transición por cambio de color** (barrido o fundido de paleta entre mundos) | **hecho 2026-11-05**: la «marea» (`"entrada"` de un plano) | — | Filtro de ffmpeg (`xfade` con `wipe`/`fade` y un tinte del color del mundo) en `montar_himno.py` | pequeño |
 | **H3. Pantalla partida** (dos tomas sincronizadas con contadores) | no | sí | Modo `partida` en `montar.py`: dos tomas escaladas a media pantalla, alineadas por el primer `pour` | medio |
-| **H4. Bucle sin costura** | no | sí | Buscar con `momentos.py` un fotograma final parecido al inicial y fundir 6-10 fotogramas | pequeño |
+| **H4. Bucle sin costura** | **hecho** (`montar_hf.py`, `cerrar_bucle`: funde el final con el principio, imagen y audio; `"bucle"` en el brief) | — | Si el fundido se nota, buscar antes con `momentos.py` un fotograma final parecido al inicial | pequeño |
 | **H5. Subtítulos cinéticos de una palabra** al ritmo del himno o de la voz | **hecho 2026-11-05** (`efectos.py`, `"palabras"` en el brief) | — | Plantilla de palabra grande (Baloo 2 ExtraBold) con un «pop» de escala, colocada en los golpes del himno (tiempos ya conocidos) | pequeño |
 | **H6. Tomas de personajes** (TiTino, Capi, Rosa) para F7 | solo el muelle y el viaje de Capi en el Mapa | sí | 1) Grabar el inicio (muelle) y el Mapa con `af_capture_screen`. 2) Si hace falta más, un extra nuevo de E1 para poner a un personaje en primer plano: es un cambio del juego y lo decide el integrador | medio, con dependencia del juego |
 | **H7. Voz narrada** para microhistorias (estilo Hole and Fill) | voz s33 de marca; Qwen3-TTS VoiceDesign en la 5080, sin integrar | parcial | Integrar Qwen3-TTS en la fábrica con una voz de diseño propia y etiqueta de IA. Antes, la decisión Q-MK-S0-1 por escrito | medio |
@@ -125,6 +131,13 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 | **H9. Sonido del juego en la toma** | se reponen los efectos con los eventos `pour` | — | — | — |
 | **H10. Medir lo publicado** (tasa de gancho y retención por formato) | la tabla `Post` de Postiz; sin analítica de vuelta | sí | S7 (`cola.py` con la API de Postiz) y lectura semanal de la analítica de cada red, a mano las dos primeras semanas | medio |
 | **H11. Toma larga del nivel grande en los tres idiomas** (F9, semana 46) | solo `s2-grande-l303-es` | sí | Grabar `l303` en en y pt con `tomar.py`/`director.py` (las mismas opciones que la de es); `calidad.py` exige una toma por idioma | pequeño |
+| **H12. Elegir los niveles de «Solución del nivel N»** (F11, semana 47) | no | sí | Mientras no haya analítica, los retos 46 y 60 y el primer nivel de cada mecánica; después, los niveles con más abandonos (evento de la analítica del juego, 08 §8) | pequeño |
+| **H13. Toma del nivel grande en un mundo de paleta oscura** (F9 para el público de hombres, semana 47) | no | sí | Grabar un nivel grande de un mundo oscuro (noche o aguas turbias) con `tomar.py`; si no hay nivel grande en ese mundo, se queda en F9 normal | pequeño |
+
+**Revisión del 2026-11-16:**
+- **H4 (bucle sin costura):** hecho en `montar_hf.py` (`cerrar_bucle`); el vídeo 2 ya no espera herramienta.
+- **H3 (pantalla partida):** sigue sin hacer.
+- **H11:** sigue faltando `s2-grande-l303` en en y pt.
 
 **Revisión del 2026-11-09:**
 - **H3 (pantalla partida):** sigue sin hacer; no hay modo `partida` en `montar.py` ni en `montar_himno.py`.
@@ -132,7 +145,7 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 
 **Prioridad (actualizada el 2026-11-05 con las decisiones del dueño):**
 1. ~~H5, H1 y H2~~: hechas el 2026-11-05 (`fabrica.md` §3.1).
-2. ~~H8~~ (hecho el 2026-11-05) y H4, el bucle (vídeo 2).
+2. ~~H8~~ (hecho el 2026-11-05) y ~~H4~~, el bucle (hecho en `montar_hf.py`; vídeo 2).
 3. H3 (vídeo 6).
 4. H6 y H7 (vídeo 7). Ya no dependen de decisiones.
 5. H10 antes de la semana 3.

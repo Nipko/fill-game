@@ -204,6 +204,81 @@ Juego puro, sin texto y sin persona.
 - **El tablero que se arma** (N07: las piezas caen y lo llenan) da un primer segundo con movimiento antes del primer vertido.
 - **El horizontal 16:9 aparece en la cima** (J, Traffic Jam): Meta lo sirve en el feed. Para Shorts y Reels seguimos en vertical.
 
+### Semana 2026-47 (2026-11-16): los que más alcanzan, vistos fotograma a fotograma
+
+Se vieron sin sonido con el visor de fotogramas. Notas completas en `C:\AI\marketing\tendencias\notas-2026-47.md`.
+
+#### Q. Magic Sort, «el espejo en la calle»: 4,33 M y 3,45 M en la UE, 60 s (nuestro género; el más visto hasta hoy)
+Son dos grupos con el mismo vídeo (M06 y M09), abiertos por su ID. Una tercera versión rosa (M14) llega a 501 k.
+
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-1 s | Calle. Una **estantería física** de botellas de colores con un tubo alto de cristal en el centro, igual que el del juego; gente mirando | cartel físico: «Only 1% can solve this puzzle.» | — |
+| 1-4 s | Una mujer vierte una botella real en otra | el cartel | sin corte |
+| 7 s | El **nivel enorme del juego** en 16:9: 4 estantes, unas 40 botellas, el tubo central | ninguno | **corte seco** |
+| 7-58 s | Toma continua; el tubo central se llena de rosa (el medidor) | ninguno | sin cortes |
+| 59-60 s | Logotipo «SORT» y «Play Now!» | — | corte |
+
+Público: 69-78 % mujeres, 25-44, Italia, España y Polonia. **Supera al nivel enorme solo (J, 2,9 M)**: el antegancho del «espejo real» (el objeto físico idéntico al juego) suma alcance a la misma toma. Lleva personas y una cifra sin fuente, así que es ✗ (§4).
+
+#### R. Magic Sort, las pinzas (M13): 344 k en la UE, 83 % mujeres, 60 s
+| Tramo | Plano | Transición |
+|---|---|---|
+| 0-4 s | Manos con pinzas echan cuentas de colores en un tubo de cristal, sobre un plato (ASMR físico) | — |
+| 7 s | El mismo nivel enorme de Q | corte seco |
+| 59 s | Logotipo y «Play Now» | corte |
+
+Con la misma toma de juego, el antegancho físico «pequeño» rinde 12 veces menos que el de la calle.
+
+#### S. Magic Sort sin antegancho y en paleta oscura (M21, nuevo): 386 k en la UE, **73 % hombres**, 60 s
+| Tramo | Plano | Texto |
+|---|---|---|
+| 0-58 s | Nivel enorme desde el fotograma 0, **azules y naranjas oscuros**, 4 estantes; el tubo central se llena | ninguno |
+| 59 s | «Magic Sort» y «Play Now» | — |
+
+Es el primer anuncio de agua con mayoría de hombres. Con el mismo guion que J, **la paleta y la falta de antegancho cambian el público**.
+
+#### T. Block Blast (P07): 1,56 M en la UE en 13 días (67 % mujeres, 25-44), 54 s
+Mismo guion que M de la semana 46 (0-4 s, rasqueta verde sobre pintura roja; corte seco a «Combo 30» y «Combo 33»; tarjeta). **Dobla su alcance en una semana** (790 k → 1,56 M): el antegancho de ASMR físico sigue subiendo.
+
+#### U. Ivy Color Block (P01): 670 k en la UE (sube de 578 k), 39 s
+| Tramo | Plano | Primer premio |
+|---|---|---|
+| 0,1 s | Tablero con el marcador (786) ya a la vista | — |
+| 1,5 s | «Combo 4» y +805 | 1,5 s |
+| 2,5-30 s | Marcador que sube sin parar (840 → 1.727 → 2.352) | continuo |
+| 38 s | Tarjeta con 4 móviles y «PLAY NOW» | cierre |
+
+Juego puro, sin texto propio; el marcador es el medidor.
+
+#### V. Attack Hole en TikTok (T21): 525 k «me gusta», 29 s
+| Tramo | Plano | Primer premio |
+|---|---|---|
+| 0,1 s | **Un agujero diminuto** sobre un campo inmenso de objetos rojos y amarillos; una mano real arrastra | — |
+| 0,7 s | Se traga la primera fila | 0,7 s |
+| 2,5-7 s | Hileras enteras; cambia el material (sandías, cajas): cambio de fase cada 2-3 s | continuo |
+
+Es el «pequeño frente a grande» de L con premio antes del primer segundo.
+
+#### W. Tall Man Run en TikTok (T24): 250 k «me gusta», 35 s
+- Arriba, el corredor con puertas «+5», «−50» y «×3»; abajo, la cara de una streamer que reacciona (✗).
+- **Un subtítulo de una palabra o dos por golpe:** «THREE GUYS.», «JUST CHANGED», «HOLD ON.», «WAIT.». Es exactamente nuestra H5.
+
+#### X. Block Blast en TikTok (T04): 617 k «me gusta», 53 s («If you survive past Level 5, we officially salute you»)
+- Tablero de madera en 3D casi lleno desde el fotograma 0; el marcador sube 600 → 700 → 1.200.
+- Sin texto en el vídeo: el reto va en el pie («si pasas del nivel 5…»).
+
+#### Y. Orgánico de la semana (YouTube)
+- **Tetris físico de acrílico:** «PART 138 FULL COLOR» llega a 14,5 M (es una **serie numerada**) y «3D Tetris Magic Trick» a 1,47 M en 2 días.
+- **Juego grabado sin edición:** un recorrido de Block Blast llega a 3,9 M.
+- **Soluciones de niveles concretos:** «Magic Sort Level 359 Solution Walkthrough» llega a 24 k y el del 389 a 19 k. La gente busca la solución de un nivel por su número.
+
+**Lo nuevo de la semana 47:**
+- **El espejo real delante del nivel enorme gana** (Q, 4,33 M): la misma toma de juego con 4-7 s de un objeto físico idéntico al juego llega a más gente que la toma sola. Nosotros no podemos usar personas; lo que sí es nuestro es el **juego como espejo de sí mismo** (la cuia de la tarjeta frente a la del tablero, plantilla 8).
+- **El antegancho decide el público** (Q frente a S): con la calle y el «1 %», 69-87 % mujeres; sin antegancho y en paleta oscura, 73 % hombres.
+- **El antegancho de ASMR físico sigue subiendo** (T: 790 k → 1,56 M en una semana).
+- **En orgánico, las series numeradas y las soluciones por número de nivel** traen vistas sostenidas (Y).
+
 ## 2. Lo que se repite en los que más alcanzan
 
 1. **El primer premio visible llega antes de 1-4 s**: un vertido, una explosión o un combo. Ninguno empieza con un logotipo ni con una pantalla de título.
@@ -221,6 +296,9 @@ Juego puro, sin texto y sin persona.
 10. **El contenido de la cuenta no es el anuncio:** en orgánico ganan el meme, la reacción y lo que se puede compartir, aunque el juego salga poco.
 11. **El tamaño del reto se ve en el primer fotograma** (semana 46): el nivel de 40 botellas, el agujero diminuto junto al depósito gigante o la carretera llena de coches. El espectador entiende la tarea antes del primer movimiento.
 12. **Se varía el antegancho, no el juego** (semana 46): Royal Match cambia barro por hielo y Candy Crush lanza cinco públicos con el mismo plano. Para probar, se cambian los 2-4 primeros segundos y se mantiene la toma.
+    - Semana 47, Magic Sort con el mismo nivel enorme: calle con estantería física 4,33 M; pinzas con cuentas 344 k; sin antegancho y en paleta oscura 386 k. El antegancho multiplica el alcance hasta por 12.
+13. **El antegancho y la paleta deciden el público** (semana 47): la misma toma de Magic Sort llega a un 69-87 % de mujeres con el antegancho de la calle y a un 73 % de hombres en paleta oscura y sin antegancho.
+14. **En orgánico, lo que se busca y lo que se repite** (semana 47): las soluciones por número de nivel (Magic Sort 359: 24 k) y las series numeradas («PART 138»: 14,5 M) traen vistas que el vídeo suelto no trae.
 
 ## 3. Plantillas de guion para Tintalú (orgánico, con tomas reales)
 
@@ -285,6 +363,29 @@ Contador: el número de vertidos sale de las tomas y del solver. No es una cifra
 - **Variación (regla 12):** se cambia solo el tramo de 0-3 s (Luciérnaga, Barro, Remolino, Lluvia) y se mantiene el resto. Así se mide qué revelado engancha más.
 - Nada de material físico ajeno (rasquetas, brocas, figuras): cada revelado es una mecánica que existe en la 1.0.
 
+### Plantilla 8. «El espejo del juego» (de Q, semana 47), 40-60 s
+El espejo de Magic Sort es un objeto físico con personas; el nuestro es el propio juego, sin nada inventado.
+
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-3 s | **Una sola cuia en grande** sellándose a cámara lenta (`s2-sellado-lento-l42`): el «objeto» que se va a ver multiplicado | ninguno | — |
+| 3 s | El nivel grande entero (`s2-grande-l303`, sin la intro) | ninguno | **corte seco** (o la marea H2) |
+| 3-55 s | Toma continua; el contador H1 en «quedan» baja hasta 0 | solo los del juego | sin cortes |
+| 55-60 s | Sellado final, victoria y tarjeta | «Tintalú» | corte |
+
+- Variación (regla 12): el tramo de 0-3 s puede ser la cuia de la Bitácora o del Mercado (`s3-cantaro`, `s3-skin-m0*`), que es una pieza real del juego.
+- Sin cifras («solo el 1 %…») ni personas.
+
+### Plantilla 9. «Solución del nivel N» (de Y, orgánico de búsqueda, semana 47), 20-40 s
+| Tramo | Plano | Texto |
+|---|---|---|
+| 0-1 s | El tablero del nivel N, quieto | «Nivel N» (título del vídeo: «Tintalú nivel N: solución») |
+| 1-35 s | La **solución real del solver**, vertido a vertido, con los toques dibujados (H8) y el contador H1 | solo los del juego |
+| final | Victoria y tarjeta | — |
+
+- Para YouTube (búsqueda). Se eligen los niveles donde más gente se atasca (cuando haya analítica: la tasa de abandono por nivel; mientras, los retos 46 y 60 y los de mecánica nueva).
+- Se puede publicar como **serie numerada** («Solución nivel 46», «nivel 47»…), que es lo que sostiene las vistas de Y.
+
 ## 4. Lo que no copiamos (§0)
 
 - Las personas reales o generadas con tablero físico (Magic Sort «Only 1 %», Nut Sort).
@@ -299,6 +400,10 @@ Contador: el número de vertidos sale de las tomas y del solver. No es una cifra
   - el «rescate» de una criatura (Ball Sort GP);
   - los medidores de «IQ» o «Genius» sin fuente;
   - «No ADS» (Royal Match): para nosotros es falso, porque hay anuncios.
+- Semana 47:
+  - la estantería física en la calle con gente y el cartel «Only 1% can solve this puzzle.» (Magic Sort, 4,33 M): personas y cifra sin fuente;
+  - las reacciones de streamers en un recuadro (Tall Man Run);
+  - los medidores de «IQ» (Brightika) y los «hacks» de monedas (vídeos de YouTube sobre Magic Sort).
 
 ## 5. Fuentes y límites de esta pasada
 
@@ -318,3 +423,9 @@ Contador: el número de vertidos sale de las tomas y del solver. No es una cifra
   - Se busca por la **razón social**, no por el nombre del juego. Por ejemplo, «Grand Games» (Turquía) para Magic Sort, con unos 900 anuncios en Brasil, casi todos vídeos de YouTube Shorts y anuncios de búsqueda («Magic Sort! | Sort it out!»).
   - Block Blast no sale como «Hungry Studio».
   - En la UE, «Times shown» solo se publica 3 meses después de la primera vez que se mostró el anuncio.
+- **Cambios de la semana 47:**
+  - Meta: `/ads/library/?id=<ID>&country=ES` lleva ahora a la página del anunciante con un diálogo «Link to ad»; su botón «See ad details» da el alcance y el `<video>` del diálogo sirve para el visor.
+  - TikTok sin sesión: la API de la lista sigue dando la página 1 (20 anuncios) con «me gusta» y, en parte, el vídeo; la búsqueda por palabra no.
+  - YouTube con el panel oculto: las miniaturas se ven cargando `i.ytimg.com/vi/<ID>/hqdefault.jpg` en una capa.
+  - Instagram pide iniciar sesión.
+  - Google: `?query=` en la URL no busca; hay que escribir en el cuadro.

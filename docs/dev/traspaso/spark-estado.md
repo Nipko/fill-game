@@ -6,6 +6,22 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-16 · Tendencias semana 2026-47: HECHO
+- **54 referencias** en `semilla-2026-47.json`: 40 puestas al día con cifra y 14 nuevas; 130 en la biblioteca. Informe: `docs/marketing/tendencias/2026-47.md`. Hay 8 anuncios desmontados con el visor (`guiones-que-funcionan.md` §1, Q a X), las plantillas 8 y 9 y los formatos F10 y F11 en `linea-de-produccion.md`. H4 (bucle) consta como hecho en `montar_hf.py`.
+- **Cifras más altas:**
+  - Meta UE: **Magic Sort 4,33 M** (y 3,45 M con el mismo vídeo). Guion: una estantería física en la calle con gente y «Only 1% can solve this puzzle.», y corte seco a los 7 s al nivel enorme. Es ✗ por las personas y la cifra; se copia el espejo con nuestro juego.
+  - Block Blast dobla a 1,56 M en 13 días; Royal Match llega a 1,42 M.
+  - TikTok: Stacky Dash, 2,28 M «me gusta».
+  - YouTube: tetris físico «PART 138», 14,5 M.
+- **Ganchos que suben:**
+  - G8, el espejo real: de 673 a 952 de peso.
+  - El antegancho decide el público: Magic Sort sin antegancho y en paleta oscura llega a un 73 % de hombres (386 k).
+  - En orgánico, las soluciones por número de nivel y las series numeradas.
+- **No se pudo ver:**
+  - Instagram (pide iniciar sesión).
+  - Las búsquedas por palabra de TikTok y México: sin la sesión del dueño, aunque la lista del sector Games sale.
+  - Meta México, y otros estudios en Google Ads Transparency.
+
 ### 2026-11-09 · Tendencias semana 2026-46: HECHO
 - **47 referencias** en `semilla-2026-46.json`: 26 nuevas o con cifra nueva y 21 puestas al día; 116 en la biblioteca. Informe: `docs/marketing/tendencias/2026-46.md`. Hay 17 anuncios desmontados con el visor (`guiones-que-funcionan.md` §1 J-P), y nuevas las plantillas 6 y 7, F9 y H11 en `linea-de-produccion.md`.
 - **Cifras más altas (alcance en la UE, Meta):**
