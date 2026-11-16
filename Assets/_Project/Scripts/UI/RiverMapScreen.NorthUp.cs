@@ -364,6 +364,7 @@ namespace AF.UI
 
             CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
             EnsureOrientationFades();
+            CancelSettle(); // observación 3 de la segunda ronda de la 1.1: el encuadre final tras el viaje, anulado
             _northUpOn = !_northUpOn;
             if (_northUpOn)
             {

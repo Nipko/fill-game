@@ -311,6 +311,11 @@ namespace AF.UI
             }
 
             bool reduce = ProgressReduceMotion;
+            if (by != JourneyByResume)
+            {
+                StartArrivalCloseUp(); // observación 1 de la segunda ronda de la 1.1: tras un viaje con menos zoom (RiverMapScreen.Capi.cs)
+            }
+
             ShowJourneyButtons(reduce ? 1f : 0f);
             _journeyInMs = reduce ? -1f : 0f;
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.MapSample); // se llena la muestra del sitio: ya se puede seguir

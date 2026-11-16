@@ -144,17 +144,21 @@ namespace AF.UI
         }
 
         /// <summary>Línea <c>AF_STATE map_open</c> (<c>af_map_open</c> de 08 §8.2).</summary>
-        public void MapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom)
+        public void MapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom, float worldZoom = -1f)
         {
-            string? line = FormatMapOpen(source, level, stop, world, view, zoom);
+            string? line = FormatMapOpen(source, level, stop, world, view, zoom, worldZoom);
             if (line != null)
             {
                 Write(line);
             }
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE map_open</c>; null si la sonda no escribe.</summary>
-        public string? FormatMapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom)
+        /// <summary>
+        /// Texto de la línea <c>AF_STATE map_open</c>; null si la sonda no escribe. Con <paramref name="worldZoom"/> &gt; 0 (observación 1
+        /// de la segunda ronda de la 1.1: el viaje con menos zoom), suma <c>world_zoom</c>, el zoom del mundo que el viaje rebajó a
+        /// <paramref name="zoom"/>.
+        /// </summary>
+        public string? FormatMapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom, float worldZoom = -1f)
         {
             if (!Enabled)
             {
@@ -173,6 +177,11 @@ namespace AF.UI
             sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"view\":\"").Append(view == MapView.Basin ? "basin" : "world").Append('"');
             sb.Append(",\"zoom\":").Append(zoom.ToString("0.00", CultureInfo.InvariantCulture));
+            if (worldZoom > 0f)
+            {
+                sb.Append(",\"world_zoom\":").Append(worldZoom.ToString("0.00", CultureInfo.InvariantCulture));
+            }
+
             sb.Append('}');
             return sb.ToString();
         }

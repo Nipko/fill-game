@@ -66,6 +66,36 @@ namespace AF.UI
         /// <summary>Constante de tiempo de la vuelta suave del primer plano a la vista normal (ms) [P]: desde ×2,5, unos 1,5 s.</summary>
         public const float CamCloseUpOutMs = 300f;
 
+        /// <summary>
+        /// Observación 1 de la segunda ronda de la 1.1 (2026-11-09, el dueño: «este es muy rápido, o se ve rápido por el efecto
+        /// zoom»): con un zoom del mundo mayor que este (×) [P], el viaje de un Mapa con viaje se hace con <see cref="JourneyWideZoom"/>.
+        /// Por qué ×7,5: el viaje del 70 (×4) le pareció bien al dueño y no cambia; por debajo de ×7,5 el acercamiento de llegada
+        /// (<see cref="JourneyWideFromZoom"/> / <see cref="JourneyWideZoom"/>) sería de menos de ×1,25 y no se notaría.
+        /// </summary>
+        public const float JourneyWideAboveZoom = 7.5f;
+
+        /// <summary>
+        /// Zoom del viaje cuando el del mundo pasa de <see cref="JourneyWideAboveZoom"/> (×) [P]. Por qué ×6: la canoa recorre en
+        /// pantalla, a igual tiempo (4,5 s), lo proporcional al zoom; con ×6 va a 1,5 veces la velocidad del viaje del 70 (×4) en vez
+        /// de a 3,75 veces (×15, el del 80), y ×15 / ×6 = ×2,5 es justo el primer plano que el dueño ya aprobó para la tripulación
+        /// (<see cref="CamCloseUpZoom"/>): al llegar, el acercamiento enseña el detalle del zoom del mundo.
+        /// </summary>
+        public const float JourneyWideZoom = 6f;
+
+        /// <summary>
+        /// Lo que dura el acercamiento de llegada tras un viaje con menos zoom (ms) [P] («se acerque un par de segundos»): desde la
+        /// llegada hasta que empieza a volver a la vista del viaje (la entrada tarda unos 900 ms y la vuelta, suave, 1,5 s más o
+        /// menos, como el primer plano de la tripulación). «Jugar» no lo espera: entra al llegar, como en D-053.
+        /// </summary>
+        public const float ArrivalCloseUpHoldMs = 2000f;
+
+        /// <summary>
+        /// Constante de tiempo con que la vista se corre, al acabar un viaje que la cámara siguió, hasta el encuadre en que caben la
+        /// parada siguiente con su rótulo y la canoa (ms) [P] (observación 3 de la segunda ronda de la 1.1: el rótulo de Leticia
+        /// quedaba cortado tras el viaje del 80). Por qué 250: unos 0,75 s, dentro del acercamiento de llegada, sin tirón.
+        /// </summary>
+        public const float CamSettleMs = 250f;
+
         /// <summary>Fundido de la luz al cambiar de mundo dentro del Mapa (ms; propuesta §3.3, pendiente de M2-1).</summary>
         public const float LightFadeMs = 600f;
 
@@ -108,6 +138,10 @@ namespace AF.UI
         private bool _capiDeparted;
         private Color _sampleWater = Color.white;
         private float _camZoom = 1f;
+        private bool _journeyWideOpen; // esta apertura hace el viaje con menos zoom (hasta que el jugador cambia de vista)
+        private float _journeyWideFrom; // el zoom del mundo que el viaje rebajó (0 si no)
+        private float _arrivalCloseMs = -1f; // el acercamiento de llegada en marcha (ms), o −1
+        private float _arrivalCloseZoom = 1f;
         private int _camPhase; // 0 nada, 1 anticipación, 2 vuelta de la anticipación, 3 llegada
         private float _closeZoom = 1f; // el primer plano de la tripulación (añadido de D-069 del 2026-11-08), que multiplica al de _camPhase
         private float _camPhaseZoom = 1f; // la escala de _camPhase sola, sin el primer plano
@@ -135,6 +169,15 @@ namespace AF.UI
 
         /// <summary>La escala de la cámara de §5.5 sola (anticipación y llegada), sin el primer plano de la tripulación.</summary>
         public float CameraPhaseZoom => _camPhaseZoom;
+
+        /// <summary>
+        /// El zoom del mundo que el viaje de esta apertura rebajó a <see cref="JourneyWideZoom"/> (observación 1 de la segunda ronda de
+        /// la 1.1), o 0 si el viaje va con el zoom del mundo (o no hay viaje).
+        /// </summary>
+        public float JourneyWideFromZoom => _journeyWideFrom;
+
+        /// <summary>El acercamiento de llegada tras un viaje con menos zoom está en marcha (tests).</summary>
+        public bool ArrivalCloseUpActive => _arrivalCloseMs >= 0f;
 
         /// <summary>El primer plano de la tripulación en este fotograma (1 sin él; añadido de D-069 del 2026-11-08).</summary>
         public float CameraCloseUp => _closeZoom;
@@ -388,7 +431,7 @@ namespace AF.UI
                 if (_capiFollowed)
                 {
                     _capiFollowed = false;
-                    SetOffset(_offset); // «Volver a la canoa», con la canoa ya en su sitio
+                    StartSettle(snap); // el encuadre final, con la parada siguiente y su rótulo enteros a la vista
                 }
             }
 
@@ -399,7 +442,7 @@ namespace AF.UI
             TickLight(dtMs);
             TickTownGlow(dtMs);
             ApplyCapiPose();
-            if (_capi.Animating || _camPhase != 0 || _closeZoom != 1f || _lightMs >= 0f || _townGlowMs >= 0f)
+            if (_capi.Animating || _camPhase != 0 || _closeZoom != 1f || _arrivalCloseMs >= 0f || _settling || _lightMs >= 0f || _townGlowMs >= 0f)
             {
                 animating = true;
             }
@@ -809,6 +852,150 @@ namespace AF.UI
             }
         }
 
+        // Observación 1 de la segunda ronda de la 1.1: en la vista Mundo del Mapa v2, si esta apertura hace un viaje que la cámara
+        // sigue y el zoom del mundo pasa de JourneyWideAboveZoom, el viaje va con JourneyWideZoom (y se queda en él: es la vista de
+        // esta apertura hasta que el jugador cambia de vista). Sin viaje, con Reducir movimiento o con «Norte arriba», nada cambia.
+        private void ApplyJourneyWideZoom(ref float zoom)
+        {
+            _journeyWideFrom = 0f;
+            if (_live && _hasCanoe && _catchUp && _catchJourney && CameraAllowed)
+            {
+                _journeyWideOpen = true;
+            }
+
+            if (_journeyWideOpen && zoom > JourneyWideAboveZoom)
+            {
+                _journeyWideFrom = zoom;
+                zoom = JourneyWideZoom;
+            }
+        }
+
+        // La canoa llegó tras un viaje con menos zoom: la cámara se acerca hasta el detalle del zoom del mundo (como mucho
+        // CamCloseUpZoom) durante ArrivalCloseUpHoldMs y vuelve suave a la vista del viaje.
+        private void StartArrivalCloseUp()
+        {
+            _arrivalCloseMs = -1f;
+            if (!_live || _journeyWideFrom <= 0f || _zoom <= 0f || !CameraAllowed)
+            {
+                return;
+            }
+
+            _arrivalCloseZoom = Mathf.Clamp(_journeyWideFrom / _zoom, 1f, CamCloseUpZoom);
+            _arrivalCloseMs = _arrivalCloseZoom > 1f ? 0f : -1f;
+        }
+
+        /// <summary>
+        /// Solo para las capturas (<c>[Explicit]</c>): escala el contenido ×<paramref name="z"/> alrededor de la canoa, como el primer
+        /// plano, sin animar; el siguiente <see cref="Tick"/> lo devuelve a su sitio.
+        /// </summary>
+        internal void ScaleForCapture(float z)
+        {
+            ApplyCameraZoom(z);
+        }
+
+        private bool _settling;
+        private Vector2 _settleTarget;
+
+        /// <summary>La vista se está corriendo al encuadre final tras un viaje que la cámara siguió (tests).</summary>
+        internal bool CameraSettling => _settling;
+
+        // Anula el encuadre final en marcha sin tocar el desplazamiento: lo llaman ApplyView (otra vista o el giro de la pantalla),
+        // «Norte arriba» y «Volver a la canoa», que ponen su propio encuadre. ResetCamera también lo anula, sin RefitAfterJourney:
+        // se llama al cerrar, al volver de segundo plano (que ya encuadra de golpe) y cuando la cámara deja de estar permitida, y
+        // en esos casos la vista que sigue vuelve a colocar los rótulos.
+        private void CancelSettle()
+        {
+            _settling = false;
+        }
+
+        // Al acabar un viaje que la cámara siguió: la vista se corre lo justo para que se vean enteras la parada siguiente con su
+        // rótulo y la canoa (FrameRemaining, como al abrir) y, ya quieta, los rótulos y las placas se vuelven a encajar en ese
+        // encuadre. Al volver de segundo plano o sin cámara, de golpe.
+        private void StartSettle(bool snap)
+        {
+            Vector2 target = _offset;
+            FrameRemaining(ref target);
+            target = new Vector2(ClampAxis(target.x, _contentW, _viewW), ClampAxis(target.y, _contentH, _viewH));
+            if (snap || !CameraAllowed || (target - _offset).sqrMagnitude < 0.25f)
+            {
+                _settling = false;
+                SetOffset(target);
+                RefitAfterJourney();
+                return;
+            }
+
+            _settleTarget = target;
+            _settling = true;
+        }
+
+        private void TickSettle(float dtMs)
+        {
+            if (!_settling)
+            {
+                return;
+            }
+
+            if (!CameraAllowed)
+            {
+                // La Cuenca o «Norte arriba» a medias: el destino era de la vista Mundo. Se anula sin tocar el desplazamiento (lo pone
+                // la vista nueva).
+                _settling = false;
+                return;
+            }
+
+            if (_dragging)
+            {
+                _settling = false; // el jugador manda: se queda donde lo deja
+                RefitAfterJourney();
+                return;
+            }
+
+            float k = 1f - Mathf.Exp(-Mathf.Max(0f, dtMs) / CamSettleMs);
+            Vector2 next = _offset + ((_settleTarget - _offset) * k);
+            if ((_settleTarget - next).sqrMagnitude < 0.25f)
+            {
+                _settling = false;
+                SetOffset(_settleTarget);
+                if (_camZoom != 1f)
+                {
+                    ApplyCameraZoom(_camZoom);
+                }
+
+                RefitAfterJourney();
+                return;
+            }
+
+            _offset = next;
+            if (_camZoom == 1f)
+            {
+                _content.anchoredPosition = new Vector2(_offset.x, -_offset.y);
+            }
+
+            LiveOffset();
+        }
+
+        // Los rótulos y las placas, otra vez encajados en el encuadre de ahora (como al final de LayoutView). Una vez por viaje.
+        private void RefitAfterJourney()
+        {
+            if (_view != MapView.World)
+            {
+                return;
+            }
+
+            CuiasRestore();
+            PlatesFitView();
+            RemainingLabelFitView();
+            CuiasYieldToPlates();
+            HeroesAfterFrame();
+            TownLabelsAfterFrame();
+            _closeUpLabelAlpha = -1f; // los rótulos recolocados toman la opacidad del primer plano en marcha (CloseUpLabels)
+            CloseUpLabels();
+            if (Visible)
+            {
+                EmitLayout();
+            }
+        }
+
         private void StartCamera(int phase)
         {
             _camFrom = _camPhaseZoom;
@@ -831,6 +1018,20 @@ namespace AF.UI
             // saluda, que entra y vuelve suave a la vista normal. Sin él con Reducir movimiento, en la Cuenca o arrastrando.
             bool closeOk = CameraAllowed && !_dragging;
             float want = closeOk && CloseUpWanted ? CamCloseUpZoom : 1f;
+            if (_arrivalCloseMs >= 0f)
+            {
+                // Observación 1 de la segunda ronda de la 1.1: el acercamiento de llegada tras un viaje con menos zoom.
+                _arrivalCloseMs += Mathf.Max(0f, dtMs);
+                if (!closeOk || _arrivalCloseMs >= ArrivalCloseUpHoldMs)
+                {
+                    _arrivalCloseMs = -1f;
+                }
+                else
+                {
+                    want = Mathf.Max(want, _arrivalCloseZoom);
+                }
+            }
+
             if (_closeZoom != want)
             {
                 float tc = want > _closeZoom ? CamCloseUpInMs : CamCloseUpOutMs;
@@ -841,6 +1042,7 @@ namespace AF.UI
                 }
             }
 
+            TickSettle(dtMs); // observación 3 de la segunda ronda de la 1.1: el encuadre final tras el viaje
             CloseUpLabels(); // los rótulos se apagan en el primer plano: a ×2 serían enormes (RiverMapScreen.Towns.cs)
             if (_camPhase == 0)
             {
@@ -923,6 +1125,8 @@ namespace AF.UI
             _camPhase = 0;
             _camMs = 0f;
             _closeZoom = 1f;
+            _arrivalCloseMs = -1f;
+            _settling = false;
             _camPhaseZoom = 1f;
             CloseUpLabels();
             if (_camZoom != 1f || _content.localScale != Vector3.one)

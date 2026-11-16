@@ -254,6 +254,9 @@ namespace AF.Presentation
         private bool _endFadeMin;
         private bool _endFadeMax;
 
+        /// <summary>El largo de las puntas que se difuminan (dp; 0 sin ellas o sin ninguna punta; <see cref="SetEndFade"/>).</summary>
+        public float EndFadeDp => _endFadeMin || _endFadeMax ? _endFadeDp : 0f;
+
         // La opacidad de la sección en el arco arc por las puntas que se difuminan (1 sin SetEndFade).
         private float EndFadeAt(float arc)
         {
