@@ -146,9 +146,6 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
             string at = max + " (visto " + (max - behind) + ")";
-            float e = RiverMapScreen.CameraLabelEdgeDp - 0.5f;
-            var view = new Rect(Vector2.zero, map.ViewportSize);
-            var area = new Rect(e, e, view.width - (2f * e), view.height - (2f * e));
             int frames = 0;
             int checkedLabels = 0;
             for (int ms = 0; ms <= 8000; ms += PlayModeHelpers.FrameMs)
@@ -160,57 +157,136 @@ namespace AF.Tests.PlayMode
                 }
 
                 frames++;
-                Canvas.ForceUpdateCanvases();
-                Rect crew = map.CrewBoxNowLocal;
-                int next = map.RemainingStopN();
-                for (int n = 0; n < boot.RiverStops!.Count; n++)
-                {
-                    Rect r = map.StopLabelLocalRect(n);
-                    if (r.width <= 0f)
-                    {
-                        Assert.That(n, Is.Not.EqualTo(next), at + " a los " + ms + " ms: el rótulo de la parada siguiente sale");
-                        continue;
-                    }
-
-                    TMPro.TextMeshProUGUI label = map.StopLabelOf(n)!;
-                    if (label.canvasRenderer.GetAlpha() <= 0f)
-                    {
-                        Assert.That(n, Is.Not.EqualTo(next), at + " a los " + ms + " ms: el rótulo de la parada siguiente no se apaga");
-                        continue;
-                    }
-
-                    checkedLabels++;
-                    Rect seen = map.LocalToScreenView(r);
-                    Assert.That(Inside(seen, area), Is.True, at + " a los " + ms + " ms (cámara ×" + map.CameraZoom.ToString("0.00") + "): el rótulo de la parada " + n + " cortado: " + seen);
-                    if (n != next)
-                    {
-                        Assert.That(r.Overlaps(crew), Is.False, at + " a los " + ms + " ms: el rótulo de la parada " + n + " pisa la canoa " + crew);
-                    }
-                }
-
-                for (int i = 0; i < map.TownMarkerCount; i++)
-                {
-                    Rect r = map.TownLabelLocalRect(i);
-                    if (r.width <= 0f || map.TownLabelMaskedByCamera(i))
-                    {
-                        continue;
-                    }
-
-                    checkedLabels++;
-                    Rect seen = map.LocalToScreenView(r);
-                    if (seen.Overlaps(view))
-                    {
-                        Assert.That(Inside(seen, area), Is.True, at + " a los " + ms + " ms (cámara ×" + map.CameraZoom.ToString("0.00") + "): el rótulo del pueblo " + i + " cortado: " + seen);
-                    }
-
-                    Assert.That(r.Overlaps(crew), Is.False, at + " a los " + ms + " ms: el rótulo del pueblo " + i + " pisa la canoa " + crew);
-                }
+                checkedLabels += CheckLabelsThisFrame(boot, map, at + " a los " + ms + " ms");
             }
 
             Debug.Log("AF_MAP r2d rótulos fotograma a fotograma " + at + ": " + frames + " fotogramas, " + checkedLabels + " rótulos vistos, " + map.LabelsMaskedByCameraTotal
                 + " apagados por la canoa o el borde, " + map.RefitsAfterJourney + " recolocaciones al acabar el viaje");
             Assert.That(frames, Is.GreaterThan(100));
             map.Close();
+        }
+
+        // Revisión de la segunda vuelta de la r2d: un compañero se une en el viaje (el tucuxi a mitad, pasando por el 51; el tucán al
+        // final, en el 21) y, a la vuelta
+        // de su primer plano (al bajar de ×1,15), los rótulos que la canoa o el borde tenían apagados siguen apagados: antes
+        // CloseUpLabels los volvía a encender todos. En cada fotograma, con la opacidad de verdad.
+        [UnityTest]
+        public IEnumerator ACompanionJoiningMidJourney_TheLabelsTheCameraHid_StayHidden_WhenItsCloseUpEnds([Values("65/45", "68/48", "62/42", "21/11")] string profile)
+        {
+            GameScreen.SimulatedPxPerDp = 3f;
+            int max = int.Parse(profile.Split('/')[0]);
+            int seen = int.Parse(profile.Split('/')[1]);
+            yield return MapMarkersTests.OpenApp(max + 1, seen);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            string at = max + " (visto " + seen + ")";
+            Assert.That(map.CatchingUp, Is.True, at + ": se pone al día");
+            Assert.That(map.CrewIntroKind, Is.EqualTo(max > 50 ? CrewKind.Tucuxi : CrewKind.Toucan), at + ": el compañero se une en el viaje (el tucán en el 21, el tucuxi en el 51)");
+            float prev = 1f;
+            int crossings = 0;
+            int maskedAtCrossing = 0;
+            for (int ms = 0; ms <= 12000; ms += PlayModeHelpers.FrameMs)
+            {
+                int maskedBefore = map.LabelsMaskedByCamera;
+                map.Tick(PlayModeHelpers.FrameMs);
+                float z = map.CameraCloseUp;
+                if (prev > RiverMapScreen.CloseUpLabelsBackBelow && z <= RiverMapScreen.CloseUpLabelsBackBelow)
+                {
+                    crossings++;
+                    maskedAtCrossing += maskedBefore;
+                    Debug.Log("AF_MAP r2d vuelta del primer plano " + at + " a los " + ms + " ms: ×" + z.ToString("0.00") + ", " + maskedBefore + " apagados justo antes, "
+                        + map.LabelsMaskedByCamera + " ahora, poniéndose al día " + map.CatchingUp);
+                }
+
+                prev = z;
+                if (map.CloseUpLabelAlpha >= 1f)
+                {
+                    CheckLabelsThisFrame(boot, map, at + " a los " + ms + " ms");
+                }
+            }
+
+            Assert.That(crossings, Is.GreaterThan(0), at + ": hubo primer plano y volvió");
+            Assert.That(maskedAtCrossing, Is.GreaterThan(0), at + ": algún rótulo apagado por la canoa o el borde al volver del primer plano (el caso de la revisión)");
+            map.Close();
+        }
+
+        // Los rótulos que se ven de verdad (opacidad heredada de la píldora o de lo que lleva dentro) en este fotograma: enteros en la
+        // pantalla con el margen de las placas (también con la escala de la cámara) y, salvo el de la parada siguiente, fuera de la
+        // canoa con su mástil, sus banderas y su tripulación donde va ahora. El de la parada siguiente sale y no se apaga. Devuelve
+        // cuántos miró.
+        private static int CheckLabelsThisFrame(GameBootstrap boot, RiverMapScreen map, string at)
+        {
+            Canvas.ForceUpdateCanvases();
+            float e = RiverMapScreen.CameraLabelEdgeDp - 0.5f;
+            var view = new Rect(Vector2.zero, map.ViewportSize);
+            var area = new Rect(e, e, view.width - (2f * e), view.height - (2f * e));
+            Rect crew = map.CrewBoxNowLocal;
+            int next = map.RemainingStopN();
+            int seenLabels = 0;
+            for (int n = 0; n < boot.RiverStops!.Count; n++)
+            {
+                Rect r = map.StopLabelLocalRect(n);
+                TMPro.TextMeshProUGUI? label = map.StopLabelOf(n);
+                if (r.width <= 0f || label == null || !Shown((RectTransform)label.transform.parent))
+                {
+                    Assert.That(n, Is.Not.EqualTo(next), at + ": el rótulo de la parada siguiente sale y no se apaga");
+                    continue;
+                }
+
+                seenLabels++;
+                Rect seen = map.LocalToScreenView(r);
+                Assert.That(Inside(seen, area), Is.True, at + " (cámara ×" + map.CameraZoom.ToString("0.00") + "): el rótulo de la parada " + n + " cortado: " + seen);
+                if (n != next)
+                {
+                    Assert.That(r.Overlaps(crew), Is.False, at + ": el rótulo de la parada " + n + " pisa la canoa " + crew);
+                }
+            }
+
+            for (int i = 0; i < map.TownMarkerCount; i++)
+            {
+                Rect r = map.TownLabelLocalRect(i);
+                RectTransform? pill = map.TownLabelPill(i);
+                if (r.width <= 0f || pill == null || !Shown(pill))
+                {
+                    continue;
+                }
+
+                seenLabels++;
+                Rect seen = map.LocalToScreenView(r);
+                if (seen.Overlaps(view))
+                {
+                    Assert.That(Inside(seen, area), Is.True, at + " (cámara ×" + map.CameraZoom.ToString("0.00") + "): el rótulo del pueblo " + i + " cortado: " + seen);
+                }
+
+                Assert.That(r.Overlaps(crew), Is.False, at + ": el rótulo del pueblo " + i + " pisa la canoa " + crew);
+            }
+
+            return seenLabels;
+        }
+
+        // La píldora se ve: ella o algo que lleva dentro, con opacidad heredada > 0.
+        private static bool Shown(RectTransform pill)
+        {
+            if (!pill.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            // GetInheritedAlpha solo cuenta los CanvasGroup de encima: con la opacidad propia (SetAlpha), lo que se ve de verdad.
+            if (pill.TryGetComponent(out CanvasRenderer own) && own.GetAlpha() * own.GetInheritedAlpha() > 0f)
+            {
+                return true;
+            }
+
+            for (int c = 0; c < pill.childCount; c++)
+            {
+                if (pill.GetChild(c).TryGetComponent(out CanvasRenderer r) && r.GetAlpha() * r.GetInheritedAlpha() > 0f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Revisión de la r2d: al acabar un viaje se recoloca todo una sola vez. Con «Reducir movimiento» no hay viaje: el Mapa abre ya

@@ -528,6 +528,14 @@ namespace AF.UI
                 return true;
             }
 
+            // Segunda vuelta de la r2d: tampoco cortado por el borde de la zona visible con este encuadre (con el margen de las placas).
+            Rect seen = InView(r, _offset);
+            if (seen.Overlaps(new Rect(0f, 0f, _viewW, _viewH))
+                && !Inside(seen, new Rect(LabelEdgeDp, LabelEdgeDp, _viewW - (2f * LabelEdgeDp), _viewH - (2f * LabelEdgeDp))))
+            {
+                return true;
+            }
+
             for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
             {
                 if (_markers[i].Root.gameObject.activeSelf && _stopLabels[i].Pill.gameObject.activeSelf
@@ -1697,12 +1705,15 @@ namespace AF.UI
             _closeUpLabelAlpha = a;
             for (int i = 0; i < _stopLabels.Count; i++)
             {
-                SetPillAlpha(_stopLabels[i].Pill, a);
+                // Revisión de la segunda vuelta de la r2d: los que la cámara apagó (LabelsFollowCamera) siguen apagados.
+                bool masked = _labelMaskOn && i < _stopLabelMasked.Length && _stopLabelMasked[i];
+                SetPillAlpha(_stopLabels[i].Pill, masked ? 0f : a);
             }
 
             for (int i = 0; i < _townMarkers.Count; i++)
             {
-                SetPillAlpha(_townMarkers[i].Pill, a);
+                bool masked = _labelMaskOn && i < _townLabelMasked.Length && _townLabelMasked[i];
+                SetPillAlpha(_townMarkers[i].Pill, masked ? 0f : a);
             }
 
             if (_prizePill != null)
@@ -2174,6 +2185,7 @@ namespace AF.UI
         private bool _labelMaskOn;
         private int _nextShiftIndex = -1;
         private Vector2 _nextShift;
+        private Vector2 _nextShiftBase;
         private Vector2 _nextShiftedAt;
 
         /// <summary>Rótulos apagados ahora por la canoa que pasa o por el borde con la cámara (tests).</summary>
@@ -2185,11 +2197,17 @@ namespace AF.UI
         /// <summary>Corrimiento (dp locales) del rótulo de la parada siguiente para quedar entero con la cámara escalada (tests).</summary>
         internal Vector2 NextLabelCameraShift => _nextShiftIndex >= 0 ? _nextShift : Vector2.zero;
 
-        /// <summary>El rótulo <paramref name="i"/> (orden de los marcadores) está apagado por la cámara (tests).</summary>
+        /// <summary>El rótulo de la parada <paramref name="n"/> está apagado por la cámara (tests).</summary>
         internal bool StopLabelMaskedByCamera(int n)
         {
             int i = StopMarkerIndexOf(n);
             return i >= 0 && i < _stopLabelMasked.Length && _stopLabelMasked[i];
+        }
+
+        /// <summary>La píldora del rótulo del pueblo <paramref name="i"/> (tests: su opacidad de verdad).</summary>
+        internal RectTransform? TownLabelPill(int i)
+        {
+            return i >= 0 && i < _townCount && i < _townMarkers.Count ? _townMarkers[i].Pill : null;
         }
 
         /// <summary>El rótulo del pueblo <paramref name="i"/> está apagado por la cámara (tests).</summary>
@@ -2293,30 +2311,35 @@ namespace AF.UI
             if (_nextShiftIndex != i || pill.anchoredPosition != _nextShiftedAt)
             {
                 _nextShiftIndex = i;
-                _nextShift = Vector2.zero;
+                _nextShiftBase = pill.anchoredPosition; // su sitio, el de la colocación (o el de una recolocación desde el fotograma anterior)
             }
 
-            Vector2 basePos = pill.anchoredPosition - _nextShift;
-            pill.anchoredPosition = basePos;
+            pill.anchoredPosition = _nextShiftBase;
             Rect seen = LocalToScreenView(PillRect(c, pill));
             float dx = seen.xMin < area.xMin ? area.xMin - seen.xMin : (seen.xMax > area.xMax ? area.xMax - seen.xMax : 0f);
             float dy = seen.yMin < area.yMin ? area.yMin - seen.yMin : (seen.yMax > area.yMax ? area.yMax - seen.yMax : 0f);
             float z = Mathf.Max(0.01f, _camZoom);
             _nextShift = new Vector2(dx / z, -dy / z); // la vista va con y hacia abajo; el contenido, hacia arriba
-            pill.anchoredPosition = basePos + _nextShift;
+            pill.anchoredPosition = _nextShiftBase + _nextShift;
             _nextShiftedAt = pill.anchoredPosition;
         }
 
-        // Apaga (o devuelve a la opacidad a) la píldora si cambia. Sin asignaciones.
+        // Apaga la píldora en cada pasada (otro, como CloseUpLabels, pudo volver a encenderla; SetPillAlpha no escribe si no cambia) o
+        // la devuelve a la opacidad a al dejar de estar apagada. Sin asignaciones.
         private static void MaskPill(RectTransform pill, ref bool masked, bool hide, float a)
         {
-            if (masked == hide)
+            if (hide)
             {
+                masked = true;
+                SetPillAlpha(pill, 0f);
                 return;
             }
 
-            masked = hide;
-            SetPillAlpha(pill, hide ? 0f : a);
+            if (masked)
+            {
+                masked = false;
+                SetPillAlpha(pill, a);
+            }
         }
 
         // Todo como estaba: los rótulos apagados por la cámara vuelven a la opacidad del primer plano (1 sin él) y el de la parada
@@ -2353,7 +2376,7 @@ namespace AF.UI
                 RectTransform pill = _stopLabels[_nextShiftIndex].Pill;
                 if (pill.anchoredPosition == _nextShiftedAt)
                 {
-                    pill.anchoredPosition -= _nextShift;
+                    pill.anchoredPosition = _nextShiftBase;
                 }
             }
 
