@@ -168,6 +168,20 @@ namespace AF.EditorTools
         /// <summary>Sin R8 en los Development Build (<c>dev.apk</c>): se depuran con los nombres de verdad.</summary>
         public const bool MinifyDebug = false;
 
+        /// <summary>
+        /// IL2CPP Code Generation «Faster (smaller) builds» (<c>OptimizeSize</c>) en Android (memoria de clase A, 2026-11-17;
+        /// D-060, punto 3, y <c>docs/dev/memoria.md</c> §6 y §11). El Moto G23 pasa de los 450 MB de PSS de D-060 casi solo por
+        /// <c>Code</c> (98-102 MB, sobre todo <c>libil2cpp.so</c> mapeado). Con <c>OptimizeSize</c> IL2CPP comparte el código de los
+        /// genéricos con tipos de referencia (un cuerpo para todas sus instancias) en lugar de generar uno por cada combinación de
+        /// tipos, así que <c>libil2cpp.so</c> sale más pequeño; a cambio, esas llamadas genéricas pasan por una búsqueda en tiempo de
+        /// ejecución y cuestan algo más de CPU. Vale para todo build Android (el <c>dev.apk</c>, el de humo, el ensayo y el release),
+        /// para que el teléfono mida lo que se publica.
+        /// <para><b>Cómo revertir</b> (si los fotogramas empeoran en el teléfono): <c>Il2CppCodeGeneration.OptimizeSpeed</c>,
+        /// <c>pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup</c> y commitear <c>ProjectSettings/ProjectSettings.asset</c>
+        /// con el test de <c>MemorySettingsTests</c>.</para>
+        /// </summary>
+        public const Il2CppCodeGeneration AndroidIl2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSize;
+
         /// <summary>Propiedad serializada de los datos de posproceso del 2D Renderer (<c>Renderer2DData.postProcessData</c>).</summary>
         internal const string PostProcessDataProperty = "m_PostProcessData";
 
@@ -230,6 +244,7 @@ namespace AF.EditorTools
             FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
             PlayerSettings.Android.minifyRelease = MinifyRelease; // añadido de D-059 del 2026-11-06: R8 en la variante release
             PlayerSettings.Android.minifyDebug = MinifyDebug;
+            PlayerSettings.SetIl2CppCodeGeneration(android, AndroidIl2CppCodeGeneration); // memoria de clase A (2026-11-17): libil2cpp.so más pequeño
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
             PlayerSettings.Android.useCustomKeystore = false;
@@ -284,6 +299,7 @@ namespace AF.EditorTools
             Check(problems, "android.blitType", PlayerSettings.Android.blitType, BlitType);
             Check(problems, "android.minifyRelease", PlayerSettings.Android.minifyRelease, MinifyRelease);
             Check(problems, "android.minifyDebug", PlayerSettings.Android.minifyDebug, MinifyDebug);
+            Check(problems, "il2cppCodeGeneration", PlayerSettings.GetIl2CppCodeGeneration(android), AndroidIl2CppCodeGeneration);
             foreach (RenderPipelineAsset asset in PipelineAssets())
             {
                 bool? hdr = PipelineHdrOf(asset);
@@ -347,6 +363,7 @@ namespace AF.EditorTools
                 + ", blit=" + PlayerSettings.Android.blitType
                 + ", r8Release=" + PlayerSettings.Android.minifyRelease
                 + ", r8Debug=" + PlayerSettings.Android.minifyDebug
+                + ", il2cppCodegen=" + PlayerSettings.GetIl2CppCodeGeneration(android)
                 + ", posproceso=" + DescribeRendererPostProcess()
                 + ", graficos=" + (PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android) ? "auto" : DescribeGraphicsApis());
         }
