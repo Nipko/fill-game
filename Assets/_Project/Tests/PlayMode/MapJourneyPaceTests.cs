@@ -674,7 +674,8 @@ namespace AF.Tests.PlayMode
             Debug.Log("AF_MAP d069d: " + plays.Count + " aperturas, " + boxes + " rótulos y placas a la vista, " + plates + " placas, "
                 + cuias + " mini cuias a la vista, " + yielded + " que no salen por una placa o un país");
             Assert.That(cuias, Is.GreaterThan(plays.Count), "se miraron mini cuias de verdad");
-            Assert.That(boxes, Is.GreaterThan(plays.Count * 2), "se miraron rótulos de verdad");
+            // Segunda vuelta de la r2d: los rótulos de pueblo cortados por el borde ya no salen (173 → 160 en estas 84 aperturas).
+            Assert.That(boxes, Is.GreaterThan(plays.Count * 3 / 2), "se miraron rótulos de verdad");
             Assert.That(plates, Is.GreaterThan(10), "y placas");
             map.Close();
         }
