@@ -4634,6 +4634,15 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **El primer toque en «Mundo» tras el viaje del 10 no entraba.** El área de salto de la secuencia del 10 tapaba el selector. Al llegar la canoa (o desde que se abre, con «Reducir movimiento»), «Jugar», la cabecera y el selector suben encima. **[P]:** pulsar «Mundo» o «Cuenca» acaba lo que queda de la secuencia, como un toque, con lo que guarda (lo visto, el dato, el compañero). **[P]:** mientras el viaje no deja tocar el selector, se ve con opacidad 0,5.
 - **La placa del mundo siguiente salía cortada en el borde.** Las placas se encajan también en la apertura del Mapa del 10 y al acabar su secuencia.
 
+### D-069, añadido del 2026-11-17: arreglos de la prueba r2d
+
+- **Origen:** `docs/dev/traspaso/pruebas-telefono-2026-11-16-1.1-r2d.md`. Spark comprobó en el S23 Ultra que los arreglos de la r2c funcionan. Rama `v11/mapa-r2d-rotulos`.
+- **Abrir el Mapa directamente en Mundo con lo visto atrasado** (el 79 y el 521). La parada siguiente, que todavía se pinta como boya del abanico, se ocultaba como «parada futura», y con ella se iban su rótulo, «faltan N» y el Premio. **Ahora la parada siguiente no cede nunca.** Al acabar un viaje que la cámara no siguió (por ejemplo, con «Reducir movimiento»), los rótulos y las placas se recolocan y las boyas se apartan de ellos.
+  - **[P] del integrador:** mientras se pone al día, el rótulo de la parada siguiente gana a la placa del mundo en juego. Así pasa en la pausa del 301, con lo visto en el 290.
+  - **[P] del integrador:** al ponerse al día, los rótulos de los pueblos no se recolocan.
+- **«Mundo» justo al acabar el viaje del 10** (el 79, con el tucuxi por presentar). Su primer plano apagaba los rótulos hasta que la cámara volvía del todo, unos 3,6 s.
+  - **[P] del integrador:** al volver, los rótulos y las placas reaparecen en cuanto el zoom baja de ×1,15 (`CloseUpLabelsBackBelow`). A la ida se siguen apagando desde el primer fotograma.
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
