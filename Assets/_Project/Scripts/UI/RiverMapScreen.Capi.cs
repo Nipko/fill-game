@@ -433,6 +433,13 @@ namespace AF.UI
                     _capiFollowed = false;
                     StartSettle(snap); // el encuadre final, con la parada siguiente y su rótulo enteros a la vista
                 }
+                else
+                {
+                    // Observación 2 de la prueba r2d de la 1.1: sin cámara que siga el viaje (el Mapa abierto en la vista Mundo con
+                    // map_seen_level atrasado), las mini cuias que eran boyas ya son las de max_level: los rótulos, las placas y las
+                    // mini cuias que cedieron se vuelven a encajar en este encuadre, como tras el viaje que la cámara sigue.
+                    RefitAfterJourney();
+                }
             }
 
             _capiTraveling = traveling;
@@ -991,6 +998,7 @@ namespace AF.UI
             TownLabelsAfterFrame();
             _closeUpLabelAlpha = -1f; // los rótulos recolocados toman la opacidad del primer plano en marcha (CloseUpLabels)
             CloseUpLabels();
+            _buoyClearDirty = true; // las boyas, fuera de los rótulos y las placas en su sitio nuevo (observación 2 de la r2d)
             if (Visible)
             {
                 EmitLayout();

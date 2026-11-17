@@ -725,6 +725,7 @@ namespace AF.UI
             }
 
             bool any = false;
+            int next = RemainingStopN(); // observación 2 de la prueba r2d de la 1.1: la parada siguiente (la de «Jugar») no cede nunca
             for (int i = 0; i < _markerCount; i++)
             {
                 StopMarker m = _markers[i];
@@ -733,12 +734,14 @@ namespace AF.UI
                     continue;
                 }
 
-                if (m.Buoy != null && m.Buoy.enabled && m.HasLeader && i != _prizeMarker)
+                if (m.Buoy != null && m.Buoy.enabled && m.HasLeader && i != _prizeMarker && m.N != next)
                 {
                     // Observación 6 de la prueba r2b de la 1.1 [P]: una parada futura (más allá de la siguiente) que el abanico apartó
                     // de su punto no sale, ni su línea fina: donde se amontonan (Bolivia), cargaban el Mapa sin decir nada aún. La del
-                    // Premio del mundo sí sale (con su píldora); la siguiente no es nunca una boya. (Eximir también a las que llevan
-                    // rótulo, como en CuiaOverPlate, dejaba sin sitio la placa del mundo 7 jugando el 301: Fx10Tests.)
+                    // Premio del mundo sí sale (con su píldora). La siguiente solo es boya mientras la canoa se pone al día desde una
+                    // parada anterior (el Mapa abierto con map_seen_level atrasado): lleva «Faltan N» y no cede (observación 2 de la
+                    // prueba r2d de la 1.1: sin ella, ni su rótulo ni el zoom alejado). (Eximir también a las que llevan rótulo, como en
+                    // CuiaOverPlate, dejaba sin sitio la placa del mundo 7 jugando el 301: Fx10Tests.)
                     m.Root.gameObject.SetActive(false);
                     _cuiaYielded[i] = true;
                     any = true;
