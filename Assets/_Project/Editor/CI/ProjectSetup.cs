@@ -172,10 +172,11 @@ namespace AF.EditorTools
         /// IL2CPP Code Generation «Faster (smaller) builds» (<c>OptimizeSize</c>) en Android (memoria de clase A, 2026-11-17;
         /// D-060, punto 3, y <c>docs/dev/memoria.md</c> §6 y §11). El Moto G23 pasa de los 450 MB de PSS de D-060 casi solo por
         /// <c>Code</c> (98-102 MB, sobre todo <c>libil2cpp.so</c> mapeado). Con <c>OptimizeSize</c> IL2CPP comparte el código de los
-        /// genéricos con tipos de referencia (un cuerpo para todas sus instancias) en lugar de generar uno por cada combinación de
-        /// tipos, así que <c>libil2cpp.so</c> sale más pequeño; a cambio, esas llamadas genéricas pasan por una búsqueda en tiempo de
-        /// ejecución y cuestan algo más de CPU. Vale para todo build Android (el <c>dev.apk</c>, el de humo, el ensayo y el release),
-        /// para que el teléfono mida lo que se publica.
+        /// genéricos también con tipos de valor («full generic sharing»: un cuerpo para todas las instancias de <c>List&lt;int&gt;</c>,
+        /// <c>List&lt;long&gt;</c>, <c>Dictionary&lt;K, V&gt;</c>…) en lugar de generar uno por cada combinación de tipos, así que
+        /// <c>libil2cpp.so</c> sale casi a la mitad (62 → 32 MB en el ensayo); a cambio, esas llamadas genéricas pasan por una
+        /// indirección en tiempo de ejecución y cuestan algo más de CPU (el Morpho y el vertido los mide el teléfono). Vale para todo
+        /// build Android (el <c>dev.apk</c>, el de humo, el ensayo y el release), para que el teléfono mida lo que se publica.
         /// <para><b>Cómo revertir</b> (si los fotogramas empeoran en el teléfono): <c>Il2CppCodeGeneration.OptimizeSpeed</c>,
         /// <c>pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup</c> y commitear <c>ProjectSettings/ProjectSettings.asset</c>
         /// con el test de <c>MemorySettingsTests</c>.</para>
