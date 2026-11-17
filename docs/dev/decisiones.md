@@ -4627,6 +4627,13 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - las paradas futuras con rótulo que el abanico sigue ocultando;
   - la memoria con cinco vueltas.
 
+### D-069, añadido del 2026-11-16 (tarde): arreglos de la prueba r2c
+
+- **Origen:** observaciones de `docs/dev/traspaso/pruebas-telefono-2026-11-16-1.1-r2c.md`. La r2c (Spark, S23 Ultra) comprueba que los arreglos de la r2b cumplen. Rama `v11/mapa-r2c-arreglos`.
+- **Rótulo bajo la ventanita de casa (el 521).** Con el v2, el rótulo de la parada siguiente esquiva el retrato y su píldora; si no cabe, el encuadre se aleja. **[P]:** los rótulos de otras paradas y de pueblos sin sitio libre fuera de la ventanita no salen con ese encuadre. Al volver del viaje se recolocan. **[P]:** el conjunto de aperturas con el zoom alejado suma 532 y 537.
+- **El primer toque en «Mundo» tras el viaje del 10 no entraba.** El área de salto de la secuencia del 10 tapaba el selector. Al llegar la canoa (o desde que se abre, con «Reducir movimiento»), «Jugar», la cabecera y el selector suben encima. **[P]:** pulsar «Mundo» o «Cuenca» acaba lo que queda de la secuencia, como un toque, con lo que guarda (lo visto, el dato, el compañero). **[P]:** mientras el viaje no deja tocar el selector, se ve con opacidad 0,5.
+- **La placa del mundo siguiente salía cortada en el borde.** Las placas se encajan también en la apertura del Mapa del 10 y al acabar su secuencia.
+
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
