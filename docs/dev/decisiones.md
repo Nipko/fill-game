@@ -4840,6 +4840,18 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Pendiente:** medir el rendimiento y la memoria con el build nuevo en el `dev.apk` y en el ensayo (guion, encargo de la jornada 6); y, como siempre en D-060, medir en un teléfono de clase A.
 - **Cómo revertir:** `ProjectSetup.UseDefaultGraphicsApis = true` (la lista automática de Unity, con Vulkan primero) o `AndroidGraphicsApis` con `GraphicsDeviceType.Vulkan` delante; después `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup` y commitear `ProjectSettings/ProjectSettings.asset` con el test `MemorySettingsTests.AndroidGraphicsApis_OpenGles3First_VulkanAsFallback`.
 
+### Añadido de D-060 del 2026-11-17: código más pequeño y menos basura al arrancar (Moto G23)
+
+- **Origen:** `docs/dev/traspaso/pruebas-telefono-2026-11-17-moto-g23-r2.md`. En el primer teléfono de clase A, el ensayo de release compilado da 470-479 MB de PSS con todo en memoria y 414-435 MB cuando Android suelta el código. El exceso es casi todo `Code`, y `mono_heap_mib` está en 73 MB, frente a ≤ 60. Como dice el punto 3, se abre el carril de `memoria.md` §6 (rama `v11/memoria-d060-codigo`; R8 ya iba en la 1.1).
+- **Aplicado:**
+  - **IL2CPP «Faster (smaller) builds»** en todo build Android, por `ProjectSetup`. `libil2cpp.so` baja de 62,3 a 32,3 MB sin comprimir, y el AAB que mide la compuerta de tamaño, de 52,7 a 46,7 MB.
+  - **El lector JSON de niveles y del Reto, con menos basura:** el arranque asigna un 68 % menos (de 43 a 14 MiB) y abrir el Reto, un 70 % menos. Los datos leídos son idénticos.
+  - Detalle y cómo revertirlo, en `memoria.md` §11.
+- **Pendiente, de Spark en el Moto G23** (`memoria.md` §11.4): el PSS del ensayo, `Code`, `mono_heap_mib`, y los fotogramas y el Morpho por el coste de CPU de «smaller».
+- **Si sigue por encima de 450 MB, decide el dueño** entre dos caminos:
+  - subir el presupuesto de clase A a unos 480 MB, como propone Spark. El exceso es código mapeado que Android recupera, y no hubo cierres por memoria;
+  - seguir recortando (profundidad y estencil, `GC.Collect` tras el catálogo, arte por código más tarde).
+
 ## Nota técnica del 2026-10-29: el juego no se muestra sobre la pantalla de bloqueo (observación 9 de la jornada 6)
 
 - **Estado:** arreglo de build-release (carril `tanda6/fx-j6-bloqueo`) para la observación 9, alta, de `pruebas-telefono-2026-10-28-completa-j6.md`: con el teléfono bloqueado más de 5 s, al encender la pantalla salía el juego encima del bloqueo y se podía jugar. No cambia ninguna decisión del dueño ni añade paquetes, SDK, permisos ni versiones.

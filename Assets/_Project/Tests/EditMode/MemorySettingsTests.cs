@@ -91,6 +91,19 @@ namespace AF.Tests.EditMode
             Assert.That(problems, Does.Not.Contain("android.useDefaultGraphicsAPIs").And.Not.Contain("android.graphicsAPIs"));
         }
 
+        /// <summary>
+        /// Memoria de clase A (2026-11-17; <c>docs/dev/memoria.md</c> §11): IL2CPP con «Faster (smaller) builds» en Android, para
+        /// que <c>libil2cpp.so</c> (el <c>Code</c> del PSS) sea más pequeño.
+        /// </summary>
+        [Test]
+        public void Il2CppCodeGeneration_OptimizeSize_OnAndroid()
+        {
+            Assert.That(ProjectSetup.AndroidIl2CppCodeGeneration, Is.EqualTo(UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize));
+            Assert.That(UnityEditor.PlayerSettings.GetIl2CppCodeGeneration(UnityEditor.Build.NamedBuildTarget.Android), Is.EqualTo(ProjectSetup.AndroidIl2CppCodeGeneration),
+                "ejecuta AF.EditorTools.ProjectSetup.ApplyAndroidDefaults");
+            Assert.That(string.Join("; ", ProjectSetup.Validate()), Does.Not.Contain("il2cppCodeGeneration"));
+        }
+
         [Test]
         public void FontAtlases_NotReadableOnTheCpu()
         {

@@ -142,9 +142,9 @@ Tras esta rama, el S938B seguiría en unos **650 MB de RSS y 540 MB de PSS**. La
 **Qué lo bajaría, con decisión del dueño (no aplicado):**
 
 - **R8 (Minify) en el release: aplicado en la 1.1** (D-059, añadido del 2026-11-06; rama `v11/r8-release`; `docs/dev/release.md` §8). `AndroidMinifyRelease` pasa a 1 por `ProjectSetup`, con las reglas `keep` de los plugins propios, las de los AAR de los SDK y las de Play Games en `AfKeepRules.androidlib`. En el ensayo, el dex baja de 28,98 MB a 12,07 MB sin comprimir (−58 %; de 4 a 2 `classes*.dex`) y la descarga de Play de 57,00 a 51,30 MB. Lo que eso baje el `.dex mmap` del teléfono (estimado −10 a −20 MB) **está sin medir**: lo dirá la sonda `AF_PERF mem` con el ensayo en el S938B, junto con la lista de humo de §8 de `release.md`.
-- **IL2CPP Code Generation «Faster (smaller) builds»:** `libil2cpp.so` más pequeño (estimado −5 a −15 MB de `.so mmap`), con algo de coste de CPU en código genérico; pide medir los fotogramas.
+- **IL2CPP Code Generation «Faster (smaller) builds»: aplicado en la 1.1** (§11; rama `v11/memoria-d060-codigo`). En el ensayo, `libil2cpp.so` baja de 62,31 a 32,25 MB sin comprimir; lo que baje `Code` en el teléfono y su coste de CPU los mide el Moto G23 (§11.4).
 - **Quitar profundidad y estencil** (§3): hasta −10 MB a esta resolución, revisando cada pantalla.
-- **Bajar el pico del heap del arranque:** crear arte por código más tarde (al abrir cada pantalla) en lugar de en el bloque `services`; toca el arranque con la intro (D-051) y su fluidez.
+- **Bajar el pico del heap del arranque:** crear arte por código más tarde (al abrir cada pantalla) en lugar de en el bloque `services`; toca el arranque con la intro (D-051) y su fluidez. Desde la 1.1 (§11.2), la lectura de los paquetes de niveles asigna un 68 % menos.
 
 **En un teléfono de clase A** (720 × 1600 a 2 px/dp, 3-4 GB), con este mismo build: el `EGL mtrack` baja a ~18 MB con la pantalla, pero las texturas del arte por código se quedan en ~40-50 MB, porque se pintan a una densidad fija y no a la del teléfono (§7.3). El código y el `Unknown` tampoco dependen de la pantalla. Estimado: **unos 600-620 MB de RSS y 490-510 MB de PSS**.
 
@@ -400,3 +400,81 @@ Con el `dev.apk` de esta rama, el guion de la r2b (§4: `pm clear`, `--ei af_mem
 2. **TOTAL PSS** tras cada vuelta: a ±3 MB de la 1.ª en la 2.ª-5.ª (el criterio de D-069). Se espera la subida de la 1.ª vuelta (≈ +10 MB) y luego plano.
 3. **`GL mtrack`** y `os_graphics_mib`, como en la r2b (fijos).
 4. Lo mismo con la 1.0 (`--ez af_map_v1 true`) como referencia: con la 1.0 no se pintan el río vivo, los pueblos, Capi ni la tripulación, así que la reserva queda pequeña o no existe.
+
+## 11. El código y el heap del arranque (rama `v11/memoria-d060-codigo`, 2026-11-17)
+
+Por la segunda prueba en el Moto G23 (`docs/dev/traspaso/pruebas-telefono-2026-11-17-moto-g23-r2.md`): el ensayo de release compilado con `speed-profile` da **470-479 MB de TOTAL PSS** con todo en memoria y 414-435 MB cuando Android suelta el código, frente a los ≤ 450 de D-060; el exceso es casi todo `Code` (98-102 MB). El `dev.apk` da `mono_heap_mib` 73,1 frente a ≤ 60 (08 §5.4). Por el punto 3 de D-060 se abren las medidas de §6 que no piden antes el teléfono: IL2CPP «Faster (smaller) builds» y bajar el pico del heap del arranque. La profundidad y el estencil (§7.5, punto 2) no se tocan: piden el teléfono, en otro carril.
+
+### 11.1 IL2CPP «Faster (smaller) builds»
+
+- **Qué cambia.** `ProjectSetup.AndroidIl2CppCodeGeneration` = `Il2CppCodeGeneration.OptimizeSize` (`PlayerSettings.SetIl2CppCodeGeneration`), exigido por `Validate` (BuildSmoke, BuildDev y BuildRelease paran con 2 si vuelve) y vigilado por `MemorySettingsTests.Il2CppCodeGeneration_OptimizeSize_OnAndroid`. En `ProjectSettings.asset` solo cambia `il2cppCodeGeneration` (`Android: 1`). Vale para todo build Android: el `dev.apk`, el de humo, el ensayo y el release.
+- **Qué hace.** IL2CPP comparte el código de los genéricos también con tipos de valor («full generic sharing»): un solo cuerpo para `List<int>`, `List<long>`, `Dictionary<K, V>` y compañía, en lugar de uno por combinación de tipos. A cambio, esas llamadas pasan por una indirección en tiempo de ejecución: algo más de CPU donde el código genérico está caliente (el solver del Morpho, el vertido, las listas de la UI). Por eso el teléfono tiene que medir los fotogramas y el Morpho (§11.4).
+- **Medido en el ensayo** (`scripts/unity-build.ps1 -Method Release -Rehearsal -Apk -Architecture x86_64`, escritorio x64, sobre `656314b4` con y sin el cambio; `unzip -v` sobre el APK y `ci/size-gate.ps1` sobre el AAB):
+
+| | Antes («Faster runtime») | Después («Faster (smaller) builds») | Diferencia |
+|---|---|---|---|
+| `libil2cpp.so` sin comprimir | 62,31 MB | **32,25 MB** | −30,06 MB (−48 %) |
+| `libil2cpp.so` comprimido en el APK | 16,48 MB | **10,50 MB** | −5,98 MB |
+| `rehearsal.apk` | 58,24 MB | **52,24 MB** | −6,00 MB |
+| `rehearsal.aab` (archivo) | 80,07 MB | **67,56 MB** | −12,51 MB |
+| `rehearsal.aab` sin `BUNDLE-METADATA` (lo que mide `size-gate`) | 52,73 MB | **46,74 MB** | −5,99 MB |
+| `BUNDLE-METADATA` (símbolos nativos y mapping de R8, que Play no sirve) | 27,33 MB | 20,82 MB | −6,51 MB |
+
+  `libunity.so` no cambia (20,33 MB). El build de IL2CPP no dio errores ni avisos nuevos.
+- **Compuertas sobre el ensayo nuevo** (AAB y APK, todas con código 0): `ci/size-gate.ps1` (46,74 MB sin `BUNDLE-METADATA`), `ci/check-16kb.sh` (19 bibliotecas de 64 bits, 0 fallos; con zipalign sobre el APK), `ci/check-manifest.ps1 -Mode dev`, `ci/check-release-classes.ps1`, `ci/check-no-unity-iap.ps1`, `ci/check-no-applovin.ps1` y `ci/check-no-unity-telemetry.ps1`; y además `ci/check-r8-mapping.ps1` (14.360 clases, las 40 de JNI con su nombre).
+- **Lo esperado en el teléfono.** `Code` cuenta las páginas de `libil2cpp.so` que están en memoria, no el archivo entero, así que no baja 30 MB: lo razonable es **−10 a −20 MB de `Code`** (la mitad de código para lo mismo que se ejecuta). Con eso, el peor caso del ensayo (479 MB en el Mapa, vuelta 1) quedaría en ~460-470 MB: cerca de 450, quizá aún por encima.
+- **Cómo revertir** (si los fotogramas o el Morpho empeoran): `ProjectSetup.AndroidIl2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSpeed`, `pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup` y commitear `ProjectSettings/ProjectSettings.asset` con el test de `MemorySettingsTests`.
+
+### 11.2 El heap gestionado del arranque: el lector JSON
+
+- **Qué asigna el bloque `catalog`** (antes de `services`): leer los 12 paquetes de niveles (los 9 de campaña y los 3 de la curva 2, ≈ 1,9 MB de JSON) y crear el catálogo. Medido con los mismos `.cs` compilados en .NET 10 (`GC.GetAllocatedBytesForCurrentThread`, que el Mono del Editor no da): **43,1 MiB de basura** para ≈ 2,9 MiB que se quedan vivos (los niveles), más 6 MiB de las cadenas de `TextAsset.text`. El 85 % era el propio lector JSON: un `StringBuilder` por cadena, un `Substring` por número, listas que crecen a saltos y tres campos por valor (el DOM entero de los paquetes ocupaba 25,8 MiB). Con IL2CPP, toda esa basura en un solo fotograma largo hace crecer el heap, que no se devuelve: era la mayor partida del pico del arranque después de los lienzos del arte por código (§2.4 y `memoria-2026-10-26.md`). La curva 2 (D-068) le sumó 15,5 MiB.
+- **Lo aplicado** (`JsonParser` y `JsonValue`; el documento que sale es el mismo):
+  - las cadenas sin escapes salen de un `Substring`, sin `StringBuilder`, y las cortas (≤ 32 caracteres: las claves, las bandas, los nombres de mecánica) se comparten dentro del documento;
+  - los enteros 0-1023 en su forma canónica y los booleanos son valores compartidos (el valor es inmutable; `-0`, `12.0`, `1e2` y los mayores se leen como antes);
+  - las listas y los objetos se acumulan en dos pilas del lector y se guardan en arrays del tamaño justo;
+  - `JsonValue` guarda el texto, los elementos o los miembros en un solo campo.
+- **Cómo se comprobó que el documento es el mismo:** se volcaron todos los JSON de `Data/Levels`, el pool del Reto y los dos del Mapa con el lector de antes y con el nuevo, y los volcados (3,2 MB) son idénticos byte a byte. Tests nuevos en `LevelPackReaderTests`: los enteros compartidos y los que no, las cadenas con y sin escapes, y las listas y objetos anidados con la misma clave en el hijo y en el padre.
+- **Medido:**
+
+| | Antes | Después |
+|---|---|---|
+| Leer los 12 paquetes y crear el catálogo (.NET 10, asignado) | 43,07 MiB | **13,94 MiB** (−68 %) |
+| Solo el lector JSON, los 12 paquetes (asignado / vivo con el DOM) | 36,45 / 25,81 MiB | **7,32 / 6,93 MiB** |
+| Vivo tras leer (los niveles) | 2,95 MiB | 2,56 MiB (las cadenas cortas compartidas) |
+| Leer el pool del Reto al abrirlo (asignado) | 35,82 MiB | **10,64 MiB** (−70 %) |
+| Editor (`MemoryProbeTests.Measure_Moments`): heap usado que sube el bloque del catálogo (`s0` → `s1`) | +15,3 MiB | **+5,2 MiB** |
+| Editor: heap usado que sube el arranque entero (con una recogida en medio) | +70,5 MiB | +58,5 MiB |
+| Editor: `levels_load` (1.º y 2.º arranque) | 95 y 32 ms | **58 y 18 ms** |
+
+  El Editor no da la basura total (su heap es de 1,5 GB y recoge cuando quiere); sirven las diferencias. El resto del arranque no cambia: los lienzos del arte por código siguen pidiendo 40,2 MiB nuevos en el Editor.
+- **Lo esperado en el teléfono:** −29 MiB de basura en el arranque y −25 MiB al abrir el Reto. Cuánto baja `mono_heap_mib` depende de cuándo recoja el GC incremental de IL2CPP: lo razonable es **−5 a −15 MB** (de 73 a ~58-68).
+- **Lo que no toca:** la intro de la marca (D-051) y sus huecos: el bloque del catálogo solo tarda menos.
+
+### 11.3 Lo que no se hizo, y por qué
+
+- **Leer los paquetes por demanda** (solo el del mundo en curso): el catálogo los necesita todos al arrancar para `level_overrides`, la reserva, el kill switch de mecánicas, la curva 2 y las etiquetas (`LevelCatalog.Create`), y el Mapa y la Liga preguntan por niveles de otros mundos. Cambiarlo toca el contrato del catálogo, y con el lector nuevo los niveles vivos son 2,6 MiB: no compensa.
+- **Un `GC.Collect()` tras el bloque del catálogo**, para que los búferes grandes de los lienzos del bloque `services` reutilicen la basura de la lectura en lugar de hacer crecer el heap: unos 10-30 ms en el Moto, en un bloque de la carga (con la intro quieta, no durante el vertido), así que no tocaría la fluidez de D-051. No se aplica a ciegas: con el lector nuevo esa basura es un tercio y el beneficio solo se ve en el teléfono. Si `mono_heap_mib` sigue por encima de 60 con este build, es el siguiente paso, medido con `heap_steps_mib` de la línea `boot`.
+- **Las tablas de textos** (`strings.csv` y `facts.csv`): 3,8 MiB asignados y 3,4 vivos, con los tres idiomas y las columnas de contexto y notas. Quitar los idiomas que no se usan o las notas cambiaría `LocCatalog` (el cambio de idioma en Ajustes y las comprobaciones de completitud): otra tarea, ≈ −2 MiB vivos.
+- **El arte por código más tarde** (al abrir cada pantalla, no en `services`): es la mayor partida que queda (40 MiB de lienzos nuevos en el Editor), pero toca el arranque con la intro (D-051) y el primer fotograma de cada pantalla; sigue en §6.
+
+### 11.4 Lo que tiene que medir Spark en el Moto G23
+
+Con el ensayo de release y el `dev.apk` de esta rama, como en la r2: `adb shell cmd package compile -m speed-profile -f <paquete>`, un minuto quieto en cada sitio y `dumpsys meminfo -d`, con el mismo perfil (el 67, 3 filas).
+
+1. **TOTAL PSS del ensayo** en el inicio recién abierto, el Mapa (vuelta 1), el inicio tras el Mapa y el nivel 67: la tabla de la r2 (469,9 / 479,2 / 472,4 / 430,1 MB), para comparar. Criterio de D-060: ≤ 450 MB en todos; si sigue por encima, cuánto.
+2. **`Code`** en esos momentos (r2: 98-103 MB con todo en memoria; lo esperado, −10 a −20 MB) y el `.so mmap` del desglose de `dumpsys meminfo -d`, que es donde está `libil2cpp.so`.
+3. **`mono_heap_mib`** (y `peak_mono_heap_mib`) del `dev.apk` en la línea `boot`, en el inicio, tras abrir el Mapa y tras abrir el Reto (r2: 73,1 fijo; lo esperado, por debajo de 70, mejor de 60). La línea `boot` trae `heap_steps_mib` por bloque: cuánto sube `catalog`.
+4. **Los fotogramas del 340 y del 386** en juego automático, como en la r2 (59,3-60,7 fps y p95 16,8-16,9 ms; el 386, máximo 65,9 ms), por el coste de CPU de «smaller». Si p95 sube más de 1 ms o aparecen parones nuevos, anotarlo.
+5. **El Morpho** con `--ei af_bench_morpho 1` en el `dev.apk` (`AF_PERF morpho` y `AF_PERF frames`): el solver es código genérico caliente y es lo que más puede notar la indirección. Para comparar hace falta la misma medida con el `dev.apk` anterior (el de la r2, de `455a05f1`) en el mismo teléfono, antes de instalar el nuevo.
+6. **El arranque:** `splash_ms` de la segunda apertura (r2: 6.029-6.074 ms) y `levels_load` del `dev.apk`, que debería bajar.
+7. **El Reto:** abrirlo una vez y anotar `open_ms` de `AF_PERF mem daily` y `mono_heap_mib` después.
+
+### 11.5 Verificación (escritorio x64, 2026-11-17)
+
+- `scripts/unity-build.ps1 -Method Setup -Architecture x86_64`: OK (`il2cppCodegen=OptimizeSize`); en `ProjectSettings.asset` solo cambia `il2cppCodeGeneration`.
+- `scripts/unity-compile.ps1 -Architecture x86_64`: compila.
+- EditMode: 5.278 (5.270 + 8 omitidos), 0 fallos (la base, 5.274, más los 4 tests nuevos). PlayMode entero (`-TimeoutSec 7100`): 2.855 (2.440 + 415 omitidos o explícitos), 0 fallos, 58 min.
+- `MemoryProbeTests.Measure_Moments` (manual), antes y después del lector nuevo: las cifras de §11.2.
+- `dotnet build dotnet/AmazonFill.slnx -warnaserror`: 0 errores y 0 avisos; `dotnet test`: 1.111 (1.105 + 6 omitidos), 0 fallos; `py -3.14 tools/validate_schema.py`: 163/163 PASS.
+- Ensayo final con los dos cambios (`-Method Release -Rehearsal -Apk`): `[AF.BuildRelease] OK.`; `rehearsal.aab` 67,56 MB (46,74 sin `BUNDLE-METADATA`), `rehearsal.apk` 52,24 MB, `libil2cpp.so` 32,26 MB. Las compuertas de §11.1, con código 0 sobre el AAB y el APK.
+- `-Method Dev`: `[AF.BuildDev] OK`; `dev.apk` de **68,51 MB** (el anterior, 71,80 MB), con `libil2cpp.so` de 32,97 MB; `ci/check-manifest.ps1 Builds/Android/dev.apk -Mode dev`: OK. Es el que tiene que medir Spark (§11.4).
