@@ -34,6 +34,8 @@ namespace AF.Core.Tests.DotnetOnly
             yield return new TestCaseData("nivel 66 final", PourMode.Run);
             yield return new TestCaseData("referencia", PourMode.Run);
             yield return new TestCaseData("referencia", PourMode.Single);
+            yield return new TestCaseData("turbio", PourMode.Run);
+            yield return new TestCaseData("turbio", PourMode.Single);
         }
 
         [TestCaseSource(nameof(Boards))]
@@ -50,6 +52,19 @@ namespace AF.Core.Tests.DotnetOnly
                     break;
                 case "nivel 66 final":
                     starts.Add(new KeyValuePair<string, BoardState>(set, Level66Board.Final()));
+                    break;
+                case "turbio":
+                    // Aguas turbias (añadido de D-014 del 2026-11-17): Marea vuelve al tablero de antes con lo revelado, la única
+                    // rama en que UndoEscapes puede ser false con historial. Dos tableros pequeños con ocultas bajo el mismo color.
+                    starts.Add(new KeyValuePair<string, BoardState>("turbio, trampa", new BoardState(new[]
+                    {
+                        Cuia.Create(3, new[] { 2, 1 }, 0x1), Cuia.Create(3, new[] { 2, 1, 1 }, 0x3), Cuia.Create(2, new[] { 2, 2 }),
+                    })));
+                    starts.Add(new KeyValuePair<string, BoardState>("turbio, cuatro cuias", new BoardState(new[]
+                    {
+                        Cuia.Create(2, new[] { 2, 2 }, 0x1), Cuia.Create(2, new[] { 1, 1 }, 0x1), Cuia.Create(3, new[] { 2, 1 }),
+                        Cuia.Create(2, new[] { 2, 1 }, 0x1),
+                    })));
                     break;
                 default:
                     for (int i = 0; i < ReferenceBoards.All.Length; i++)
@@ -71,7 +86,7 @@ namespace AF.Core.Tests.DotnetOnly
             TestContext.WriteLine(set + " en " + mode + ": " + stuckByLoop.ToString(CultureInfo.InvariantCulture)
                 + " estados en Aguas estancadas por repetición, " + lostButPlaying.ToString(CultureInfo.InvariantCulture)
                 + " perdidos que siguen en Playing por un vertido a un tablero no visto");
-            if (set != "referencia")
+            if (set != "referencia" && set != "turbio")
             {
                 Assert.That(stuckByLoop, Is.GreaterThan(0));
                 Assert.That(lostButPlaying, Is.GreaterThan(0));
@@ -193,6 +208,7 @@ namespace AF.Core.Tests.DotnetOnly
                         {
                             BoardState leaving = session.Current;
                             bool predicted = session.UndoEscapes;
+                            Assert.That(predicted || start.HasHidden, Is.True, context + ": sin ocultas, con historial Marea siempre saca");
                             Assert.That(session.Undo(), Is.True, context);
                             oracle.CheckUndo(session, leaving, predicted, context + " (Marea desde el bloqueo)");
                             continue;
@@ -212,6 +228,7 @@ namespace AF.Core.Tests.DotnetOnly
                     {
                         BoardState leaving = session.Current;
                         bool predicted = session.UndoEscapes;
+                        Assert.That(predicted || start.HasHidden, Is.True, context + ": sin ocultas, con historial Marea siempre saca");
                         Assert.That(session.Undo(), Is.True, context);
                         oracle.CheckUndo(session, leaving, predicted, context + " (Marea)");
                         continue;

@@ -245,6 +245,52 @@ namespace AF.Core.Tests
             Assert.That(session.UndoEscapes, Is.False, "sin historial, Marea no saca de nada");
         }
 
+        /// <summary>
+        /// Tablero turbio en que el vertido revela una dosis y Marea no saca del atasco (añadido de D-014 del 2026-11-17): 0 =
+        /// [2?, 1] de 3, 1 = [2?, 1?, 1] de 3 y 2 = [2, 2] de 2 (? = oculta). Hallado con una búsqueda exhaustiva de historias
+        /// cortas sobre tableros turbios pequeños.
+        /// </summary>
+        private static BoardState MurkyTrap()
+        {
+            return new BoardState(new[] { Cuia.Create(3, new[] { 2, 1 }, 0x1), Cuia.Create(3, new[] { 2, 1, 1 }, 0x3), C(2, 2, 2) });
+        }
+
+        [Test]
+        public void R13b_UndoEscapes_WithARevealedDose_MatchesMarea_AndCanBeFalse()
+        {
+            // Opción 3 del dueño (añadido de D-014 del 2026-11-17), la rama de lo revelado: 1 → 0 vierte el 1 de arriba y deja
+            // arriba el 1 oculto, que se revela (I5); el tablero queda en Aguas estancadas. Marea vuelve al tablero de antes con
+            // ese 1 ya visible (02 R7, T6), que no es el de antes: con lo revelado, el tablero de vuelta también está bloqueado,
+            // así que UndoEscapes es false y el modal no ofrecería Marea. Es el único caso con historial en que pasa.
+            BoardState start = MurkyTrap();
+            var session = new LevelSession(start, true, PourMode.Run);
+            var oracle = new StagnationOracle();
+            oracle.Check(session, "inicio");
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(session.UndoEscapes, Is.False, "sin historial");
+
+            Assert.That(session.TryPour(1, 0, out _), Is.True);
+            oracle.Check(session, "1 → 0");
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(session.RevealedLayers(1), Is.EqualTo(0x2), "el vertido reveló el 1 oculto de la cuia 1");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(2));
+
+            BoardState stuck = session.Current;
+            bool predicted = session.UndoEscapes;
+            Assert.That(session.Current.Equals(stuck) && session.Status == LevelStatus.Stuck, Is.True, "UndoEscapes no cambia nada");
+            Assert.That(session.Undo(), Is.True);
+            oracle.CheckUndo(session, stuck, predicted, "Marea");
+            Assert.That(predicted, Is.False, "Marea no saca del atasco");
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
+
+            // El tablero de vuelta es el de antes con lo revelado (I5): la cuia 1 conserva solo el 2 oculto del fondo.
+            BoardState back = new BoardState(new[] { Cuia.Create(3, new[] { 2, 1 }, 0x1), Cuia.Create(3, new[] { 2, 1, 1 }, 0x1), C(2, 2, 2) });
+            Assert.That(session.Current.Equals(back), Is.True, session.Current.ToString());
+            Assert.That(session.Current.Equals(start), Is.False);
+            Assert.That(session.SeenBoardCount, Is.EqualTo(2), "el de partida (oculto) y el de vuelta; el deshecho ya no");
+            Assert.That(session.CanUndo, Is.False);
+        }
+
         [Test]
         public void R13b_UndoEscapes_WithoutHistory_IsFalse()
         {

@@ -29,9 +29,11 @@ namespace AF.Core.Session
     /// <see cref="Restart"/>, la Pororoca, la Luciérnaga o <see cref="RestoreRevealed"/>) suma 1; <see cref="Undo"/> resta 1 al
     /// tablero que deja y, a 0, ese tablero deja de estar visto. Así, si el mismo tablero salió dos veces en el historial (ida y
     /// vuelta), deshacer la segunda lo deja visto por la primera. El tablero al que vuelve Marea ya estaba contado; solo entra
-    /// (con 1) si no lo estaba, porque lo revelado lo cambió (I5). Por eso, tras Aguas estancadas, Marea deja al menos un
-    /// vertido a un tablero no visto (el que deshizo) salvo que ese tablero siga visto por otro paso del historial o que el de
-    /// antes esté bloqueado por R13: <see cref="UndoEscapes"/> lo dice antes de gastarla. <see cref="Restart"/> (Volver a la
+    /// (con 1) si no lo estaba, porque lo revelado lo cambió (I5). Así Marea deja los vistos como estaban antes de su vertido,
+    /// cuando la partida estaba en <see cref="LevelStatus.Playing"/>: sin dosis ocultas, con historial, Marea siempre saca de
+    /// Aguas estancadas. Solo puede no sacar si el vertido deshecho reveló una dosis (Aguas turbias), porque entonces el tablero
+    /// de vuelta es el de antes con lo revelado y puede estar bloqueado; o sin historial. <see cref="UndoEscapes"/> lo dice
+    /// antes de gastarla. <see cref="Restart"/> (Volver a la
     /// orilla: un intento nuevo, 04 §2.7) los olvida [P]. La Pororoca (<see cref="ApplyShuffle"/>), la Luciérnaga (<see cref="Reveal"/>) y
     /// <see cref="RestoreRevealed"/> los conservan y su tablero nuevo entra como visto al quedar en pantalla, no antes (en un
     /// nivel turbio, la Pororoca anota además el tablero de antes con todo revelado, que su <see cref="RevealAll"/> evalúa; no
@@ -175,8 +177,9 @@ namespace AF.Core.Session
         /// Marea sacaría del atasco (añadido de D-014 del 2026-11-17, la opción 3 del dueño): hay historial y, tras deshacer el
         /// último vertido (con el tablero deshecho fuera de los vistos, I6), la partida quedaría en <see cref="LevelStatus.Playing"/>:
         /// el tablero de antes no está bloqueado por R13 y tiene al menos un vertido legal a un tablero no visto, o su cierre no está
-        /// perdido (R13 ampliada, el mismo <see cref="DeadEndProbe"/> que la partida). False sin historial. No cambia nada: el modal
-        /// Aguas estancadas lo pregunta para no ofrecer una Marea que no sirve.
+        /// perdido (R13 ampliada, el mismo <see cref="DeadEndProbe"/> que la partida). False sin historial; con historial, solo
+        /// puede ser false si el vertido deshecho reveló una dosis oculta (I5, I6). No cambia nada: el modal Aguas estancadas lo
+        /// pregunta para no ofrecer una Marea que no sirve.
         /// </summary>
         /// <remarks>
         /// No asigna una vez calentado (CLAUDE.md, regla dura 2): copia el tablero de antes a un búfer propio, le aplica lo revelado

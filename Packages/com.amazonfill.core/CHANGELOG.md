@@ -15,9 +15,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   mismo `DeadEndProbe` con una vista del contador, `SeenBoards.AfterUndo`). Con historial y sin dosis ocultas siempre es true:
   Marea deja los vistos como antes de su vertido.
 - `DeadEndProbe.IsStagnant` recibe `in SeenBoards` (interno) en lugar del `HashSet<ulong>`.
-- Pruebas: `DeadEndProbeTests` (Marea y repetir en el 66, ida y vuelta, sin historial), `RuleCatalogTests` (R15),
+- Pruebas: `DeadEndProbeTests` (Marea y repetir en el 66, ida y vuelta, sin historial y el tablero turbio en que Marea
+  vuelve con lo revelado a un tablero bloqueado: `UndoEscapes` false con historial), `RuleCatalogTests` (R15),
   `TinajaSolverTests` y el oráculo `StagnationOracle` con contador, `CheckUndo` y `WalkUntilStuck`; solo dotnet,
-  `StagnationPropertyTests` (Marea en las partidas al azar y `UndoEscapes` en todas las historias de hasta 7 vertidos) y
+  `StagnationPropertyTests` (Marea en las partidas al azar, también sobre dos tableros turbios, y sin ocultas `CanUndo` ⇒
+  `UndoEscapes` y `UndoEscapes` en todas las historias de hasta 7 vertidos) y
   `HotLoopAllocationTests.WarmUndoAndUndoEscapes_DoNotAllocate`.
 
 ### Curva de la 1.1, fase F2: Aguapé, Aguapé espeso, Lancha y bot atento (D-068)
