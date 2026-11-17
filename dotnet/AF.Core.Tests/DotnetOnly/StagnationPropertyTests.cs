@@ -15,7 +15,8 @@ namespace AF.Core.Tests.DotnetOnly
     /// <list type="bullet">
     /// <item><description>nunca Stuck (por el cierre) si queda un vertido legal a un tablero no visto en el intento;</description></item>
     /// <item><description>siempre Stuck si el cierre da el tablero por perdido y todo vertido legal lleva a un tablero visto;</description></item>
-    /// <item><description>Volver a la orilla olvida lo visto; Marea no.</description></item>
+    /// <item><description>Volver a la orilla olvida lo visto; Marea resta 1 al tablero que deshace (añadido de D-014 del
+    /// 2026-11-17), y <see cref="LevelSession.UndoEscapes"/> dice antes si la partida quedará en Playing.</description></item>
     /// </list>
     /// El oráculo (<see cref="StagnationOracle"/>) lleva su propio conjunto de vistos. Solo dotnet: lotes grandes.
     /// </summary>
@@ -77,6 +78,86 @@ namespace AF.Core.Tests.DotnetOnly
             }
         }
 
+        [TestCase("nivel 66 final", PourMode.Run)]
+        [TestCase("nivel 26", PourMode.Run)]
+        [TestCase("nivel 26", PourMode.Single)]
+        public void R13b_UndoEscapes_PredictsMarea_AndWithHistoryMareaAlwaysEscapes(string set, PourMode mode)
+        {
+            // Opción 3 del dueño (añadido de D-014 del 2026-11-17): en todas las historias de hasta MaxDepth vertidos (en
+            // profundidad, con Marea para volver), cada vez que la partida está en Aguas estancadas, UndoEscapes coincide con lo que
+            // deja Marea. Con el contador de la opción 1, Marea deshace exactamente lo que el vertido sumó, así que deja los vistos
+            // como estaban antes de ese vertido, y entonces la partida estaba en Playing (solo se vierte en Playing): sin dosis
+            // ocultas, con historial, Marea siempre saca del atasco. UndoEscapes solo es false sin historial (tras una Pororoca, o
+            // al reanudar con ResumeStuck al principio) o si lo revelado cambia el tablero al que se vuelve (Aguas turbias).
+            BoardState start = set == "nivel 26" ? Level26Board.Lost() : Level66Board.Final();
+            var session = new LevelSession(start, true, mode);
+            int escapes = 0;
+            int traps = 0;
+            Explore(session, mode, 0, ref escapes, ref traps);
+            TestContext.WriteLine(set + " en " + mode + ": " + escapes.ToString(CultureInfo.InvariantCulture) + " bloqueos de los que Marea saca, "
+                + traps.ToString(CultureInfo.InvariantCulture) + " de los que no");
+            Assert.That(session.Current.Equals(start), Is.True);
+            Assert.That(session.SeenBoardCount, Is.EqualTo(1), "Marea deshizo todo y olvidó lo deshecho");
+            Assert.That(escapes, Is.GreaterThan(0));
+            Assert.That(traps, Is.EqualTo(0), "Marea deja los vistos como antes del vertido");
+        }
+
+        private const int MaxDepth = 7;
+
+        private static void Explore(LevelSession session, PourMode mode, int depth, ref int escapes, ref int traps)
+        {
+            if (session.Status == LevelStatus.Stuck)
+            {
+                if (!session.CanUndo)
+                {
+                    return;
+                }
+
+                bool predicted = session.UndoEscapes;
+                Assert.That(session.Undo(), Is.True);
+                bool playing = session.Status == LevelStatus.Playing;
+                Assert.That(predicted, Is.EqualTo(playing), "UndoEscapes en profundidad " + depth.ToString(CultureInfo.InvariantCulture));
+                if (playing)
+                {
+                    escapes++;
+                }
+                else
+                {
+                    traps++;
+                }
+
+                return; // el llamante rehace el vertido con su propio Undo: aquí ya se deshizo
+            }
+
+            if (depth == MaxDepth || session.Status != LevelStatus.Playing)
+            {
+                return;
+            }
+
+            int count = session.Current.Count;
+            for (int a = 0; a < count; a++)
+            {
+                for (int b = 0; b < count; b++)
+                {
+                    if (session.Status != LevelStatus.Playing || a == b || !PourRules.IsLegal(session.Current, a, b))
+                    {
+                        continue;
+                    }
+
+                    BoardState before = session.Current;
+                    int pours = session.AppliedPours;
+                    Assert.That(session.TryPour(a, b, out _), Is.True);
+                    Explore(session, mode, depth + 1, ref escapes, ref traps);
+                    if (session.AppliedPours > pours)
+                    {
+                        Assert.That(session.Undo(), Is.True);
+                    }
+
+                    Assert.That(session.Current.Equals(before), Is.True);
+                }
+            }
+        }
+
         /// <summary>
         /// Partidas al azar: en cada paso, vertido legal (2/3) o Marea (1/3); desde Aguas estancadas, Marea o Volver a la orilla.
         /// Tras cada cambio, la partida tiene que coincidir con el oráculo.
@@ -110,7 +191,11 @@ namespace AF.Core.Tests.DotnetOnly
                         }
                         else
                         {
+                            BoardState leaving = session.Current;
+                            bool predicted = session.UndoEscapes;
                             Assert.That(session.Undo(), Is.True, context);
+                            oracle.CheckUndo(session, leaving, predicted, context + " (Marea desde el bloqueo)");
+                            continue;
                         }
 
                         oracle.Check(session, context + " (salida del bloqueo)");
@@ -125,7 +210,11 @@ namespace AF.Core.Tests.DotnetOnly
 
                     if (session.CanUndo && rng.NextInt(3) == 0)
                     {
+                        BoardState leaving = session.Current;
+                        bool predicted = session.UndoEscapes;
                         Assert.That(session.Undo(), Is.True, context);
+                        oracle.CheckUndo(session, leaving, predicted, context + " (Marea)");
+                        continue;
                     }
                     else
                     {

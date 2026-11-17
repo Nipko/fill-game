@@ -250,7 +250,7 @@ namespace AF.Core.Tests
             Assert.That(PourRules.IsStuck(state, true), Is.False);
             var session = new LevelSession(state, true);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(StagnationOracle.WalkUntilStuck(session), Is.EqualTo(LevelStatus.Stuck));
         }
 
         [Test]
@@ -259,15 +259,34 @@ namespace AF.Core.Tests
             // 02 R15 (parte del núcleo): input bloqueado desde el instante lógico del bloqueo, aunque quede un vertido legal
             // (aquí, incluso útil: el vaivén parcial 0 ↔ 1 de R13 ampliada, D-014); Marea restaura el estado. El retraso de
             // 400 ms y el modal son de la UI. El tablero inicial se gana en 5; el vertido 2 → 0 lo pierde, y Aguas estancadas sale
-            // cuando el jugador ya probó sus vertidos y todos llevan a tableros vistos (añadido de D-014 del 2026-11-06).
+            // cuando el jugador ya probó sus vertidos y todos llevan a tableros vistos (añadido de D-014 del 2026-11-06). Marea saca
+            // de los vistos el tablero que deshace (añadido del 2026-11-17), así que deja jugar otra vez.
             var session = new LevelSession(Board(C(4, 2, 1, 2), C(4, 1, 1, 2), C(4, 1, 2)), true);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(session.TryPour(2, 0, out _), Is.True);
-            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
-            Assert.That(session.AppliedPours, Is.EqualTo(1));
-            Assert.That(PourRules.IsLegal(session.Current, 0, 1), Is.True);
+            Assert.That(StagnationOracle.WalkUntilStuck(session), Is.EqualTo(LevelStatus.Stuck));
+            BoardState stuck = session.Current;
+            int pours = session.AppliedPours;
+            int a = -1;
+            int b = -1;
+            for (int i = 0; i < stuck.Count && a < 0; i++)
+            {
+                for (int j = 0; j < stuck.Count && a < 0; j++)
+                {
+                    if (i != j && PourRules.IsLegal(stuck, i, j))
+                    {
+                        a = i;
+                        b = j;
+                    }
+                }
+            }
 
-            Assert.That(session.TryPour(0, 1, out _), Is.False);
+            Assert.That(a, Is.GreaterThanOrEqualTo(0), "queda un vertido legal");
+            Assert.That(session.TryPour(a, b, out _), Is.False);
+            Assert.That(session.AppliedPours, Is.EqualTo(pours));
+            Assert.That(session.Current.Equals(stuck), Is.True);
+
+            Assert.That(session.UndoEscapes, Is.True);
             Assert.That(session.Undo(), Is.True);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
         }

@@ -289,14 +289,15 @@ namespace AF.Solver.Tests
                 Assert.That(probe.LastStateCount, Is.InRange(2, DeadEndProbe.MaxStates), names[i]);
 
                 // Añadido de D-014 del 2026-11-06: Aguas estancadas espera a que el jugador repita (todo vertido lleva a un
-                // tablero ya visto en el intento).
+                // tablero ya visto en el intento); desde el del 2026-11-17, lo deshecho con Marea deja de estar visto, así que el
+                // jugador repite sin Marea.
                 var session = new LevelSession(board, true, mode);
                 var classic = new LevelSession(board, false, mode);
                 Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), names[i] + ": aún con vertidos a tableros nuevos");
                 Assert.That(RepeatEveryPour(session), Is.EqualTo(LevelStatus.Stuck), names[i] + ": Aguas estancadas en la partida (D-014)");
                 Assert.That(RepeatEveryPour(classic), Is.EqualTo(LevelStatus.Stuck), names[i] + ": no depende de futile_rule_enabled");
                 Assert.That(session.TryPour(useful[0].Source, useful[0].Target, out _), Is.False, names[i] + ": R15, la entrada queda bloqueada");
-                Assert.That(session.AppliedPours, Is.EqualTo(0), names[i] + ": cada vertido se deshizo con Marea (la tinaja queda vista)");
+                Assert.That(session.AppliedPours, Is.GreaterThan(0), names[i] + ": el jugador repitió sin Marea");
                 Assert.That(solver.Solve(board, SolverOptions.ForPipeline(mode, board)).Status, Is.EqualTo(SolveStatus.Unsolvable), names[i] + ": P1 (R14)");
             }
         }
@@ -327,38 +328,45 @@ namespace AF.Solver.Tests
             Assert.That(session.TryPour(4, 0, out _), Is.True, "el 3.º vertido del desvío aún entra");
             Assert.That(session.Current.Equals(LostBoard()), Is.True, session.Current.ToString());
             Assert.That(RepeatEveryPour(session), Is.EqualTo(LevelStatus.Stuck));
-            Assert.That(session.AppliedPours, Is.EqualTo(3));
+            Assert.That(session.AppliedPours, Is.GreaterThanOrEqualTo(3));
 
-            Assert.That(session.Undo(), Is.True);
-            Assert.That(session.Undo(), Is.True);
+            while (session.AppliedPours > 1)
+            {
+                Assert.That(session.Undo(), Is.True);
+            }
+
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "tras sacar: el nivel aún se gana");
         }
 
         /// <summary>
-        /// El jugador que repite (añadido de D-014 del 2026-11-06): prueba cada vertido legal desde el tablero actual y lo deshace
-        /// con Marea, hasta que la partida deja de estar en Playing (como mucho 3 vueltas). Devuelve el estado final. Copia mínima
-        /// de <c>StagnationOracle.TryEveryPourAndUndo</c> de AF.Core.Tests, que en Unity es otro ensamblado.
+        /// El jugador que repite (añadidos de D-014 del 2026-11-06 y del 2026-11-17): sin Marea, que ya saca de los vistos lo que
+        /// deshace, hace en cada paso el primer vertido legal a un tablero que aún no pisó; si no queda ninguno, para. Desde un
+        /// tablero perdido acaba en Aguas estancadas. Devuelve el estado final. Copia mínima de
+        /// <c>StagnationOracle.WalkUntilStuck</c> de AF.Core.Tests, que en Unity es otro ensamblado.
         /// </summary>
         private static LevelStatus RepeatEveryPour(LevelSession session)
         {
-            int count = session.Current.Count;
-            for (int pass = 0; pass < 3; pass++)
+            var walked = new HashSet<ulong> { session.Current.CanonicalHash() };
+            for (int step = 0; step <= DeadEndProbe.MaxStates && session.Status == LevelStatus.Playing; step++)
             {
-                for (int a = 0; a < count; a++)
+                BoardState state = session.Current;
+                bool moved = false;
+                for (int a = 0; a < state.Count && !moved; a++)
                 {
-                    for (int b = 0; b < count; b++)
+                    for (int b = 0; b < state.Count && !moved; b++)
                     {
-                        if (session.Status != LevelStatus.Playing)
-                        {
-                            return session.Status;
-                        }
-
-                        if (a != b && PourRules.IsLegal(session.Current, a, b))
+                        if (a != b && PourRules.Amount(state, a, b, session.PourMode) > 0
+                            && walked.Add(PourRules.Apply(state, a, b, session.PourMode).CanonicalHash()))
                         {
                             Assert.That(session.TryPour(a, b, out _), Is.True);
-                            Assert.That(session.Undo(), Is.True);
+                            moved = true;
                         }
                     }
+                }
+
+                if (!moved)
+                {
+                    break;
                 }
             }
 

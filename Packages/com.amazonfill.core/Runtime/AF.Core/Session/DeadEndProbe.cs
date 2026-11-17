@@ -1,6 +1,5 @@
 #nullable enable
 using System;
-using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Rules;
 
@@ -104,7 +103,7 @@ namespace AF.Core.Session
             Add(BoardCanon.Hash(_child, 0, width));
             for (int head = 0; head < _count; head++)
             {
-                if (!Expand(head, units, mode, null))
+                if (!Expand(head, units, mode, false, default))
                 {
                     return false; // victoria alcanzable o más de MaxStates estados: no se declara (conservador)
                 }
@@ -117,19 +116,20 @@ namespace AF.Core.Session
         /// Aguas estancadas por repetición (02 R13 ampliada; D-014 con su añadido del 2026-11-06, que aplica el punto 1 del
         /// añadido de D-059 del 2026-10-31): el cierre da el tablero por perdido (<see cref="IsDeadEnd(Cuia[], int, int, int[], PourMode)"/>)
         /// <b>y</b> todo vertido legal desde él (útil o fútil, como en el cierre) lleva a un tablero cuyo hash canónico está en
-        /// <paramref name="seen"/> (los tableros ya vistos en el intento). Sin vertidos legales también da true, pero ese caso ya
-        /// lo declara R13 antes. No modifica el array ni <paramref name="seen"/> y no valida argumentos (bucle caliente: solo
-        /// <see cref="HashSet{T}.Contains"/> sobre <c>ulong</c>, sin boxing ni asignaciones).
+        /// <paramref name="seen"/> (los tableros ya vistos en el intento; desde el añadido de D-014 del 2026-11-17, un contador por
+        /// hash que Marea rebaja: <see cref="SeenBoards"/>). Sin vertidos legales también da true, pero ese caso ya lo declara R13
+        /// antes. No modifica el array ni <paramref name="seen"/> y no valida argumentos (bucle caliente: solo
+        /// <see cref="SeenBoards.Contains"/>, una búsqueda en un diccionario de <c>ulong</c>, sin boxing ni asignaciones).
         /// </summary>
         /// <remarks>
         /// La pertenencia a <paramref name="seen"/> se decide solo por el hash FNV-1a de 64 bits (<see cref="CanonicalHash"/>):
         /// una colisión haría pasar por visto un tablero nuevo, pero solo en un tablero que el cierre ya da por perdido, así que
         /// nunca rompe R14 (P1) [P].
         /// </remarks>
-        internal bool IsStagnant(Cuia[] cuias, int offset, int width, int[] units, PourMode mode, HashSet<ulong> seen)
+        internal bool IsStagnant(Cuia[] cuias, int offset, int width, int[] units, PourMode mode, in SeenBoards seen)
         {
             // Tras un veredicto true, el estado 0 del cierre es S en orden canónico.
-            return IsDeadEnd(cuias, offset, width, units, mode) && Expand(0, units, mode, seen);
+            return IsDeadEnd(cuias, offset, width, units, mode) && Expand(0, units, mode, true, in seen);
         }
 
         /// <summary>
@@ -157,11 +157,11 @@ namespace AF.Core.Session
         }
 
         /// <summary>
-        /// Aplica cada vertido del estado <paramref name="node"/>. Sin <paramref name="seen"/>, guarda los hijos nuevos y devuelve
-        /// false si un hijo es victoria o si no cabe (el cierre pasaría de <see cref="MaxStates"/>). Con <paramref name="seen"/>,
+        /// Aplica cada vertido del estado <paramref name="node"/>. Sin <paramref name="useSeen"/>, guarda los hijos nuevos y devuelve
+        /// false si un hijo es victoria o si no cabe (el cierre pasaría de <see cref="MaxStates"/>). Con <paramref name="useSeen"/>,
         /// no guarda nada y devuelve false en cuanto un hijo no está en él (un vertido lleva a un tablero no visto).
         /// </summary>
-        private bool Expand(int node, int[] units, PourMode mode, HashSet<ulong>? seen)
+        private bool Expand(int node, int[] units, PourMode mode, bool useSeen, in SeenBoards seen)
         {
             int width = _width;
             int offset = node * width;
@@ -205,7 +205,7 @@ namespace AF.Core.Session
                     BoardRules.Apply(in child, a, b, mode, futile, ref events);
                     BoardCanon.Sort(_child, 0, width);
                     ulong hash = BoardCanon.Hash(_child, 0, width);
-                    if (seen != null)
+                    if (useSeen)
                     {
                         if (!seen.Contains(hash))
                         {

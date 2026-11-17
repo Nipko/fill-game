@@ -4,6 +4,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+### Marea saca de vistos lo que deshace y dice si saca del atasco (añadido de D-014 del 2026-11-17)
+
+- **Opción 1 del dueño:** los tableros vistos del intento pasan de `HashSet<ulong>` a un contador por hash
+  (`Dictionary<ulong, int>`, capacidad inicial 256 [P]). `LevelSession.Undo()` resta 1 al tablero que deja y, a 0, deja de estar
+  visto; un tablero repetido en el historial sigue visto por la otra vez [P]. Tras Aguas estancadas, Marea deja jugar (el 66: Marea
+  al 11.º sigue en `Playing`; rehacer el 12.º vuelve a `Stuck`). Volver a la orilla, la Pororoca, la Luciérnaga, `RestoreRevealed`
+  y las sesiones rehechas no cambian.
+- **Opción 3 del dueño:** `LevelSession.UndoEscapes`, sin asignaciones, dice si tras Marea la partida quedaría en `Playing` (el
+  mismo `DeadEndProbe` con una vista del contador, `SeenBoards.AfterUndo`). Con historial y sin dosis ocultas siempre es true:
+  Marea deja los vistos como antes de su vertido.
+- `DeadEndProbe.IsStagnant` recibe `in SeenBoards` (interno) en lugar del `HashSet<ulong>`.
+- Pruebas: `DeadEndProbeTests` (Marea y repetir en el 66, ida y vuelta, sin historial), `RuleCatalogTests` (R15),
+  `TinajaSolverTests` y el oráculo `StagnationOracle` con contador, `CheckUndo` y `WalkUntilStuck`; solo dotnet,
+  `StagnationPropertyTests` (Marea en las partidas al azar y `UndoEscapes` en todas las historias de hasta 7 vertidos) y
+  `HotLoopAllocationTests.WarmUndoAndUndoEscapes_DoNotAllocate`.
+
 ### Curva de la 1.1, fase F2: Aguapé, Aguapé espeso, Lancha y bot atento (D-068)
 
 - **Aguapé (M8) y Aguapé espeso:** `MechanicType.Aguape` (12), filtro de origen; suelta de todo el grupo en R10 (d) con `n` sellos

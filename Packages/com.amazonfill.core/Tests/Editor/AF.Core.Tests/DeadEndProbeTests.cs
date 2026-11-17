@@ -77,10 +77,14 @@ namespace AF.Core.Tests
             Assert.That(probe.LastStateCount, Is.InRange(2, DeadEndProbe.MaxStates));
 
             // Añadido de D-014 del 2026-11-06: perdido no basta; el modal espera a que todo vertido lleve a un tablero ya visto.
+            // Añadido del 2026-11-17: probar cada vertido y deshacerlo con Marea no agota el tablero (lo deshecho deja de estar
+            // visto); recorrerlo sin Marea, sí.
             var session = new LevelSession(state, true, PourMode.Run);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Playing));
             Assert.That(session.Current.Equals(state), Is.True);
+            Assert.That(session.SeenBoardCount, Is.EqualTo(1), "solo el tablero en pantalla");
+            Assert.That(StagnationOracle.WalkUntilStuck(session), Is.EqualTo(LevelStatus.Stuck));
         }
 
         [Test]
@@ -146,10 +150,10 @@ namespace AF.Core.Tests
         [Test]
         public void R13b_Level66_MareaAndRestart_ReevaluateTheLoop()
         {
-            // 04 §2.1 y §2.7 con D-014 y su añadido del 2026-11-06: Marea desde el bloqueo por bucle evalúa otra vez el tablero
-            // anterior con lo ya visto (lo deshecho sigue visto [P]); rehacer el mismo vertido lleva a un tablero visto cuyos
-            // vertidos llevan todos a vistos, así que lo vuelve a declarar; Volver a la orilla empieza un intento nuevo y olvida
-            // lo visto [P].
+            // 04 §2.1 y §2.7 con D-014 y sus añadidos del 2026-11-06 y del 2026-11-17: Marea desde el bloqueo por bucle saca de
+            // los vistos el tablero que deshace, así que el tablero del 11.º vuelve a tener un vertido a un tablero no visto y la
+            // partida sigue en Playing (UndoEscapes lo decía antes); rehacer el 12.º lleva otra vez al tablero agotado y lo vuelve
+            // a declarar. Volver a la orilla empieza un intento nuevo y olvida lo visto [P].
             var session = new LevelSession(Level66Board.Initial(), true, PourMode.Run);
             var oracle = new StagnationOracle();
             oracle.Check(session, "inicio");
@@ -162,25 +166,106 @@ namespace AF.Core.Tests
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
             Assert.That(PourRules.IsStuck(session.Current, true), Is.False);
             int seen = session.SeenBoardCount;
+            Assert.That(seen, Is.EqualTo(Level66Board.PourCount + 1));
 
+            BoardState stuck = session.Current;
+            bool escapes = session.UndoEscapes;
+            Assert.That(escapes, Is.True, "Marea saca del atasco");
+            Assert.That(session.Current.Equals(stuck) && session.Status == LevelStatus.Stuck, Is.True, "UndoEscapes no cambia nada");
             Assert.That(session.Undo(), Is.True);
-            oracle.Check(session, "Marea");
-            Assert.That(session.SeenBoardCount, Is.EqualTo(seen), "el tablero deshecho sigue visto");
-            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck), "el tablero del 11.º también está agotado");
-            for (int pours = Level66Board.PourCount - 2; pours >= 8; pours--)
+            oracle.CheckUndo(session, stuck, escapes, "Marea");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(seen - 1), "el tablero deshecho deja de estar visto");
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "Marea deja jugar");
+            Assert.That(oracle.HasPourToUnseen(session.Current, PourMode.Run), Is.True);
+
+            int last = Level66Board.PourCount - 1;
+            Assert.That(session.TryPour(Level66Board.Source(last), Level66Board.Target(last), out PourResult again), Is.True);
+            oracle.Check(session, "el 12.º otra vez");
+            Assert.That(again.Status, Is.EqualTo(LevelStatus.Stuck), "repetir el vertido deshecho vuelve a Aguas estancadas");
+            Assert.That(session.Current.Equals(stuck), Is.True);
+
+            // Marea hacia atrás hasta el 8.º: cada paso coincide con el oráculo y con lo que UndoEscapes dijo antes.
+            for (int pours = Level66Board.PourCount - 1; pours >= 8; pours--)
             {
+                BoardState leaving = session.Current;
+                bool predicted = session.UndoEscapes;
                 Assert.That(session.Undo(), Is.True);
-                oracle.Check(session, "Marea al vertido " + pours);
-                LevelStatus expected = pours == 8 ? LevelStatus.Playing : LevelStatus.Stuck;
-                Assert.That(session.Status, Is.EqualTo(expected), "Marea al vertido " + pours + " (el 8.º se gana)");
+                oracle.CheckUndo(session, leaving, predicted, "Marea al vertido " + pours);
+                Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "Marea al vertido " + pours);
             }
 
-            Assert.That(session.TryPour(Level66Board.Source(8), Level66Board.Target(8), out PourResult again), Is.True);
-            Assert.That(again.Status, Is.EqualTo(LevelStatus.Stuck), "el 9.º lleva a un tablero visto y agotado");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(9), "los tableros del 9.º al 12.º, deshechos, ya no están vistos");
+            Assert.That(session.TryPour(Level66Board.Source(8), Level66Board.Target(8), out PourResult ninth), Is.True);
+            oracle.Check(session, "el 9.º otra vez");
+            Assert.That(ninth.Status, Is.EqualTo(LevelStatus.Playing), "el 9.º lleva a un tablero perdido, pero sus vertidos ya no están vistos");
 
             session.Restart();
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(session.SeenBoardCount, Is.EqualTo(1), "Volver a la orilla: intento nuevo");
+        }
+
+        [Test]
+        public void R13b_UndoAfterARoundTrip_KeepsTheBoardSeenOnce()
+        {
+            // I6 de LevelSession (añadido de D-014 del 2026-11-17 [P]): un contador por hash, no un conjunto. En el 66 perdido, el
+            // vaivén 2 → 1 y su vuelta 1 → 2 pasan dos veces por el mismo tablero: deshacer la vuelta resta 1 y el tablero de
+            // partida sigue visto por la primera vez.
+            BoardState state = Level66Board.Final();
+            var session = new LevelSession(state, true, PourMode.Run);
+            var oracle = new StagnationOracle();
+            oracle.Check(session, "inicio");
+            Assert.That(session.TryPour(2, 1, out _), Is.True);
+            oracle.Check(session, "ida");
+            BoardState away = session.Current;
+            int back = -1;
+            for (int b = 0; b < away.Count && back < 0; b++)
+            {
+                if (b != 1 && PourRules.IsLegal(away, 1, b) && PourRules.Apply(away, 1, b).CanonicalHash() == state.CanonicalHash())
+                {
+                    back = b;
+                }
+            }
+
+            Assert.That(back, Is.GreaterThanOrEqualTo(0), "un vertido desde la 1 vuelve al tablero de partida");
+            Assert.That(session.TryPour(1, back, out _), Is.True);
+            oracle.Check(session, "vuelta");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(2));
+
+            BoardState leaving = session.Current;
+            bool predicted = session.UndoEscapes;
+            Assert.That(session.Undo(), Is.True);
+            oracle.CheckUndo(session, leaving, predicted, "Marea de la vuelta");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(2), "el tablero de partida sigue visto por la primera vez");
+
+            leaving = session.Current;
+            predicted = session.UndoEscapes;
+            Assert.That(session.Undo(), Is.True);
+            oracle.CheckUndo(session, leaving, predicted, "Marea de la ida");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(1), "la ida, deshecha, ya no está vista");
+            Assert.That(session.UndoEscapes, Is.False, "sin historial, Marea no saca de nada");
+        }
+
+        [Test]
+        public void R13b_UndoEscapes_WithoutHistory_IsFalse()
+        {
+            // Opción 3 del dueño (añadido de D-014 del 2026-11-17): sin historial Marea no deshace nada, así que el modal no la
+            // ofrece. Es el bloqueo reabierto al reanudar en el tablero de partida del intento (ResumeStuck) y el de justo tras
+            // una Pororoca, que vacía el historial (02 §14).
+            var lost = new LevelSession(Level26Board.Lost(), true, PourMode.Run);
+            Assert.That(lost.UndoEscapes, Is.False, "en juego, sin historial");
+            Assert.That(lost.ResumeStuck(), Is.True);
+            Assert.That(lost.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(lost.CanUndo, Is.False);
+            Assert.That(lost.UndoEscapes, Is.False);
+            Assert.That(lost.Undo(), Is.False);
+
+            // Con historial, el mismo bloqueo reabierto sí: Marea vuelve al tablero de antes, que estaba en juego.
+            var resumed = new LevelSession(Level26Board.Lost(), true, PourMode.Run);
+            Assert.That(resumed.TryPour(1, 8, out _), Is.True, "2 → 9");
+            Assert.That(resumed.ResumeStuck(), Is.True);
+            Assert.That(resumed.UndoEscapes, Is.True);
+            Assert.That(resumed.Undo(), Is.True);
+            Assert.That(resumed.Status, Is.EqualTo(LevelStatus.Playing));
         }
 
         [Test]
@@ -287,9 +372,12 @@ namespace AF.Core.Tests
             var probe = new DeadEndProbe();
             Assert.That(probe.IsDeadEnd(start, mode), Is.True);
 
+            // Añadido de D-014 del 2026-11-17: Marea saca de los vistos lo que deshace, así que, de vuelta al principio, solo queda
+            // visto el tablero de partida y sigue en Playing; por el camino, los paseos hacia delante sí acabaron en Aguas estancadas.
             Assert.That(session.Current.Equals(start), Is.True);
-            Assert.That(session.SeenBoardCount, Is.EqualTo(probe.LastStateCount));
-            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(walked.Count, Is.EqualTo(probe.LastStateCount), "el paseo recorrió el cierre entero");
+            Assert.That(session.SeenBoardCount, Is.EqualTo(1));
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(stuck, Is.GreaterThan(0));
         }
 
@@ -316,8 +404,10 @@ namespace AF.Core.Tests
                         stuck += Walk(session, oracle, walked, depth + 1);
                     }
 
+                    BoardState leaving = session.Current;
+                    bool predicted = session.UndoEscapes;
                     Assert.That(session.Undo(), Is.True);
-                    oracle.Check(session, "Marea en profundidad " + depth);
+                    oracle.CheckUndo(session, leaving, predicted, "Marea en profundidad " + depth);
                     stuck += session.Status == LevelStatus.Stuck ? 1 : 0;
                 }
             }
@@ -431,7 +521,7 @@ namespace AF.Core.Tests
             Assert.That(new LevelSession(winnable, true, PourMode.Run).Status, Is.EqualTo(LevelStatus.Playing));
             var session = new LevelSession(lost, true, PourMode.Run);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "perdido, pero con vertidos a tableros nuevos");
-            Assert.That(StagnationOracle.TryEveryPourAndUndo(session), Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(StagnationOracle.WalkUntilStuck(session), Is.EqualTo(LevelStatus.Stuck));
             var winning = new LevelSession(winnable, true, PourMode.Run);
             Assert.That(StagnationOracle.TryEveryPourAndUndo(winning), Is.EqualTo(LevelStatus.Playing), "R14: repetir no declara un tablero ganable");
         }
