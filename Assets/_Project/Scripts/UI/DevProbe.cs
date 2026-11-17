@@ -463,7 +463,8 @@ namespace AF.UI
         /// de rescate (<c>balsa_ok</c>: <paramref name="balsaOk"/>, <c>balsa_ok</c> de 04 §6.2, congelado al abrir), sus
         /// impresiones de hoy ya contada la de este modal (<c>balsa_shown_today</c>, contra <c>af_rescue_daily_cap</c>) y si está
         /// oculta por rechazos (<c>balsa_hidden</c>): por qué falta la Balsa en el modal (prueba de la ola 3 en el teléfono; tarea
-        /// FX5).
+        /// FX5); y si deshacer saca del atasco (<c>undo_escapes</c>; sin él, el modal no ofrece Marea: añadido de D-014 del
+        /// 2026-11-17).
         /// </summary>
         public void Funnel(string evt, LevelFlow flow, AF.IAP.StoreLedger? ledger = null, bool balsaOk = false)
         {
@@ -512,6 +513,8 @@ namespace AF.UI
                 sb.Append(",\"balsa_ok\":").Append(balsaOk ? "true" : "false");
                 sb.Append(",\"balsa_shown_today\":").Append(ledger.BalsaShownToday.ToString(CultureInfo.InvariantCulture));
                 sb.Append(",\"balsa_hidden\":").Append(ledger.BalsaHiddenUntil.HasValue ? "true" : "false");
+                // Añadido de D-014 del 2026-11-17: si el modal ofrece Marea (deshacer saca del atasco; LevelSession.UndoEscapes).
+                sb.Append(",\"undo_escapes\":").Append(flow.Session.UndoEscapes ? "true" : "false");
             }
 
             sb.Append('}');

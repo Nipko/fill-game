@@ -140,6 +140,45 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void UndoUseless_NoMareaNorItsRefills_TheRescueAndTheFooterStay()
+        {
+            // Añadido de D-014 del 2026-11-17 (la opción 3 del dueño): si deshacer no saca del atasco, el modal no ofrece Marea, ni
+            // su recarga (video o semillas) ni la de regalo de la rama F: nadie gasta una Marea que no sirve [P].
+            StuckContext withSeeds = Ctx(level: 31, seeds: 1240, price: 300);
+            withSeeds.UndoUseless = true;
+            StuckModalView a = StuckModalModel.Build(withSeeds, Config);
+            Assert.That(a.Undo, Is.EqualTo(StuckUndoKind.None));
+            Assert.That(a.UndoOffered, Is.False);
+            Assert.That(a.Rescue, Is.EqualTo(StuckRescueKind.Available), "«Continuar: +1 cuia» delante");
+            Assert.That(a.Footer, Is.EqualTo(StuckFooter.GiveUp), "y «Rendirse»");
+
+            StuckContext refill = Ctx(level: 31, seeds: 10, price: 300);
+            refill.UndoFree = 0;
+            refill.UndoAdReady = true;
+            refill.UndoUseless = true;
+            StuckModalView b = StuckModalModel.Build(refill, Config);
+            Assert.That(b.Undo, Is.EqualTo(StuckUndoKind.None), "sin «+3 Deshacer»");
+            Assert.That(b.Rescue, Is.EqualTo(StuckRescueKind.Disabled));
+            Assert.That(b.Offers, Is.Not.Empty, "rama B: las ofertas siguen");
+
+            StuckContext gift = Ctx(level: 31, seeds: 1240, price: 600);
+            gift.RescueCheck = RescueCheck.Unsolvable;
+            gift.UndoFree = 0;
+            gift.UndoUseless = true;
+            Assert.That(StuckModalModel.Build(gift, Config).Undo, Is.EqualTo(StuckUndoKind.None), "ni la recarga gratis de la rama F");
+
+            StuckContext early = Ctx(level: 6, seeds: 0);
+            early.UndoUseless = true;
+            StuckModalView c = StuckModalModel.Build(early, Config);
+            Assert.That(c.Undo, Is.EqualTo(StuckUndoKind.None));
+            Assert.That(c.Footer, Is.EqualTo(StuckFooter.RestartFree), "1-30: «Volver a la orilla (gratis)»");
+
+            StuckContext useful = Ctx(level: 31, seeds: 1240, price: 300);
+            Assert.That(useful.UndoUseless, Is.False, "por defecto, Marea se ofrece como antes");
+            Assert.That(StuckModalModel.Build(useful, Config).UndoOffered, Is.True);
+        }
+
+        [Test]
         public void BranchG_LastCanoe_AndStep2SaysSo()
         {
             StuckContext ctx = Ctx(level: 31, seeds: 1240, price: 600);

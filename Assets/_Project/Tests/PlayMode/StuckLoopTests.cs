@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
@@ -22,7 +23,9 @@ namespace AF.Tests.PlayMode
     /// vertidos 10.º y 11.º del dueño entran, y Aguas estancadas sale justo tras el 12.º, cuando todo vertido lleva a un tablero
     /// ya visto, como fija <c>DeadEndProbeTests.R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheTwelfthPour</c>, aunque 2 → 1
     /// siga siendo útil para R13 de reglas. Desde ahí se ignoran los toques (R15) y el modal es el embudo de D-008 para un nivel
-    /// ≥ 31: Marea primero (04 §6.2, regla 0), «Continuar: +1 cuia» y «Rendirse».
+    /// ≥ 31: Marea primero (04 §6.2, regla 0), «Continuar: +1 cuia» y «Rendirse». Con el añadido de D-014 del 2026-11-17, Marea
+    /// desde el modal saca de los vistos el tablero que deshace y deja jugar; el modal vuelve solo si el jugador repite. Si deshacer
+    /// no sacara del atasco, el modal no ofrecería Marea (ni para TalkBack).
     /// </summary>
     public sealed class StuckLoopTests
     {
@@ -139,29 +142,106 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Stuck.RestartButton.gameObject.activeSelf, Is.False);
             Assert.That(view.Stuck.CanoeLineText, Is.EqualTo(UiText.StuckCanoeLost));
 
-            // Marea desde el bloqueo por bucle (04 §2.1) cierra el modal y deshace el 12.º, pero el tablero del 11.º también está
-            // perdido y todos sus vertidos llevan a tableros ya vistos (lo deshecho sigue visto [P]; añadido de D-014 del
-            // 2026-11-06): Aguas estancadas vuelve a salir, con un uso de Marea menos.
+            // Opción 3 del dueño (añadido de D-014 del 2026-11-17): Marea se ofrece porque deshacer saca del atasco.
+            Assert.That(flow.Session.UndoEscapes, Is.True);
+            Assert.That(flow.BuildStuckContext(false, true, GeoTier.T3).UndoUseless, Is.False);
+
+            // Marea desde el bloqueo por bucle (04 §2.1) cierra el modal y deshace el 12.º; el tablero deshecho deja de estar visto
+            // (añadido de D-014 del 2026-11-17), así que el del 11.º vuelve a tener un vertido a un tablero no visto: se juega.
             view.Stuck.UndoButton.onClick.Invoke();
             Assert.That(flow.Session.AppliedPours, Is.EqualTo(LastPlayable));
-            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Playing), "Marea deja jugar");
+            Assert.That(flow.Session.SeenBoardCount, Is.EqualTo(OwnersSequence.Length), "el tablero del 12.º ya no está visto");
             Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(2));
-            WaitForStuckModal(boot, "tras Marea al 11.º");
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "el modal no vuelve al instante");
+            Assert.That(view.StuckVisible, Is.False);
+            Assert.That(flow.AcceptsBoardInput, Is.True);
+
+            // Repetir el 12.º lleva otra vez al tablero agotado: Aguas estancadas vuelve, con Marea todavía ofrecida.
+            int[] twelfth = OwnersSequence[LastPlayable];
+            Assert.That(boot.TapCuia(twelfth[0]).Kind, Is.EqualTo(TapKind.Selected), "selección del 12.º otra vez");
+            TapResult again = boot.TapCuia(twelfth[1]);
+            Assert.That(again.Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(again.Pour.Status, Is.EqualTo(LevelStatus.Stuck), "repetir el vertido deshecho");
+            Assert.That(flow.Session.Current.Equals(stuck), Is.True);
+            WaitForStuckModal(boot, "tras repetir el 12.º");
+            Assert.That(view.Stuck.View!.Undo, Is.EqualTo(StuckUndoKind.Undo));
             Assert.That(view.Stuck.View!.UndoBadge, Is.EqualTo(flow.UndoStatus.FreeLeft + flow.UndoStatus.Stock));
 
-            // Con el cupo que queda (2), Marea hacia atrás llega al tablero del 9.º, el primero perdido: también agotado, así que
-            // el modal vuelve a salir cada vez. El del 8.º se gana (lo fija el núcleo): una Marea más volvería a jugar.
-            for (int pours = LastPlayable - 1; pours > FirstLost; pours--)
+            // Otra Marea: también deja jugar, y Marea hacia atrás sigue en juego (con la opción 1, cada Marea deja los vistos como
+            // antes de su vertido, cuando la partida estaba en juego).
+            view.Stuck.UndoButton.onClick.Invoke();
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(1));
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.AcceptsBoardInput, Is.True);
+            Assert.That(flow.Session.UndoEscapes, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Level66_WhenUndoDoesNotEscape_TheModalHasNoMarea_AndTalkBackDoesNotReadIt()
+        {
+            // Opción 3 del dueño (añadido de D-014 del 2026-11-17): si deshacer no saca del atasco (LevelSession.UndoEscapes false;
+            // en la partida, sin historial: con historial y sin dosis ocultas Marea deja los vistos como antes del vertido),
+            // «Deshacer · Marea» no sale, ni en gris [P], ni su recarga; delante quedan «Continuar: +1 cuia» y «Rendirse», y
+            // TalkBack no la lee. Es la variante del bloqueo del 66 armada con ese dato.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1000));
+            yield return PlayModeHelpers.LoadGame(66, new MemoryProgressStore(66, 65));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
+            PlayModeHelpers.Step(boot, 1500);
+            for (int i = 0; i <= LastPlayable; i++)
             {
-                view.Stuck.UndoButton.onClick.Invoke();
-                Assert.That(flow.Session.AppliedPours, Is.EqualTo(pours), "Marea al vertido " + pours);
-                Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Stuck), "Marea al vertido " + pours);
-                WaitForStuckModal(boot, "tras Marea al vertido " + pours);
+                Assert.That(boot.TapCuia(OwnersSequence[i][0]).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(boot.TapCuia(OwnersSequence[i][1]).Kind, Is.EqualTo(TapKind.Poured));
+                if (i < LastPlayable)
+                {
+                    PlayModeHelpers.StepUntilIdle(boot, 6000);
+                }
             }
 
-            Assert.That(flow.Session.AppliedPours, Is.EqualTo(FirstLost + 1));
-            Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(0));
-            Assert.That(view.StuckVisible, Is.True);
+            WaitForStuckModal(boot, "tras el 12.º vertido");
+            StuckContext ctx = flow.BuildStuckContext(false, true, GeoTier.T3);
+            Assert.That(ctx.UndoUseless, Is.False, "aquí Marea sí saca");
+            ctx.UndoUseless = true;
+            StuckModalView useless = StuckModalModel.Build(ctx, flow.Boosters);
+            Assert.That(useless.Undo, Is.EqualTo(StuckUndoKind.None));
+            Assert.That(useless.UndoOffered, Is.False);
+            view.ShowStuckVariant(useless);
+            PlayModeHelpers.Step(boot, 50);
+
+            Assert.That(view.Stuck.UndoButton.gameObject.activeSelf, Is.False, "sin «Deshacer · Marea»");
+            Assert.That(view.Stuck.RefillSeedsButton.gameObject.activeSelf, Is.False, "ni su recarga");
+            Assert.That(view.Stuck.RescueButton.gameObject.activeSelf, Is.True, "«Continuar: +1 cuia» delante");
+            Assert.That(view.Stuck.GiveUpButton.gameObject.activeSelf, Is.True, "«Rendirse»");
+            var ids = new List<string>();
+            var rects = new List<UnityEngine.RectTransform>();
+            view.Stuck.VisibleButtons(ids, rects);
+            Assert.That(ids, Has.No.Member("undo_modal"));
+            Assert.That(ids, Has.No.Member("refill_seeds"));
+            Assert.That(ids, Has.No.Member("refill_video"));
+            Assert.That(ids[0], Is.EqualTo("rescue"), "el rescate sube al primer puesto");
+
+            UnityEngine.Canvas.ForceUpdateCanvases();
+            var items = new List<A11yItem>();
+            new A11yScanner().Scan(items);
+            var labels = new List<string>();
+            foreach (A11yItem item in items)
+            {
+                labels.Add(item.Label);
+            }
+
+            string rescue = A11yScanner.ButtonLabel(view.Stuck.RescueButton, out _);
+            Assert.That(labels, Does.Contain(rescue), "TalkBack lee «Continuar: +1 cuia»");
+            foreach (string label in labels)
+            {
+                Assert.That(label, Does.Not.StartWith(UiText.StuckUndo), "TalkBack no lee Marea: «" + label + "»");
+            }
         }
 
         // Avanza hasta que se abre Aguas estancadas (como mucho 5 s) y deja que el panel termine de subir.
