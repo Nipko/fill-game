@@ -24,7 +24,8 @@ namespace AF.Tests.PlayMode
     /// futura con su línea y, sin cámara que siguiera el viaje, nada la volvía a poner;</item>
     /// <item>observación 2 (a): «Mundo» pulsado justo al acabar el viaje del Mapa del 10 deja la vista con sus rótulos y su placa,
     /// igual que al volver a pedir «Mundo» desde la Cuenca. En el 79, con el tucuxi por presentar, su primer plano (añadido de
-    /// D-069 del 2026-11-16) apaga los rótulos unos 3,5 s: se comprueban 3 s después de que acabe.</item>
+    /// D-069 del 2026-11-16) apagaba los rótulos hasta que la cámara llegaba a ×1, unos 3,6 s: con la cámara ya casi en su sitio
+    /// no se veía ninguno a los 3 s. Ahora vuelven al bajar de ×1,15 y a los 3 s están.</item>
     /// </list>
     /// </summary>
     public sealed class MapRound2dTests
@@ -107,14 +108,15 @@ namespace AF.Tests.PlayMode
             Assert.That(map.View, Is.EqualTo(MapView.World));
             Assert.That(map.L10SequenceActive, Is.False);
             int quietMs = TickUntilQuiet(map, max + " tras «Mundo»");
-            Debug.Log("AF_MAP r2d «Mundo» tras el viaje del 10 (" + max + "): compañero " + map.CrewIntroKind + ", rótulos de vuelta a los " + quietMs + " ms");
-            if (map.CrewIntroKind == null)
-            {
-                Assert.That(quietMs, Is.LessThanOrEqualTo(3000), "sin compañero que presentar, nada apaga los rótulos más de 3 s");
-            }
-
+            Debug.Log("AF_MAP r2d «Mundo» tras el viaje del 10 (" + max + "): compañero " + map.CrewIntroKind + ", rótulos de vuelta a los " + quietMs + " ms, zoom ×"
+                + map.CameraCloseUp.ToString("0.00"));
+            Assert.That(quietMs, Is.LessThan(3000), "a los 3 s de pulsar «Mundo» (con la presentación del compañero, si la hay), los rótulos ya se ven");
+            Level10MapTests.Tick(map, 3000 - quietMs);
+            View after = AssertNextLabel(map, max + " a los 3 s de «Mundo»", true);
             Level10MapTests.Tick(map, 3000);
-            View after = AssertNextLabel(map, max + " tras «Mundo»", true);
+            View settled = AssertNextLabel(map, max + " tras «Mundo», ya quieto", true);
+            Assert.That(settled.Text, Is.EqualTo(after.Text));
+            after = settled;
             AssertNoBuoyOverLabels(map, max + " tras «Mundo»");
 
             // Lo mismo que da la vista Mundo pedida otra vez desde la Cuenca (hoja-d de la prueba).
@@ -140,7 +142,8 @@ namespace AF.Tests.PlayMode
             for (; ms < 12000; ms += PlayModeHelpers.FrameMs)
             {
                 map.Tick(PlayModeHelpers.FrameMs);
-                if (ms >= 500 && !map.CatchingUp && !map.CrewIntroWaiting && !map.CrewArriving && map.CameraCloseUp <= 1f && map.CloseUpLabelAlpha >= 1f)
+                if (ms >= 500 && !map.CatchingUp && !map.CrewIntroWaiting && !map.CrewArriving && map.CameraCloseUp <= RiverMapScreen.CloseUpLabelsBackBelow
+                    && map.CloseUpLabelAlpha >= 1f)
                 {
                     break;
                 }

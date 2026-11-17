@@ -1599,6 +1599,15 @@ namespace AF.UI
         private const float CloseUpLabelsOffAbove = 1.001f;
 
         /// <summary>
+        /// A la vuelta del primer plano (×), los rótulos y las placas vuelven por debajo de este zoom [P] (observación 2 de la prueba
+        /// r2d de la 1.1): un 15 % más grandes como mucho, opacos, mientras la cámara acaba de volver.
+        /// </summary>
+        public const float CloseUpLabelsBackBelow = 1.15f;
+
+        // La cámara vuelve del primer plano (el zoom que quiere es menor que el de ahora).
+        private bool _closeUpLeaving;
+
+        /// <summary>
         /// Rótulos de parada y de pueblo, la píldora del premio y placas de mundo que se ven ahora (activos y con opacidad &gt; 0;
         /// tests: en el primer plano, ninguno).
         /// </summary>
@@ -1654,9 +1663,13 @@ namespace AF.UI
         // apagan del todo desde el primer fotograma del primer plano (o del acercamiento de llegada), con las placas de mundo; antes
         // se desvanecían a la vez que crecían con la cámara y se veía un rótulo enorme y medio transparente. Solo escribe si cambia;
         // sin asignaciones.
+        //
+        // Observación 2 de la prueba r2d de la 1.1: a la vuelta, la cámara se acerca a ×1 con una cola exponencial larga (de ×1,15 a
+        // ×1,01 tarda unos 0,8 s) en que el Mapa ya se ve como siempre; los rótulos y las placas vuelven al bajar de
+        // CloseUpLabelsBackBelow, no al llegar a ×1 (en el 79, «Mundo» tras el viaje del 10 se quedaba sin ninguno a los 3 s).
         private void CloseUpLabels()
         {
-            float a = _closeZoom > CloseUpLabelsOffAbove ? 0f : 1f;
+            float a = _closeZoom > (_closeUpLeaving ? CloseUpLabelsBackBelow : CloseUpLabelsOffAbove) ? 0f : 1f;
             if (a == 1f && _closeUpLabelAlpha == 1f)
             {
                 return; // en reposo, nada; en el primer plano se repasa cada fotograma: un rótulo que sale a mitad (un pueblo que

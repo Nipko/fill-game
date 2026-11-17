@@ -150,11 +150,15 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
             Assert.That(map.VisibleMapLabelCount(), Is.GreaterThan(0), "fuera del primer plano hay rótulos");
+            // Observación 2 de la r2d: a la vuelta, vuelven al bajar de CloseUpLabelsBackBelow (×1,15), no al llegar a ×1.
             int closeFrames = 0;
+            float prev = 1f;
             for (int ms = 0; ms < 4000; ms += PlayModeHelpers.FrameMs)
             {
                 map.Tick(PlayModeHelpers.FrameMs);
-                if (map.CameraCloseUp > 1.001f)
+                bool rising = map.CameraCloseUp >= prev;
+                prev = map.CameraCloseUp;
+                if (map.CameraCloseUp > RiverMapScreen.CloseUpLabelsBackBelow || (rising && map.CameraCloseUp > 1.001f))
                 {
                     closeFrames++;
                     Assert.That(map.VisibleMapLabelCount(), Is.EqualTo(0), "a los " + ms + " ms del primer plano del tucuxi (×" + map.CameraCloseUp + ")");
@@ -168,10 +172,13 @@ namespace AF.Tests.PlayMode
 
             MapRound2Tests.Open(boot, map, 81, 80, 70); // el viaje del 80, con su acercamiento de llegada
             int arrivalFrames = 0;
+            prev = 1f;
             for (int ms = 0; ms < 9000; ms += PlayModeHelpers.FrameMs)
             {
                 map.Tick(PlayModeHelpers.FrameMs);
-                if (map.CameraCloseUp > 1.001f)
+                bool rising = map.CameraCloseUp >= prev;
+                prev = map.CameraCloseUp;
+                if (map.CameraCloseUp > RiverMapScreen.CloseUpLabelsBackBelow || (rising && map.CameraCloseUp > 1.001f))
                 {
                     arrivalFrames++;
                     Assert.That(map.VisibleMapLabelCount(), Is.EqualTo(0), "a los " + ms + " ms del acercamiento de llegada (×" + map.CameraCloseUp + ")");

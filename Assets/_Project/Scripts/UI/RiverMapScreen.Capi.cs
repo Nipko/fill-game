@@ -1041,6 +1041,7 @@ namespace AF.UI
                 }
             }
 
+            _closeUpLeaving = want < _closeZoom; // los rótulos vuelven antes de llegar a ×1 (CloseUpLabels)
             if (_closeZoom != want)
             {
                 float tc = want > _closeZoom ? CamCloseUpInMs : CamCloseUpOutMs;
