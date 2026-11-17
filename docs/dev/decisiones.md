@@ -1810,6 +1810,23 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 ---
 
+### D-014, añadido del 2026-11-17: Marea saca del atasco y solo se ofrece si sirve
+
+- **Origen:** el dueño jugaba en el teléfono un tablero de 2 filas y 10 cuias, con Matapí y sin semillas. Le salió «No hay más vertidos». Pulsó «Deshacer · Marea» y el modal volvió a salir al instante, gastando la Marea. La causa era la [P] del añadido del 2026-11-06 (I6): lo deshecho con Marea seguía contando como visto.
+- **Decisión del dueño:** en el chat con Spark, literal: «Sí, opción 1 y 3». Confirmada después en el chat con el integrador: «Sí, las dos». Encargo: `docs/dev/traspaso/encargo-integrador-marea-estancado.md`. Rama `v11/marea-estancado`.
+  1. **Deshacer saca de «vistos» el tablero deshecho.** Así, tras una Marea el jugador puede repetir el vertido u otro, y el modal vuelve solo cuando todo vertido legal lleva otra vez a un tablero visto.
+  2. **El modal solo ofrece Marea cuando deshacer sirve** (`LevelSession.UndoEscapes`). Si no sirve, quedan delante el rescate y el pie («Rendirse» o «Volver a la orilla»).
+- **Lo que se vio al implementarlo:** con historial y sin dosis ocultas, Marea siempre saca del atasco, porque deja los vistos como estaban al entrar en el tablero de antes, que estaba en juego. Lo respalda un test exhaustivo de las historias de hasta 7 vertidos del 66 y del 26. `UndoEscapes` solo da falso sin historial (justo tras una Pororoca, o al reanudar el atasco en el tablero del intento) y en Aguas turbias si lo revelado cambia el tablero de antes. El punto 2 queda como red de seguridad.
+- **[P] del integrador:**
+  - **Contador por tablero** (un contador por hash canónico, con capacidad inicial 256, en lugar del conjunto). Cubre los tableros repetidos en el historial. Deshacer resta 1 y el tablero deja de estar visto al llegar a 0. Sin asignaciones tras calentar.
+  - **Marea no sale cuando no sirve, ni en gris.** En el proyecto, el gris significa «te faltan semillas» y se arregla pagando (D-061); aquí nada la haría servir. Con ella no salen «+3 Deshacer» ni la recarga de regalo de la rama F.
+- **No cambia:** cuándo sale el modal (sigue saliendo cuando todo vertido legal lleva a un tablero visto, aunque al jugador le parezca que le queda uno). Tampoco cambian «Volver a la orilla», la Pororoca, la Luciérnaga ni las sesiones rehechas.
+- **GDD:** 02 §1.4 (R13) y §2; 04 §2.1, §5.1, §6.1 y §6.2. El README y el CHANGELOG del núcleo también.
+- **Por probar en el teléfono (Spark, S23):**
+  - el 66 con la secuencia del dueño;
+  - el tablero de su captura;
+  - TalkBack en el modal.
+
 ## D-015 · Respuestas del 2026-10-13 a las preguntas 39-44 de `docs/GDD.md` §6.3
 
 - **Fecha:** 2026-10-13. Registrada el 2026-10-13.
