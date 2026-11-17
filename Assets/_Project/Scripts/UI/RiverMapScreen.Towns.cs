@@ -1723,7 +1723,8 @@ namespace AF.UI
 
             for (int i = 0; i < _silhouettes.Count && !_northUpOn && !NorthUpTurning; i++)
             {
-                SetPillAlpha(_silhouettes[i].Root, a); // las placas de mundo, que también crecen con la cámara («Norte arriba» pone las suyas)
+                bool plateMasked = _labelMaskOn && i < _plateMasked.Length && _plateMasked[i];
+                SetPillAlpha(_silhouettes[i].Root, plateMasked ? 0f : a); // las placas de mundo, que también crecen con la cámara («Norte arriba» pone las suyas)
             }
 
             if (_buoysAhead != null)
@@ -2186,6 +2187,23 @@ namespace AF.UI
         private int _nextShiftIndex = -1;
         private Vector2 _nextShift;
         private Vector2 _nextShiftBase;
+        private bool[] _plateMasked = new bool[0];
+        private int _plateShiftIndex = -1;
+        private Vector2 _plateShift;
+        private Vector2 _plateShiftBase;
+        private Vector2 _plateShiftedAt;
+
+        /// <summary>Corrimiento (dp locales) de la placa del mundo siguiente, sola, para quedar entera con la cámara escalada (tests).</summary>
+        internal Vector2 PlateCameraShift => _plateShiftIndex >= 0 ? _plateShift : Vector2.zero;
+
+        /// <summary>
+        /// Caja de la placa <paramref name="i"/> (orden de <see cref="SilhouetteCount"/>) donde se ve de verdad ahora, con la escala de la
+        /// cámara (zona visible, dp, y hacia abajo; tests).
+        /// </summary>
+        internal Rect SilhouetteScreenViewBox(int i)
+        {
+            return LocalToScreenView(SilhouetteLocalBox(i));
+        }
         private Vector2 _nextShiftedAt;
 
         /// <summary>Rótulos apagados ahora por la canoa que pasa o por el borde con la cámara (tests).</summary>
@@ -2229,7 +2247,9 @@ namespace AF.UI
         // Con la cámara quieta y la canoa parada, todo vuelve como estaba. Sin asignaciones (salvo el tamaño de las listas).
         private void LabelsFollowCamera(bool traveling)
         {
-            bool on = _live && _view == MapView.World && Visible && !_northUpOn && (traveling || _camZoom != 1f);
+            // En el primer plano (CloseUpLabels los tiene todos a 0) no hace falta: al volver de él, en el mismo fotograma, se apagan
+            // otra vez los que tocan. Así nada se corre mientras no se ve.
+            bool on = _live && _view == MapView.World && Visible && !_northUpOn && (traveling || _camZoom != 1f) && _closeUpLabelAlpha != 0f;
             if (!on)
             {
                 if (_labelMaskOn)
@@ -2301,7 +2321,111 @@ namespace AF.UI
                 MaskPill(m.Pill, ref _townLabelMasked[i], hide, a);
             }
 
+            masked += PlatesFollowCamera(area, a);
             LabelsMaskedByCamera = masked;
+        }
+
+        // Lo mismo con las placas de mundo (el coordinador, tras la segunda vuelta de la r2d): una placa que la escala de la cámara deja
+        // cortada por el borde no se ve y vuelve a ×1. Si la que sale es una sola (con el Mapa v2, la del mundo siguiente), no se
+        // oculta: se corre lo justo para quedar entera, como el rótulo de la parada siguiente. Devuelve cuántas oculta.
+        private int PlatesFollowCamera(Rect area, float a)
+        {
+            if (NorthUpTurning)
+            {
+                return 0;
+            }
+
+            if (_plateMasked.Length < _silhouettes.Count)
+            {
+                System.Array.Resize(ref _plateMasked, _silhouettes.Count);
+            }
+
+            int shown = 0;
+            int only = -1;
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                if (PlateShown(k))
+                {
+                    shown++;
+                    only = k;
+                }
+            }
+
+            int masked = 0;
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                if (!PlateShown(k))
+                {
+                    continue;
+                }
+
+                RectTransform root = _silhouettes[k].Root;
+                if (shown == 1 && k == only && ShiftOnlyPlate(k, root, area))
+                {
+                    MaskPill(root, ref _plateMasked[k], false, a);
+                    continue;
+                }
+
+                Rect seen = LocalToScreenView(PlateBox(root));
+                bool hide = seen.Overlaps(new Rect(0f, 0f, _viewW, _viewH)) && !Inside(seen, area);
+                if (hide && !_plateMasked[k])
+                {
+                    LabelsMaskedByCameraTotal++;
+                }
+
+                masked += hide ? 1 : 0;
+                MaskPill(root, ref _plateMasked[k], hide, a);
+            }
+
+            return masked;
+        }
+
+        private bool PlateShown(int k)
+        {
+            Silhouette s = _silhouettes[k];
+            return s.Root.gameObject.activeInHierarchy && s.Plate.enabled && !(k < _plateFitHidden.Length && _plateFitHidden[k]);
+        }
+
+        // La placa sola, corrida lo justo para quedar entera en area con la escala de ahora (solo si asoma a la vista). Si corrida
+        // quedaría bajo la ventanita de casa, no se corre (false) y la regla de las demás la oculta mientras dure [P].
+        private bool ShiftOnlyPlate(int k, RectTransform root, Rect area)
+        {
+            if (_plateShiftIndex != k || root.anchoredPosition != _plateShiftedAt)
+            {
+                _plateShiftIndex = k;
+                _plateShiftBase = root.anchoredPosition;
+            }
+
+            root.anchoredPosition = _plateShiftBase;
+            Rect seen = LocalToScreenView(PlateBox(root));
+            float dx = 0f;
+            float dy = 0f;
+            if (seen.Overlaps(new Rect(0f, 0f, _viewW, _viewH)))
+            {
+                dx = seen.xMin < area.xMin ? area.xMin - seen.xMin : (seen.xMax > area.xMax ? area.xMax - seen.xMax : 0f);
+                dy = seen.yMin < area.yMin ? area.yMin - seen.yMin : (seen.yMax > area.yMax ? area.yMax - seen.yMax : 0f);
+            }
+
+            float z = Mathf.Max(0.01f, _camZoom);
+            _plateShift = new Vector2(dx / z, -dy / z);
+            root.anchoredPosition = _plateShiftBase + _plateShift;
+            _plateShiftedAt = root.anchoredPosition;
+            if (_plateShift != Vector2.zero && ScreenBoxUnderHomeWindow(LocalToScreenView(PlateBox(root))))
+            {
+                _plateShift = Vector2.zero;
+                root.anchoredPosition = _plateShiftBase;
+                _plateShiftedAt = root.anchoredPosition;
+                return false;
+            }
+
+            return true;
+        }
+
+        // La caja (zona visible, con la escala de la cámara) pisa la ventanita de casa, si sale.
+        private bool ScreenBoxUnderHomeWindow(Rect seen)
+        {
+            return _live && _homeWindow != null && _homeWindow.Ready && !_northUpOn && !HomeInViewAt(_offset)
+                && seen.Overlaps(Grow(HomeWindowInView(), HomeWindowGapDp));
         }
 
         // El rótulo de la parada siguiente, corrido lo justo para quedar entero en area con la escala de ahora (en dp locales: lo que
@@ -2380,6 +2504,29 @@ namespace AF.UI
                 }
             }
 
+            for (int k = 0; k < _plateMasked.Length; k++)
+            {
+                if (_plateMasked[k])
+                {
+                    _plateMasked[k] = false;
+                    if (k < _silhouettes.Count)
+                    {
+                        SetPillAlpha(_silhouettes[k].Root, a);
+                    }
+                }
+            }
+
+            if (_plateShiftIndex >= 0 && _plateShiftIndex < _silhouettes.Count)
+            {
+                RectTransform root = _silhouettes[_plateShiftIndex].Root;
+                if (root.anchoredPosition == _plateShiftedAt)
+                {
+                    root.anchoredPosition = _plateShiftBase;
+                }
+            }
+
+            _plateShiftIndex = -1;
+            _plateShift = Vector2.zero;
             _nextShiftIndex = -1;
             _nextShift = Vector2.zero;
             _labelMaskOn = false;

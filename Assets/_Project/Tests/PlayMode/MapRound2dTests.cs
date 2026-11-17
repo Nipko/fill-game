@@ -193,7 +193,7 @@ namespace AF.Tests.PlayMode
                 if (prev > RiverMapScreen.CloseUpLabelsBackBelow && z <= RiverMapScreen.CloseUpLabelsBackBelow)
                 {
                     crossings++;
-                    maskedAtCrossing += maskedBefore;
+                    maskedAtCrossing += map.LabelsMaskedByCamera; // en el primer plano la máscara descansa: se apagan en el fotograma de la vuelta
                     Debug.Log("AF_MAP r2d vuelta del primer plano " + at + " a los " + ms + " ms: ×" + z.ToString("0.00") + ", " + maskedBefore + " apagados justo antes, "
                         + map.LabelsMaskedByCamera + " ahora, poniéndose al día " + map.CatchingUp);
                 }
@@ -208,6 +208,64 @@ namespace AF.Tests.PlayMode
             Assert.That(crossings, Is.GreaterThan(0), at + ": hubo primer plano y volvió");
             Assert.That(maskedAtCrossing, Is.GreaterThan(0), at + ": algún rótulo apagado por la canoa o el borde al volver del primer plano (el caso de la revisión)");
             map.Close();
+        }
+
+        // Tras la segunda vuelta de la r2d (el coordinador): en el 79, «Mundo» justo tras el viaje del 10 presenta al tucuxi y, en cada
+        // fotograma de la cola de su primer plano (los rótulos ya vuelven por debajo de ×1,15 y la cámara aún no está en ×1), ninguna
+        // placa de mundo que se ve queda cortada por el borde: la sola (la del mundo siguiente) se corre lo justo; si hubiera más, se
+        // ocultan. A ×1, todas en su sitio.
+        [UnityTest]
+        public IEnumerator TheTailOfTheCompanionsCloseUp_NoPlateIsCutByTheEdge()
+        {
+            GameScreen.SimulatedPxPerDp = 3f;
+            yield return LoadUnseen(79);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            for (int ms = 0; ms < 15000 && map.JourneyReadyMs < 0f; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            yield return MapRound2cTests.TapTop(map, map.ViewWorldButton);
+            Assert.That(map.View, Is.EqualTo(MapView.World));
+            float e = RiverMapScreen.CameraLabelEdgeDp - 0.5f;
+            var view = new Rect(Vector2.zero, map.ViewportSize);
+            var area = new Rect(e, e, view.width - (2f * e), view.height - (2f * e));
+            int tail = 0;
+            int shifted = 0;
+            for (int ms = 0; ms <= 8000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                if (map.CloseUpLabelAlpha < 1f || map.CameraZoom <= 1f)
+                {
+                    continue;
+                }
+
+                tail++;
+                shifted += map.PlateCameraShift != Vector2.zero ? 1 : 0;
+                for (int i = 0; i < map.SilhouetteCount; i++)
+                {
+                    UnityEngine.UI.Image plate = map.SilhouettePlate(i);
+                    CanvasRenderer cr = map.SilhouetteLabel(i).canvasRenderer;
+                    if (!plate.enabled || !plate.gameObject.activeInHierarchy || cr.GetAlpha() * cr.GetInheritedAlpha() <= 0f)
+                    {
+                        continue;
+                    }
+
+                    Rect seen = map.SilhouetteScreenViewBox(i);
+                    if (seen.Overlaps(view))
+                    {
+                        Assert.That(Inside(seen, area), Is.True, "79 a los " + ms + " ms de «Mundo» (cámara ×" + map.CameraZoom.ToString("0.00") + "): la placa del mundo "
+                            + map.SilhouetteWorld(i) + " cortada: " + seen);
+                    }
+                }
+            }
+
+            Debug.Log("AF_MAP r2d cola del primer plano del tucuxi: " + tail + " fotogramas, " + shifted + " con la placa corrida");
+            Assert.That(tail, Is.GreaterThan(10), "hubo cola del primer plano con los rótulos a la vista");
+            Assert.That(map.CameraZoom, Is.EqualTo(1f));
+            Assert.That(map.PlateCameraShift, Is.EqualTo(Vector2.zero), "a ×1, la placa en su sitio");
+            boot.CloseRiverMap();
         }
 
         // Los rótulos que se ven de verdad (opacidad heredada de la píldora o de lo que lleva dentro) en este fotograma: enteros en la
