@@ -268,6 +268,105 @@ namespace AF.Tests.PlayMode
             boot.CloseRiverMap();
         }
 
+        // Tercera revisión de la r2d: la placa de destino de la secuencia del Mapa del 10 es de la secuencia (PlateOwnedByL10): mientras
+        // dura, la cámara no la corre ni la apaga, y al acabar queda donde la dejan la secuencia y FX10, entera a la vista (o fuera).
+        [UnityTest]
+        public IEnumerator InTheMapOf10_TheCameraNeverMovesNorHidesTheDestinationPlate([Values(71, 132)] int max)
+        {
+            GameScreen.SimulatedPxPerDp = 3f;
+            yield return LoadUnseen(max);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.L10SequenceActive, Is.True);
+            int world = AF.Levels.WorldTable.WorldOf(11);
+            int frames = 0;
+            for (int ms = 0; ms < 20000 && map.L10SequenceActive; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                if (!map.L10SequenceActive)
+                {
+                    break;
+                }
+
+                frames++;
+                Assert.That(map.PlateCameraShift, Is.EqualTo(Vector2.zero), max + " a los " + ms + " ms: la cámara no corre ninguna placa en la secuencia");
+                for (int i = 0; i < map.SilhouetteCount; i++)
+                {
+                    if (map.SilhouetteWorld(i) == world && map.SilhouettePlate(i).enabled)
+                    {
+                        Assert.That(map.SilhouetteLabel(i).canvasRenderer.GetAlpha(), Is.EqualTo(1f), max + " a los " + ms + " ms: la placa de destino, sin apagar");
+                    }
+                }
+            }
+
+            Assert.That(frames, Is.GreaterThan(30), "hubo secuencia");
+            Level10MapTests.Tick(map, 2000);
+            var view = new Rect(Vector2.zero, map.ViewportSize);
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                Rect box = map.SilhouetteViewBox(i);
+                if (map.SilhouettePlate(i).enabled && box.Overlaps(view))
+                {
+                    Assert.That(Inside(box, new Rect(-0.5f, -0.5f, view.width + 1f, view.height + 1f)), Is.True, max + ": la placa del mundo " + map.SilhouetteWorld(i) + " al acabar: " + box);
+                }
+            }
+
+            Assert.That(map.PlateCameraShift, Is.EqualTo(Vector2.zero));
+            map.Close();
+        }
+
+        // Tercera revisión de la r2d: un rótulo de pueblo que el encuadre quitó (por el borde, sobre todo) vuelve al soltar un arrastre
+        // que trae su viñeta al centro, entero a la vista; los que siguen sin sitio, fuera. Del 2 al 298 de 8 en 8, al día.
+        [UnityTest]
+        public IEnumerator ATownLabelTheFrameTookOff_ComesBack_WhenADragBringsItIn()
+        {
+            GameScreen.SimulatedPxPerDp = 3f;
+            yield return MapMarkersTests.OpenApp(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            int tried = 0;
+            int back = 0;
+            for (int play = 2; play <= 298; play += 8)
+            {
+                map.Close();
+                RiverMapScreen.ResetCapiSession();
+                map.Open(MapOpenSource.Lobby, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!, new MemoryProgressStore(play, play - 1, play - 1), play, true);
+                map.Tick(PlayModeHelpers.FrameMs);
+                int off = -1;
+                for (int i = 0; i < map.TownMarkerCount && off < 0; i++)
+                {
+                    off = map.TownLabelOffByFrame(i) ? i : -1;
+                }
+
+                if (off < 0)
+                {
+                    continue;
+                }
+
+                tried++;
+                Rect seen = map.LocalToView(map.TownVignetteLocalRect(off));
+                Vector2 view = map.ViewportSize;
+                map.Drag(new Vector2((view.x * 0.5f) - seen.center.x, seen.center.y - (view.y * 0.5f)));
+                map.EndDragForTests();
+                back += map.TownLabelsBackAfterDrag;
+                for (int i = 0; i < map.TownMarkerCount; i++)
+                {
+                    Rect r = map.TownLabelLocalRect(i);
+                    Rect v = map.LocalToView(r);
+                    if (r.width > 0f && v.Overlaps(new Rect(Vector2.zero, view)))
+                    {
+                        float e = RiverMapScreen.LabelEdgeDp - 0.5f;
+                        Assert.That(Inside(v, new Rect(e, e, view.x - (2f * e), view.y - (2f * e))), Is.True, "jugando el " + play + ", tras arrastrar: el rótulo del pueblo " + i + " cortado: " + v);
+                    }
+                }
+            }
+
+            Debug.Log("AF_MAP r2d pueblos tras arrastrar: " + tried + " aperturas con un rótulo quitado, " + back + " rótulos de vuelta");
+            Assert.That(tried, Is.GreaterThan(0), "hay rótulos de pueblo quitados por el encuadre");
+            Assert.That(back, Is.GreaterThan(0), "al soltar el arrastre, alguno vuelve");
+            map.Close();
+        }
+
         // Los rótulos que se ven de verdad (opacidad heredada de la píldora o de lo que lleva dentro) en este fotograma: enteros en la
         // pantalla con el margen de las placas (también con la escala de la cámara) y, salvo el de la parada siguiente, fuera de la
         // canoa con su mástil, sus banderas y su tripulación donde va ahora. El de la parada siguiente sale y no se apaga. Devuelve

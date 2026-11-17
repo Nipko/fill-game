@@ -516,8 +516,67 @@ namespace AF.UI
                 {
                     m.Pill.anchoredPosition = before;
                     m.Pill.gameObject.SetActive(false);
+                    if (_townLabelOff.Length < _townMarkers.Count)
+                    {
+                        System.Array.Resize(ref _townLabelOff, _townMarkers.Count);
+                    }
+
+                    _townLabelOff[i] = true; // con otro encuadre (al soltar un arrastre) puede volver: TownLabelsAfterDrag
                 }
             }
+        }
+
+        // Rótulos de pueblo que TownLabelsAfterFrame quitó con el último encuadre (el borde, una placa, la canoa...).
+        private bool[] _townLabelOff = new bool[0];
+
+        /// <summary>Rótulos de pueblo que volvieron al soltar el último arrastre (tests).</summary>
+        internal int TownLabelsBackAfterDrag { get; private set; }
+
+        // Revisión de la segunda vuelta de la r2d: al soltar un arrastre, los rótulos de pueblo que el encuadre anterior quitó (sobre
+        // todo los cortados por el borde) vuelven a probar su sitio con el encuadre nuevo; los que siguen sin sitio, fuera otra vez.
+        // Sin asignaciones.
+        private void TownLabelsAfterDrag()
+        {
+            TownLabelsBackAfterDrag = 0;
+            if (!_towns || _view != MapView.World || !Visible)
+            {
+                return;
+            }
+
+            bool any = false;
+            for (int i = 0; i < _townCount && i < _townLabelOff.Length && i < _townMarkers.Count; i++)
+            {
+                if (!_townLabelOff[i])
+                {
+                    continue;
+                }
+
+                _townLabelOff[i] = false;
+                TownMarker m = _townMarkers[i];
+                if (m.Root.gameObject.activeSelf && !m.Pill.gameObject.activeSelf && m.WantsLabel && m.Label.text.Length > 0)
+                {
+                    m.Pill.gameObject.SetActive(true);
+                    any = true;
+                }
+            }
+
+            if (!any)
+            {
+                return;
+            }
+
+            TownLabelsAfterFrame();
+            for (int i = 0; i < _townCount && i < _townMarkers.Count; i++)
+            {
+                bool off = i < _townLabelOff.Length && _townLabelOff[i];
+                TownLabelsBackAfterDrag += !off && _townMarkers[i].Pill.gameObject.activeSelf ? 1 : 0;
+            }
+        }
+
+        /// <summary>El rótulo del pueblo <paramref name="i"/> lo quitó el encuadre (tests).</summary>
+        internal bool TownLabelOffByFrame(int i)
+        {
+            return i >= 0 && i < _townLabelOff.Length && _townLabelOff[i];
         }
 
         // El rótulo del pueblo self en r (local) pisa algo que manda más que él o a otro pueblo (ver TownLabelsAfterFrame).
@@ -957,6 +1016,7 @@ namespace AF.UI
         private void TownsSpace(MapSpace space)
         {
             ClearLabelMask(); // se colocan otra vez: ninguno queda apagado ni corrido por la cámara del encuadre anterior
+            System.Array.Clear(_townLabelOff, 0, _townLabelOff.Length); // se colocan todos otra vez
             CollectCrewLabelBoxes();
             _stopLabelPlaced.Clear();
             _windowHiddenLabels.Clear(); // se colocan todos otra vez
@@ -2187,6 +2247,7 @@ namespace AF.UI
         private int _nextShiftIndex = -1;
         private Vector2 _nextShift;
         private Vector2 _nextShiftBase;
+        private Vector2 _nextShiftedAt;
         private bool[] _plateMasked = new bool[0];
         private int _plateShiftIndex = -1;
         private Vector2 _plateShift;
@@ -2204,8 +2265,6 @@ namespace AF.UI
         {
             return LocalToScreenView(SilhouetteLocalBox(i));
         }
-        private Vector2 _nextShiftedAt;
-
         /// <summary>Rótulos apagados ahora por la canoa que pasa o por el borde con la cámara (tests).</summary>
         internal int LabelsMaskedByCamera { get; private set; }
 
@@ -2342,9 +2401,11 @@ namespace AF.UI
 
             int shown = 0;
             int only = -1;
+            // La placa de destino de la secuencia del Mapa del 10 es de la secuencia (PlateOwnedByL10; LiftL10Destination y
+            // RestoreL10Destination la colocan y la devuelven): la cámara no la corre ni la apaga, y no cuenta para «la sola».
             for (int k = 0; k < _silhouettes.Count; k++)
             {
-                if (PlateShown(k))
+                if (PlateShown(k) && !PlateOwnedByL10(k))
                 {
                     shown++;
                     only = k;
@@ -2354,7 +2415,7 @@ namespace AF.UI
             int masked = 0;
             for (int k = 0; k < _silhouettes.Count; k++)
             {
-                if (!PlateShown(k))
+                if (!PlateShown(k) || PlateOwnedByL10(k))
                 {
                     continue;
                 }

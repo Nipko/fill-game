@@ -1743,6 +1743,12 @@ namespace AF.UI
             SetRenderInterval(1);
         }
 
+        /// <summary>Suelta el arrastre como el dedo (tests).</summary>
+        internal void EndDragForTests()
+        {
+            EndDrag();
+        }
+
         private void DragPixels(Vector2 pixels)
         {
             Drag(pixels / _scale);
@@ -1752,6 +1758,8 @@ namespace AF.UI
         {
             _dragging = false;
             _activeMs = ActiveLingerMs;
+            TownLabelsAfterDrag(); // revisión de la segunda vuelta de la r2d: los rótulos de pueblo que el encuadre quitó, otra vez
+
             EmitLayoutIfCanoeButtonChanged();
         }
 
