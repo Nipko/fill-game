@@ -104,11 +104,12 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator TappingWorld_RightAfterTheJourneyOfTheMapOf10_ChangesTheView([Values(132, 521)] int max, [Values(0, 1000)] int afterMs)
+        public IEnumerator TappingWorld_RightAfterTheJourneyOfTheMapOf10_ChangesTheView([Values(51, 132, 521)] int max, [Values(0, 1000)] int afterMs)
         {
             yield return MapMarkersTests.OpenApp(max + 1);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
+            using var watch = new SequenceWatch(map);
             map.Close();
             map.Open(MapOpenSource.L10, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!, new MemoryProgressStore(max + 1, max, 0), max + 1, true);
             Canvas.ForceUpdateCanvases();
@@ -116,17 +117,30 @@ namespace AF.Tests.PlayMode
             Assert.That(map.View, Is.EqualTo(MapView.Basin));
             Assert.That(map.JourneyLocked, Is.True);
             Assert.That(map.ViewSwitchAlpha, Is.EqualTo(RiverMapScreen.JourneyViewSwitchAlpha), "durante el viaje el selector no parece habilitado");
+            CrewKind? crew = map.CrewIntroKind;
+            if (max == 51)
+            {
+                // Con el 132 y el 521 (los de la prueba) el tucuxi ya no está pendiente: se presenta solo cerca de su punto (RiverCrew.IntroPending).
+                Assert.That(crew, Is.EqualTo(CrewKind.Tucuxi), "el tucuxi, pendiente con el Mapa sin ver y el 51 ganado");
+            }
 
-            int ms = 0;
-            for (; ms < 15000 && map.JourneyReadyMs < 0f; ms += PlayModeHelpers.FrameMs)
+            bool factSeen = false;
+            for (int ms = 0; ms < 15000 && map.JourneyReadyMs < 0f; ms += PlayModeHelpers.FrameMs)
             {
                 map.Tick(PlayModeHelpers.FrameMs);
+                factSeen |= map.L10FactShown;
             }
 
             Assert.That(map.JourneyReadyMs, Is.GreaterThanOrEqualTo(0f), "map_play_ready");
-            Level10MapTests.Tick(map, afterMs);
+            for (int ms = 0; ms < afterMs; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                factSeen |= map.L10FactShown;
+            }
+
             Debug.Log("AF_MAP r2c Mundo tras el viaje del 10 (" + max + ", +" + afterMs + " ms): secuencia " + map.L10SequenceActive + ", selector ×" + map.ViewSwitchAlpha
-                + ", subido " + map.ViewSwitchRaised);
+                + ", subido " + map.ViewSwitchRaised + ", dato visto " + factSeen);
+            Assert.That(map.L10SequenceActive, Is.True, "aún queda secuencia: el caso de la prueba");
             if (afterMs >= RiverMapScreen.JourneyButtonInMs)
             {
                 Assert.That(map.ViewSwitchAlpha, Is.EqualTo(1f), "ya se ve habilitado");
@@ -136,15 +150,110 @@ namespace AF.Tests.PlayMode
             map.Tick(PlayModeHelpers.FrameMs);
             Assert.That(map.View, Is.EqualTo(MapView.World), "el primer toque en «Mundo» cambia de vista");
             Assert.That(map.L10SequenceActive, Is.False, "lo que quedaba de la secuencia acaba");
+            Assert.That(map.L10SequenceDone, Is.True);
+            Assert.That(map.L10SequenceSkipped, Is.True, "como con un toque");
+            Assert.That(watch.Ended, Is.EqualTo(1), "L10SequenceEnded una vez (GameBootstrap anota lo visto hasta el 10)");
+            if (DevProbe.Enabled)
+            {
+                Assert.That(watch.FactShown, Is.EqualTo(factSeen ? 1 : 0), "river_fact_shown una vez si la placa del dato llegó a verse");
+            }
+
             AssertNothingUnderHomeWindow(boot, map, max + " al pasar a Mundo");
             AssertPlatesWhole(map, max + " al pasar a Mundo");
             Level10MapTests.Tick(map, 4000);
             Assert.That(map.View, Is.EqualTo(MapView.World), "y nada lo deshace (ni el encuadre de la secuencia ni el compañero)");
+            if (crew.HasValue)
+            {
+                Assert.That(map.CrewIntroWaiting, Is.False, "el compañero que esperaba a la secuencia se presentó");
+                Assert.That(map.CrewIntroKind, Is.EqualTo(crew));
+                Assert.That(map.CrewIntroFired, Is.True, "en la vista Mundo");
+            }
+
+            Assert.That(watch.Ended, Is.EqualTo(1), "y no se acaba otra vez");
             Debug.Log("AF_MAP r2c Mundo tras el Mapa del 10 (" + max + "): ventanita " + map.HomeWindowShown + " en " + map.HomeWindowViewRect + ", rótulo de la parada "
                 + map.RemainingStopN() + " en " + map.LocalToView(map.StopLabelLocalRect(map.RemainingStopN())) + ", zoom ×" + map.Zoom.ToString("0.00"));
             AssertNothingUnderHomeWindow(boot, map, max + " en Mundo, 4 s después");
             AssertPlatesWhole(map, max + " en Mundo, 4 s después");
             boot.CloseRiverMap();
+            Assert.That(watch.Ended, Is.EqualTo(1), "cerrar no la acaba otra vez");
+        }
+
+        [UnityTest]
+        public IEnumerator WithReduceMotion_WorldAndPlay_AreOverTheSkipArea_AndBasinSkipsTheSequence()
+        {
+            // Revisión de la r2c: con Reducir movimiento no hay viaje (JourneyArrived no sube nada); los controles van encima del área
+            // que salta la secuencia desde que se abre. Y «Cuenca» (la vista en que ya está) salta la secuencia, como hacía el toque.
+            yield return MapMarkersTests.OpenApp(133);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            using var watch = new SequenceWatch(map);
+            map.Close();
+            map.ProgressReduceMotion = true;
+            map.Open(MapOpenSource.L10, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!, new MemoryProgressStore(133, 132, 0), 133, true);
+            Canvas.ForceUpdateCanvases();
+            map.Tick(PlayModeHelpers.FrameMs);
+            Assert.That(map.L10SequenceActive, Is.True);
+            Assert.That(map.JourneyLocked, Is.False, "sin viaje");
+            Assert.That(map.ViewSwitchRaised, Is.True, "los controles, encima del área que salta la secuencia");
+            Assert.That(map.ViewSwitchAlpha, Is.EqualTo(1f));
+            yield return TapTop(map, map.PlayButton, false); // «Jugar» lo recibe (no se pulsa: empezaría el nivel)
+            yield return TapTop(map, map.ViewBasinButton);
+            Assert.That(map.View, Is.EqualTo(MapView.Basin));
+            Assert.That(map.L10SequenceActive, Is.False, "«Cuenca» salta lo que queda");
+            Assert.That(map.L10SequenceSkipped, Is.True);
+            Assert.That(watch.Ended, Is.EqualTo(1));
+            map.Close();
+
+            map.Open(MapOpenSource.L10, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!, new MemoryProgressStore(133, 132, 0), 133, true);
+            Canvas.ForceUpdateCanvases();
+            map.Tick(PlayModeHelpers.FrameMs);
+            Assert.That(map.L10SequenceActive, Is.True);
+            yield return TapTop(map, map.ViewWorldButton);
+            map.Tick(PlayModeHelpers.FrameMs);
+            Assert.That(map.View, Is.EqualTo(MapView.World), "con Reducir movimiento, «Mundo» también cambia de vista");
+            Assert.That(map.L10SequenceSkipped, Is.True);
+            Assert.That(watch.Ended, Is.EqualTo(2));
+            Level10MapTests.Tick(map, 2000);
+            Assert.That(map.View, Is.EqualTo(MapView.World));
+            map.ProgressReduceMotion = false;
+            boot.CloseRiverMap();
+        }
+
+        // Cuenta los finales de la secuencia (L10SequenceEnded, sin quitar el de GameBootstrap) y las sondas river_fact_shown.
+        private sealed class SequenceWatch : System.IDisposable
+        {
+            private readonly RiverMapScreen _map;
+            private readonly System.Action? _before;
+
+            public SequenceWatch(RiverMapScreen map)
+            {
+                _map = map;
+                _before = map.L10SequenceEnded;
+                map.L10SequenceEnded = () =>
+                {
+                    Ended++;
+                    _before?.Invoke();
+                };
+                Application.logMessageReceived += OnLog;
+            }
+
+            public int Ended { get; private set; }
+
+            public int FactShown { get; private set; }
+
+            public void Dispose()
+            {
+                Application.logMessageReceived -= OnLog;
+                _map.L10SequenceEnded = _before;
+            }
+
+            private void OnLog(string message, string stack, LogType type)
+            {
+                if (message.StartsWith("AF_STATE {\"event\":\"river_fact_shown\"", System.StringComparison.Ordinal))
+                {
+                    FactShown++;
+                }
+            }
         }
 
         [UnityTest]
@@ -286,7 +395,7 @@ namespace AF.Tests.PlayMode
         /// Antes deja pasar un fotograma (los Graphic recién subidos tienen depth −1 hasta que el lienzo los procesa). En batchmode
         /// la pantalla es más pequeña que el teléfono simulado: el lienzo se encoge lo justo mientras dura la prueba de impacto.
         /// </summary>
-        internal static IEnumerator TapTop(RiverMapScreen map, Button button)
+        internal static IEnumerator TapTop(RiverMapScreen map, Button button, bool click = true)
         {
             yield return null;
             EventSystem? events = EventSystem.current;
@@ -322,6 +431,11 @@ namespace AF.Tests.PlayMode
                     canvas.scaleFactor = scale;
                     Canvas.ForceUpdateCanvases();
                 }
+            }
+
+            if (!click)
+            {
+                yield break; // solo la prueba de impacto
             }
 
             tap.pointerCurrentRaycast = hits[0];

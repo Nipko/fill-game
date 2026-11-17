@@ -781,17 +781,21 @@ namespace AF.UI
             }
 
             CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
-            if (view == _view)
-            {
-                return;
-            }
 
             // Observación 2 de la prueba r2c de la 1.1: con la canoa ya llegada, lo que queda de la secuencia del Mapa del 10 (el
-            // bocadillo y la placa del dato) acaba como con un toque, y la vista cambia (antes el área que la salta se quedaba el toque
-            // y, si no, la secuencia volvía a su encuadre de la Cuenca).
+            // bocadillo y la placa del dato) acaba como con un toque (también con la pestaña de la vista en que ya está, que antes
+            // recibía el área que la salta) y la vista cambia (si no, la secuencia volvía a su encuadre de la Cuenca).
+            bool other = view != _view;
             if (L10SequenceActive && !JourneyLocked)
             {
+                _seqEndingForView = other; // el encaje y AF_LAYOUT, con el encuadre de la vista nueva (ApplyView)
                 SkipL10Sequence();
+                _seqEndingForView = false;
+            }
+
+            if (!other)
+            {
+                return;
             }
 
             _viewChanges++;

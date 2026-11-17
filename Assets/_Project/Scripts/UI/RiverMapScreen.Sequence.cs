@@ -134,6 +134,7 @@ namespace AF.UI
         private bool _seqDone;
         private bool _seqSkipped;
         private bool _seqPlaceDirty;
+        private bool _seqEndingForView; // SetView acaba la secuencia y cambia de vista: lo que se coloca, con la vista nueva
         private float _seqMs;
         private float _seqOutMs = -1f;
         private int _seqTripFromMs;
@@ -571,14 +572,14 @@ namespace AF.UI
             else
             {
                 HideL10Pieces();
-                if (fade)
+                if (fade && !_seqEndingForView)
                 {
                     PlatesAfterL10Frame(); // observación 3 de la r2c (al cerrar el Mapa, fade es false: nada que encajar)
                 }
             }
 
             L10SequenceEnded?.Invoke();
-            if (Visible)
+            if (Visible && !_seqEndingForView)
             {
                 EmitLayout(); // el área táctil que la saltaba ya no está
             }

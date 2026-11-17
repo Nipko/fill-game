@@ -181,7 +181,6 @@ namespace AF.UI
             _playGroup = Group(_play.Button.gameObject);
             _backGroup = Group(_back.Button.gameObject);
             _viewSwitchGroup = Group(_viewSwitch.gameObject);
-            _viewSwitchGroup.blocksRaycasts = false; // la cápsula no recibe toques: los reciben sus pestañas
             _viewWorldGroup = Group(_viewWorld.Button.gameObject);
             _viewBasinGroup = Group(_viewBasin.Button.gameObject);
         }
@@ -208,7 +207,11 @@ namespace AF.UI
 
             if (!JourneySource(source) || !_catchUp)
             {
-                return; // sin viaje (o con Reducir movimiento: el fundido): los botones, como siempre
+                // Sin viaje (o con Reducir movimiento: el fundido): los botones, como siempre. En el Mapa del 10 ya responden, así que
+                // van encima del área que salta la secuencia desde el principio (revisión de la r2c: con Reducir movimiento, «Mundo» y
+                // «Jugar» quedaban debajo durante toda la secuencia).
+                RaiseControlsOverSequence();
+                return;
             }
 
             _journeyOpen = true;
@@ -325,15 +328,7 @@ namespace AF.UI
             // Solo el tiempo que dura esa secuencia: al cerrar (o al volver a abrir) vuelven a su sitio (RestoreJourneyOrder).
             // Observación 2 de la prueba r2c de la 1.1: también el selector de vista, que ya se ve habilitado; su toque acaba lo que
             // queda de la secuencia y cambia de vista (SetView).
-            if (_seqActive && _raisedCount == 0)
-            {
-                RaiseOverSequence(_viewSwitch.transform);
-                RaiseOverSequence(_viewWorld.Button.transform);
-                RaiseOverSequence(_viewBasin.Button.transform);
-                RaiseOverSequence(_play.Button.transform);
-                RaiseOverSequence(_headerPlate.transform);
-                RaiseSorted();
-            }
+            RaiseControlsOverSequence();
 
             bool reduce = ProgressReduceMotion;
             if (by != JourneyByResume)
@@ -457,6 +452,23 @@ namespace AF.UI
 
             _play.Face.parent.localScale = scale;
             _back.Face.parent.localScale = scale;
+        }
+
+        // Con la secuencia del Mapa del 10 en marcha y los controles ya respondiendo, «Jugar», la cabecera (con «←») y el selector de
+        // vista suben encima del área que la salta: su toque hace lo suyo (el selector, además, la acaba: SetView). Una vez por apertura.
+        private void RaiseControlsOverSequence()
+        {
+            if (!_seqActive || _journeyLock || _raisedCount > 0)
+            {
+                return;
+            }
+
+            RaiseOverSequence(_viewSwitch.transform);
+            RaiseOverSequence(_viewWorld.Button.transform);
+            RaiseOverSequence(_viewBasin.Button.transform);
+            RaiseOverSequence(_play.Button.transform);
+            RaiseOverSequence(_headerPlate.transform);
+            RaiseSorted();
         }
 
         // Apunta t para subirlo encima del área que salta el Mapa del 10 (RaiseSorted), con su sitio de ahora. Sin asignaciones.

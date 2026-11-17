@@ -947,6 +947,7 @@ namespace AF.UI
         {
             CollectCrewLabelBoxes();
             _stopLabelPlaced.Clear();
+            _windowHiddenLabels.Clear(); // se colocan todos otra vez
             TownsSpaceCore(space);
             if (!_towns)
             {
@@ -1333,6 +1334,10 @@ namespace AF.UI
         /// <summary>Rótulos de parada que la ventanita de casa movió (o, sin sitio, quitó) en el último encuadre (tests).</summary>
         internal int StopLabelsMovedForHomeWindow { get; private set; }
 
+        // Los rótulos de parada que StopLabelsAvoidHomeWindow quitó con el último encuadre: con otro (el final del viaje), se vuelven a
+        // colocar antes de esquivar otra vez la ventanita.
+        private readonly List<int> _windowHiddenLabels = new List<int>();
+
         // Observación 1 de la prueba r2c de la 1.1: con el encuadre ya decidido (tras RemainingLabelFitView, que ya la esquiva con el
         // de la parada siguiente), un rótulo de otra parada que queda debajo de la ventanita de casa pasa al primero de sus sitios que
         // quede entero a la vista y libre; si ninguno, no sale con este encuadre [P] (el encuadre siguiente lo vuelve a colocar). No
@@ -1345,6 +1350,17 @@ namespace AF.UI
                 return;
             }
 
+            // Revisión de la r2c: los que quitó el encuadre anterior (el del viaje, en RefitAfterJourney) se vuelven a colocar primero.
+            for (int k = 0; k < _windowHiddenLabels.Count; k++)
+            {
+                int j = _windowHiddenLabels[k];
+                if (j < _markerCount && j < _stopLabels.Count && _markers[j].Root.gameObject.activeSelf && !_stopLabels[j].Pill.gameObject.activeSelf)
+                {
+                    LayoutStopLabel(j);
+                }
+            }
+
+            _windowHiddenLabels.Clear();
             int next = StopMarkerIndexOf(RemainingStopN());
             _labelView = new Rect(2f, 2f, _viewW - 4f, _viewH - 4f);
             for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
@@ -1380,6 +1396,7 @@ namespace AF.UI
                 else
                 {
                     pill.gameObject.SetActive(false); // sin sitio fuera de la ventanita con este encuadre [P]
+                    _windowHiddenLabels.Add(i);
                 }
             }
         }
