@@ -11,6 +11,14 @@ namespace AF.Levels.Json
     /// dependencias (Newtonsoft solo llega como dependencia transitiva y no se usa), sin reflexión e invariante a la
     /// cultura del dispositivo. Los números se guardan como texto y se convierten con InvariantCulture al pedirlos.
     /// </summary>
+    /// <remarks>
+    /// Memoria (2026-11-17, <c>docs/dev/memoria.md</c> §11): el arranque lee unos 1,8 MB de paquetes de niveles y el Reto otros
+    /// 1,4 MB, y con IL2CPP la basura de esa lectura hace crecer el heap gestionado, que no se devuelve. Por eso el lector asigna lo
+    /// justo: las cadenas sin escapes salen de un <c>Substring</c> (sin <c>StringBuilder</c>), las cortas que se repiten (las claves,
+    /// los nombres de banda o de mecánica) se comparten dentro del documento, los enteros pequeños y los booleanos son valores
+    /// compartidos (<see cref="JsonValue"/>), y las listas y los objetos se acumulan en dos pilas del lector y se guardan en arrays
+    /// del tamaño justo. El documento que sale es el mismo.
+    /// </remarks>
     public static class JsonParser
     {
         private const int MaxDepth = 64;
@@ -37,10 +45,23 @@ namespace AF.Levels.Json
             return value;
         }
 
+        // Cadenas más largas que esto no se comparten (las claves y los nombres cortos sí).
+        private const int MaxSharedStringLength = 32;
+
+        // Huecos de la tabla de cadenas compartidas de un documento (potencia de 2).
+        private const int SharedStringSlots = 1024;
+
         private sealed class Reader
         {
             private readonly string _text;
             private int _pos;
+
+            // Pilas de los elementos y de los miembros que se están leyendo (cada lista u objeto usa su tramo del final).
+            private readonly List<JsonValue> _itemStack = new List<JsonValue>(64);
+            private readonly List<KeyValuePair<string, JsonValue>> _memberStack = new List<KeyValuePair<string, JsonValue>>(64);
+
+            // Cadenas cortas ya leídas en este documento: la misma clave o el mismo nombre, una sola cadena.
+            private readonly string?[] _shared = new string?[SharedStringSlots];
 
             public Reader(string text)
             {
@@ -111,7 +132,7 @@ namespace AF.Levels.Json
                     default:
                         if (c == '-' || (c >= '0' && c <= '9'))
                         {
-                            return JsonValue.FromNumber(ReadNumber());
+                            return ReadNumber();
                         }
 
                         throw Error("carácter inesperado '" + c + "'");
@@ -131,12 +152,12 @@ namespace AF.Levels.Json
             private JsonValue ReadObject(int depth)
             {
                 _pos++; // {
-                var members = new List<KeyValuePair<string, JsonValue>>();
+                int start = _memberStack.Count;
                 SkipWhitespace();
                 if (!AtEnd && _text[_pos] == '}')
                 {
                     _pos++;
-                    return JsonValue.FromObject(members);
+                    return JsonValue.FromObject(PopMembers(start));
                 }
 
                 while (true)
@@ -148,9 +169,9 @@ namespace AF.Levels.Json
                     }
 
                     string key = ReadString();
-                    for (int i = 0; i < members.Count; i++)
+                    for (int i = start; i < _memberStack.Count; i++)
                     {
-                        if (string.Equals(members[i].Key, key, StringComparison.Ordinal))
+                        if (string.Equals(_memberStack[i].Key, key, StringComparison.Ordinal))
                         {
                             throw Error("clave duplicada '" + key + "'");
                         }
@@ -165,7 +186,7 @@ namespace AF.Levels.Json
                     _pos++;
                     SkipWhitespace();
                     JsonValue value = ReadValue(depth + 1);
-                    members.Add(new KeyValuePair<string, JsonValue>(key, value));
+                    _memberStack.Add(new KeyValuePair<string, JsonValue>(key, value));
                     SkipWhitespace();
                     if (AtEnd)
                     {
@@ -175,7 +196,7 @@ namespace AF.Levels.Json
                     char c = _text[_pos++];
                     if (c == '}')
                     {
-                        return JsonValue.FromObject(members);
+                        return JsonValue.FromObject(PopMembers(start));
                     }
 
                     if (c != ',')
@@ -188,18 +209,19 @@ namespace AF.Levels.Json
             private JsonValue ReadArray(int depth)
             {
                 _pos++; // [
-                var items = new List<JsonValue>();
+                int start = _itemStack.Count;
                 SkipWhitespace();
                 if (!AtEnd && _text[_pos] == ']')
                 {
                     _pos++;
-                    return JsonValue.FromArray(items);
+                    return JsonValue.FromArray(PopItems(start));
                 }
 
                 while (true)
                 {
                     SkipWhitespace();
-                    items.Add(ReadValue(depth + 1));
+                    JsonValue item = ReadValue(depth + 1);
+                    _itemStack.Add(item);
                     SkipWhitespace();
                     if (AtEnd)
                     {
@@ -209,7 +231,7 @@ namespace AF.Levels.Json
                     char c = _text[_pos++];
                     if (c == ']')
                     {
-                        return JsonValue.FromArray(items);
+                        return JsonValue.FromArray(PopItems(start));
                     }
 
                     if (c != ',')
@@ -219,10 +241,52 @@ namespace AF.Levels.Json
                 }
             }
 
+            // Los elementos de la lista que empieza en start, en un array del tamaño justo, fuera de la pila.
+            private JsonValue[] PopItems(int start)
+            {
+                int count = _itemStack.Count - start;
+                var items = new JsonValue[count];
+                _itemStack.CopyTo(start, items, 0, count);
+                _itemStack.RemoveRange(start, count);
+                return items;
+            }
+
+            // Los miembros del objeto que empieza en start, en un array del tamaño justo, fuera de la pila.
+            private KeyValuePair<string, JsonValue>[] PopMembers(int start)
+            {
+                int count = _memberStack.Count - start;
+                var members = new KeyValuePair<string, JsonValue>[count];
+                _memberStack.CopyTo(start, members, 0, count);
+                _memberStack.RemoveRange(start, count);
+                return members;
+            }
+
             private string ReadString()
             {
                 _pos++; // "
-                var sb = new StringBuilder();
+                int start = _pos;
+                int end = start;
+                while (end < _text.Length)
+                {
+                    char ch = _text[end];
+                    if (ch == '"')
+                    {
+                        // Sin escapes: el texto tal cual, compartido si es corto.
+                        _pos = end + 1;
+                        return Slice(start, end - start);
+                    }
+
+                    if (ch == '\\' || ch < ' ')
+                    {
+                        break; // con escapes o con un carácter de control (que es un error): la lectura de siempre, desde ahí
+                    }
+
+                    end++;
+                }
+
+                var sb = new StringBuilder(end - start + 16);
+                sb.Append(_text, start, end - start);
+                _pos = end;
                 while (true)
                 {
                     if (AtEnd)
@@ -283,7 +347,7 @@ namespace AF.Levels.Json
                 }
             }
 
-            private string ReadNumber()
+            private JsonValue ReadNumber()
             {
                 int start = _pos;
                 if (_text[_pos] == '-')
@@ -336,7 +400,62 @@ namespace AF.Levels.Json
                     SkipDigits();
                 }
 
-                return _text.Substring(start, _pos - start);
+                // Un entero pequeño en su forma canónica (solo dígitos, sin ceros delante): el valor compartido, sin texto nuevo.
+                int length = _pos - start;
+                if (length <= 4 && _text[start] != '-' && (length == 1 || _text[start] != '0'))
+                {
+                    int value = 0;
+                    bool digits = true;
+                    for (int i = start; i < _pos; i++)
+                    {
+                        char d = _text[i];
+                        if (!IsDigit(d))
+                        {
+                            digits = false;
+                            break;
+                        }
+
+                        value = (value * 10) + (d - '0');
+                    }
+
+                    if (digits && value <= JsonValue.SharedIntMax)
+                    {
+                        return JsonValue.SharedInt(value);
+                    }
+                }
+
+                return JsonValue.FromNumber(_text.Substring(start, length));
+            }
+
+            // El texto [start, start + length) como cadena: si es corto, la misma cadena cada vez que se repite en el documento.
+            private string Slice(int start, int length)
+            {
+                if (length == 0)
+                {
+                    return string.Empty;
+                }
+
+                if (length > MaxSharedStringLength)
+                {
+                    return _text.Substring(start, length);
+                }
+
+                uint hash = 2166136261u;
+                for (int i = 0; i < length; i++)
+                {
+                    hash = (hash ^ _text[start + i]) * 16777619u;
+                }
+
+                int slot = (int)(hash & (SharedStringSlots - 1));
+                string? shared = _shared[slot];
+                if (shared != null && shared.Length == length && string.CompareOrdinal(_text, start, shared, 0, length) == 0)
+                {
+                    return shared;
+                }
+
+                shared = _text.Substring(start, length);
+                _shared[slot] = shared;
+                return shared;
             }
 
             private void SkipDigits()
