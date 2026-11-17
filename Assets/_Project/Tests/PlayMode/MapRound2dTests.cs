@@ -134,6 +134,124 @@ namespace AF.Tests.PlayMode
             boot.CloseRiverMap();
         }
 
+        // Segunda vuelta de la r2d (la captura del 79 al abrir en Mundo con lo visto atrasado): en cada fotograma de la apertura, del
+        // viaje y del acercamiento de cada llegada, los rótulos que se ven quedan enteros en la pantalla con el margen de las placas
+        // (también con la escala de la cámara) y ninguno, salvo el de la parada siguiente, pisa la canoa con su mástil, sus banderas
+        // y su tripulación donde va ahora. El de la parada siguiente no se apaga nunca (salvo en el primer plano del compañero).
+        [UnityTest]
+        public IEnumerator OpeningInTheWorld_EveryFrame_LabelsAreWholeOnScreen_AndClearOfTheCanoe([Values(79, 71)] int max, [Values(0, 10)] int behind)
+        {
+            GameScreen.SimulatedPxPerDp = 3f;
+            yield return MapMarkersTests.OpenApp(max + 1, max - behind);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            string at = max + " (visto " + (max - behind) + ")";
+            float e = RiverMapScreen.CameraLabelEdgeDp - 0.5f;
+            var view = new Rect(Vector2.zero, map.ViewportSize);
+            var area = new Rect(e, e, view.width - (2f * e), view.height - (2f * e));
+            int frames = 0;
+            int checkedLabels = 0;
+            for (int ms = 0; ms <= 8000; ms += PlayModeHelpers.FrameMs)
+            {
+                map.Tick(PlayModeHelpers.FrameMs);
+                if (map.CloseUpLabelAlpha < 1f)
+                {
+                    continue; // el primer plano los apaga todos (añadido de D-069 del 2026-11-16)
+                }
+
+                frames++;
+                Canvas.ForceUpdateCanvases();
+                Rect crew = map.CrewBoxNowLocal;
+                int next = map.RemainingStopN();
+                for (int n = 0; n < boot.RiverStops!.Count; n++)
+                {
+                    Rect r = map.StopLabelLocalRect(n);
+                    if (r.width <= 0f)
+                    {
+                        Assert.That(n, Is.Not.EqualTo(next), at + " a los " + ms + " ms: el rótulo de la parada siguiente sale");
+                        continue;
+                    }
+
+                    TMPro.TextMeshProUGUI label = map.StopLabelOf(n)!;
+                    if (label.canvasRenderer.GetAlpha() <= 0f)
+                    {
+                        Assert.That(n, Is.Not.EqualTo(next), at + " a los " + ms + " ms: el rótulo de la parada siguiente no se apaga");
+                        continue;
+                    }
+
+                    checkedLabels++;
+                    Rect seen = map.LocalToScreenView(r);
+                    Assert.That(Inside(seen, area), Is.True, at + " a los " + ms + " ms (cámara ×" + map.CameraZoom.ToString("0.00") + "): el rótulo de la parada " + n + " cortado: " + seen);
+                    if (n != next)
+                    {
+                        Assert.That(r.Overlaps(crew), Is.False, at + " a los " + ms + " ms: el rótulo de la parada " + n + " pisa la canoa " + crew);
+                    }
+                }
+
+                for (int i = 0; i < map.TownMarkerCount; i++)
+                {
+                    Rect r = map.TownLabelLocalRect(i);
+                    if (r.width <= 0f || map.TownLabelMaskedByCamera(i))
+                    {
+                        continue;
+                    }
+
+                    checkedLabels++;
+                    Rect seen = map.LocalToScreenView(r);
+                    if (seen.Overlaps(view))
+                    {
+                        Assert.That(Inside(seen, area), Is.True, at + " a los " + ms + " ms (cámara ×" + map.CameraZoom.ToString("0.00") + "): el rótulo del pueblo " + i + " cortado: " + seen);
+                    }
+
+                    Assert.That(r.Overlaps(crew), Is.False, at + " a los " + ms + " ms: el rótulo del pueblo " + i + " pisa la canoa " + crew);
+                }
+            }
+
+            Debug.Log("AF_MAP r2d rótulos fotograma a fotograma " + at + ": " + frames + " fotogramas, " + checkedLabels + " rótulos vistos, " + map.LabelsMaskedByCameraTotal
+                + " apagados por la canoa o el borde, " + map.RefitsAfterJourney + " recolocaciones al acabar el viaje");
+            Assert.That(frames, Is.GreaterThan(100));
+            map.Close();
+        }
+
+        // Revisión de la r2d: al acabar un viaje se recoloca todo una sola vez. Con «Reducir movimiento» no hay viaje: el Mapa abre ya
+        // con las paradas de max_level (solo funde el agua nueva) y no hace falta recolocar nada [P]; el rótulo sale igual.
+        [UnityTest]
+        public IEnumerator AfterAJourney_EverythingIsRefitOnce([Values(false, true)] bool reduceMotion)
+        {
+            GameScreen.SimulatedPxPerDp = 3f;
+            yield return MapMarkersTests.OpenApp(80, 79);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            map.Close();
+            RiverMapScreen.ResetCapiSession();
+            map.ProgressReduceMotion = reduceMotion;
+            try
+            {
+                map.Open(MapOpenSource.Lobby, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!, new MemoryProgressStore(80, 79, 69), 80, true);
+                Assert.That(map.CatchingUp || reduceMotion, Is.True, "se pone al día del 69 al 79");
+                Assert.That(map.RefitsAfterJourney, Is.EqualTo(0), "al abrir, aún nada");
+                Level10MapTests.Tick(map, 12000);
+                Assert.That(map.CatchingUp, Is.False);
+                Debug.Log("AF_MAP r2d recolocaciones (Reducir movimiento " + reduceMotion + "): " + map.RefitsAfterJourney);
+                int once = reduceMotion ? 0 : 1;
+                Assert.That(map.RefitsAfterJourney, Is.EqualTo(once), reduceMotion ? "sin viaje, nada que recolocar" : "una vez por viaje");
+                AssertNextLabel(map, "79 (visto 69), Reducir movimiento " + reduceMotion, true);
+                Level10MapTests.Tick(map, 3000);
+                Assert.That(map.RefitsAfterJourney, Is.EqualTo(once), "y ninguna más con el Mapa quieto");
+            }
+            finally
+            {
+                map.ProgressReduceMotion = false;
+            }
+
+            map.Close();
+        }
+
+        private static bool Inside(Rect r, Rect area)
+        {
+            return r.xMin >= area.xMin && r.xMax <= area.xMax && r.yMin >= area.yMin && r.yMax <= area.yMax;
+        }
+
         // Avanza hasta que nada apaga los rótulos (el viaje, el acercamiento de llegada, el primer plano del compañero); como mucho
         // 12 s. Devuelve lo que tardó.
         internal static int TickUntilQuiet(RiverMapScreen map, string at)

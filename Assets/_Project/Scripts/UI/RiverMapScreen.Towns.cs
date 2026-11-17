@@ -948,6 +948,7 @@ namespace AF.UI
         // Tras PlacePassing (SamplesSpace): en la vista Mundo, cada viñeta en su orilla y a la medida del zoom, sin pisarse.
         private void TownsSpace(MapSpace space)
         {
+            ClearLabelMask(); // se colocan otra vez: ninguno queda apagado ni corrido por la cámara del encuadre anterior
             CollectCrewLabelBoxes();
             _stopLabelPlaced.Clear();
             _windowHiddenLabels.Clear(); // se colocan todos otra vez
@@ -1334,6 +1335,23 @@ namespace AF.UI
             return InView(local, _offset);
         }
 
+        /// <summary>
+        /// Como <see cref="LocalToView"/>, pero donde se ve de verdad ahora: con la escala de la cámara (el primer plano, la llegada)
+        /// alrededor de la canoa (tests).
+        /// </summary>
+        internal Rect LocalToScreenView(Rect local)
+        {
+            if (_camZoom == 1f)
+            {
+                return InView(local, _offset);
+            }
+
+            Vector2 c = _canoe.rectTransform.anchoredPosition;
+            Vector2 a = c + ((local.min - c) * _camZoom);
+            Vector2 b = c + ((local.max - c) * _camZoom);
+            return InView(Rect.MinMaxRect(a.x, a.y, b.x, b.y), _offset);
+        }
+
         /// <summary>Rótulos de parada que la ventanita de casa movió (o, sin sitio, quitó) en el último encuadre (tests).</summary>
         internal int StopLabelsMovedForHomeWindow { get; private set; }
 
@@ -1365,7 +1383,7 @@ namespace AF.UI
 
             _windowHiddenLabels.Clear();
             int next = StopMarkerIndexOf(RemainingStopN());
-            _labelView = new Rect(2f, 2f, _viewW - 4f, _viewH - 4f);
+            _labelView = new Rect(LabelEdgeDp, LabelEdgeDp, _viewW - (2f * LabelEdgeDp), _viewH - (2f * LabelEdgeDp)); // con el margen de las placas (segunda vuelta de la r2d)
             for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
             {
                 RectTransform pill = _stopLabels[i].Pill;
@@ -1427,7 +1445,7 @@ namespace AF.UI
             Vector2 c = _markers[i].Root.anchoredPosition;
             Rect old = PillRect(c, pill);
             Rect placedRect = old; // su caja en _stopLabelPlaced y _townPlaced, tal como la dejó TownsSpace
-            _labelView = new Rect(2f, 2f, _viewW - 4f, _viewH - 4f);
+            _labelView = new Rect(LabelEdgeDp, LabelEdgeDp, _viewW - (2f * LabelEdgeDp), _viewH - (2f * LabelEdgeDp)); // con el margen de las placas (segunda vuelta de la r2d)
             if (ClearRemainingOffView(i))
             {
                 old = PillRect(c, pill); // venía de la placa (otro encuadre de esta apertura): con «Faltan N» otra vez, ¿cabe?
@@ -2141,6 +2159,244 @@ namespace AF.UI
             public RectTransform Pill { get; }
 
             public TextMeshProUGUI Label { get; }
+        }
+
+        // ============================================================================================ rótulos con la cámara
+
+        /// <summary>
+        /// Margen (dp) de los rótulos con el borde de la zona del mapa mientras la cámara escala el contenido (la anticipación del
+        /// viaje y el acercamiento de cada llegada) o la canoa viaja: el de las placas (<see cref="LabelEdgeDp"/>) [P].
+        /// </summary>
+        public const float CameraLabelEdgeDp = LabelEdgeDp;
+
+        private bool[] _stopLabelMasked = new bool[0];
+        private bool[] _townLabelMasked = new bool[0];
+        private bool _labelMaskOn;
+        private int _nextShiftIndex = -1;
+        private Vector2 _nextShift;
+        private Vector2 _nextShiftedAt;
+
+        /// <summary>Rótulos apagados ahora por la canoa que pasa o por el borde con la cámara (tests).</summary>
+        internal int LabelsMaskedByCamera { get; private set; }
+
+        /// <summary>Rótulos apagados por la canoa que pasa o por el borde en algún fotograma desde que se abrió el Mapa (tests).</summary>
+        internal int LabelsMaskedByCameraTotal { get; private set; }
+
+        /// <summary>Corrimiento (dp locales) del rótulo de la parada siguiente para quedar entero con la cámara escalada (tests).</summary>
+        internal Vector2 NextLabelCameraShift => _nextShiftIndex >= 0 ? _nextShift : Vector2.zero;
+
+        /// <summary>El rótulo <paramref name="i"/> (orden de los marcadores) está apagado por la cámara (tests).</summary>
+        internal bool StopLabelMaskedByCamera(int n)
+        {
+            int i = StopMarkerIndexOf(n);
+            return i >= 0 && i < _stopLabelMasked.Length && _stopLabelMasked[i];
+        }
+
+        /// <summary>El rótulo del pueblo <paramref name="i"/> está apagado por la cámara (tests).</summary>
+        internal bool TownLabelMaskedByCamera(int i)
+        {
+            return i >= 0 && i < _townLabelMasked.Length && _townLabelMasked[i];
+        }
+
+        /// <summary>La canoa con su mástil, sus banderas y su tripulación donde va ahora (local del contenido; tests).</summary>
+        internal Rect CrewBoxNowLocal => CrewBoxNow();
+
+        // Segunda vuelta de la prueba r2d de la 1.1 (la captura del 79 abierto en Mundo con lo visto atrasado: «Lago 🇧🇷 T…é» y
+        // Leticia cortada a la izquierda): los rótulos se colocan con el encuadre quieto y la canoa en su sitio de max_level, pero
+        // mientras la canoa viaja (se pone al día) y mientras la cámara escala el contenido alrededor de ella (hasta ×1,15 en cada
+        // llegada), cada fotograma:
+        // - un rótulo de parada o de pueblo que pisa la canoa con su mástil, sus banderas y su tripulación, donde va ahora, no se ve;
+        // - uno que la escala de la cámara saca de la zona visible (con CameraLabelEdgeDp de margen) tampoco;
+        // - el de la parada siguiente, con «faltan N», no se apaga nunca: se corre lo justo para quedar entero, y vuelve a su sitio.
+        // Con la cámara quieta y la canoa parada, todo vuelve como estaba. Sin asignaciones (salvo el tamaño de las listas).
+        private void LabelsFollowCamera(bool traveling)
+        {
+            bool on = _live && _view == MapView.World && Visible && !_northUpOn && (traveling || _camZoom != 1f);
+            if (!on)
+            {
+                if (_labelMaskOn)
+                {
+                    ClearLabelMask();
+                }
+
+                return;
+            }
+
+            _labelMaskOn = true;
+            if (_stopLabelMasked.Length < _stopLabels.Count)
+            {
+                System.Array.Resize(ref _stopLabelMasked, _stopLabels.Count);
+            }
+
+            if (_townLabelMasked.Length < _townMarkers.Count)
+            {
+                System.Array.Resize(ref _townLabelMasked, _townMarkers.Count);
+            }
+
+            Rect crew = traveling ? Grow(CrewBoxNow(), CrewLabelGapDp) : default;
+            var area = new Rect(CameraLabelEdgeDp, CameraLabelEdgeDp, _viewW - (2f * CameraLabelEdgeDp), _viewH - (2f * CameraLabelEdgeDp));
+            float a = _closeUpLabelAlpha < 0f ? 1f : _closeUpLabelAlpha;
+            int next = StopMarkerIndexOf(RemainingStopN());
+            int masked = 0;
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                RectTransform pill = _stopLabels[i].Pill;
+                if (!pill.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                Vector2 c = _markers[i].Root.anchoredPosition;
+                if (i == next)
+                {
+                    ShiftNextLabel(i, c, pill, area);
+                    continue;
+                }
+
+                Rect box = PillRect(c, pill);
+                bool hide = (crew.width > 0f && box.Overlaps(crew)) || !Inside(LocalToScreenView(box), area);
+                if (hide && !_stopLabelMasked[i])
+                {
+                    LabelsMaskedByCameraTotal++;
+                }
+
+                masked += hide ? 1 : 0;
+                MaskPill(pill, ref _stopLabelMasked[i], hide, a);
+            }
+
+            for (int i = 0; i < _townCount && i < _townMarkers.Count; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (!m.Pill.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                Rect box = PillRect(m.Root.anchoredPosition, m.Pill);
+                bool hide = (crew.width > 0f && box.Overlaps(crew)) || !Inside(LocalToScreenView(box), area);
+                if (hide && !_townLabelMasked[i])
+                {
+                    LabelsMaskedByCameraTotal++;
+                }
+
+                masked += hide ? 1 : 0;
+                MaskPill(m.Pill, ref _townLabelMasked[i], hide, a);
+            }
+
+            LabelsMaskedByCamera = masked;
+        }
+
+        // El rótulo de la parada siguiente, corrido lo justo para quedar entero en area con la escala de ahora (en dp locales: lo que
+        // se ve, entre la escala). Si algo lo recolocó desde el fotograma anterior, esa es su base.
+        private void ShiftNextLabel(int i, Vector2 c, RectTransform pill, Rect area)
+        {
+            if (_nextShiftIndex != i || pill.anchoredPosition != _nextShiftedAt)
+            {
+                _nextShiftIndex = i;
+                _nextShift = Vector2.zero;
+            }
+
+            Vector2 basePos = pill.anchoredPosition - _nextShift;
+            pill.anchoredPosition = basePos;
+            Rect seen = LocalToScreenView(PillRect(c, pill));
+            float dx = seen.xMin < area.xMin ? area.xMin - seen.xMin : (seen.xMax > area.xMax ? area.xMax - seen.xMax : 0f);
+            float dy = seen.yMin < area.yMin ? area.yMin - seen.yMin : (seen.yMax > area.yMax ? area.yMax - seen.yMax : 0f);
+            float z = Mathf.Max(0.01f, _camZoom);
+            _nextShift = new Vector2(dx / z, -dy / z); // la vista va con y hacia abajo; el contenido, hacia arriba
+            pill.anchoredPosition = basePos + _nextShift;
+            _nextShiftedAt = pill.anchoredPosition;
+        }
+
+        // Apaga (o devuelve a la opacidad a) la píldora si cambia. Sin asignaciones.
+        private static void MaskPill(RectTransform pill, ref bool masked, bool hide, float a)
+        {
+            if (masked == hide)
+            {
+                return;
+            }
+
+            masked = hide;
+            SetPillAlpha(pill, hide ? 0f : a);
+        }
+
+        // Todo como estaba: los rótulos apagados por la cámara vuelven a la opacidad del primer plano (1 sin él) y el de la parada
+        // siguiente, a su sitio.
+        private void ClearLabelMask()
+        {
+            float a = _closeUpLabelAlpha < 0f ? 1f : _closeUpLabelAlpha;
+            for (int i = 0; i < _stopLabelMasked.Length; i++)
+            {
+                if (_stopLabelMasked[i])
+                {
+                    _stopLabelMasked[i] = false;
+                    if (i < _stopLabels.Count)
+                    {
+                        SetPillAlpha(_stopLabels[i].Pill, a);
+                    }
+                }
+            }
+
+            for (int i = 0; i < _townLabelMasked.Length; i++)
+            {
+                if (_townLabelMasked[i])
+                {
+                    _townLabelMasked[i] = false;
+                    if (i < _townMarkers.Count)
+                    {
+                        SetPillAlpha(_townMarkers[i].Pill, a);
+                    }
+                }
+            }
+
+            if (_nextShiftIndex >= 0 && _nextShiftIndex < _stopLabels.Count)
+            {
+                RectTransform pill = _stopLabels[_nextShiftIndex].Pill;
+                if (pill.anchoredPosition == _nextShiftedAt)
+                {
+                    pill.anchoredPosition -= _nextShift;
+                }
+            }
+
+            _nextShiftIndex = -1;
+            _nextShift = Vector2.zero;
+            _labelMaskOn = false;
+            LabelsMaskedByCamera = 0;
+        }
+
+        // La canoa con su mástil, sus banderas y la tripulación donde va ahora (coordenadas locales del contenido).
+        private Rect CrewBoxNow()
+        {
+            if (!_hasCanoe || !_canoe.gameObject.activeSelf)
+            {
+                return default;
+            }
+
+            Rect box = CanoeBoxLocal;
+            if (_mast != null && _mast.gameObject.activeInHierarchy)
+            {
+                box = Union(box, LocalBox(_mast.rectTransform));
+            }
+
+            for (int k = 0; k < _flagCount && k < _flagImages.Length; k++)
+            {
+                Image? flag = _flagImages[k];
+                if (flag != null && flag.gameObject.activeInHierarchy)
+                {
+                    box = Union(box, LocalBox(flag.rectTransform));
+                }
+            }
+
+            if (_guide != null && _guide.gameObject.activeInHierarchy)
+            {
+                Rect g = LocalBox(_guide.rectTransform);
+                box = Union(box, g);
+                if (_tucuxi != null && _tucuxi.gameObject.activeInHierarchy)
+                {
+                    box = Union(box, TucuxiBoxBeside(g, _canoeFacing));
+                }
+            }
+
+            return box;
         }
     }
 }

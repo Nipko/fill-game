@@ -243,6 +243,8 @@ namespace AF.UI
         partial void CapiOpen(MapOpenSource source)
         {
             ResetCamera();
+            RefitsAfterJourney = 0;
+            LabelsMaskedByCameraTotal = 0;
             _lightMs = -1f;
             _townGlowMs = -1f;
             if (_townGlow != null)
@@ -446,6 +448,7 @@ namespace AF.UI
             _capi.Traveling = traveling;
             _capi.Tick(dtMs);
             TickCamera(dtMs, traveling);
+            LabelsFollowCamera(traveling); // segunda vuelta de la r2d: los rótulos, fuera de la canoa que pasa y dentro de la pantalla
             TickLight(dtMs);
             TickTownGlow(dtMs);
             ApplyCapiPose();
@@ -981,6 +984,9 @@ namespace AF.UI
             LiveOffset();
         }
 
+        /// <summary>Veces que los rótulos y las placas se volvieron a encajar al acabar un viaje desde que se abrió el Mapa (tests).</summary>
+        internal int RefitsAfterJourney { get; private set; }
+
         // Los rótulos y las placas, otra vez encajados en el encuadre de ahora (como al final de LayoutView). Una vez por viaje.
         private void RefitAfterJourney()
         {
@@ -988,6 +994,8 @@ namespace AF.UI
             {
                 return;
             }
+
+            RefitsAfterJourney++;
 
             CuiasRestore();
             PlatesFitView();
@@ -1145,6 +1153,7 @@ namespace AF.UI
             }
 
             _camZoom = 1f;
+            LabelsFollowCamera(false);
         }
 
         // ============================================================================================ luz y pueblos

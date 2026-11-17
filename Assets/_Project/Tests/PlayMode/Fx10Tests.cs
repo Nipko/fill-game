@@ -455,24 +455,13 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
             Assert.That(map.CatchingUp, Is.True, "«ponerse al día» por el tramo del 300");
-            // Madre de Dios, aún futuro al empezar el viaje. Observación 2 de la prueba r2d de la 1.1: la parada siguiente (la 31, aún
-            // boya al empezar) ya no cede su sitio, y la placa del mundo 7, el que se juega, puede quedarse sin él al abrir (FX10: una
-            // placa sin sitio no sale); lo que no falta nunca es el rótulo de la parada siguiente con «faltan N».
+            // Madre de Dios, aún futuro al empezar el viaje. Observación 2 de la prueba r2d de la 1.1 [P]: la parada siguiente (la 31,
+            // aún boya al empezar) ya no cede su sitio, y la placa del mundo 7, el que se juega, se queda sin él al abrir y no sale
+            // (FX10: una placa sin sitio no sale); el rótulo de la parada siguiente con «faltan N», sí.
             map.Tick(16f);
-            bool hidden7 = PlateOfWorldHidden(map, 7);
-            if (hidden7)
-            {
-                Assert.That(map.StopLabelLocalRect(map.RemainingStopN()).width, Is.GreaterThan(0f), "tramo del 300, al abrir: sin la placa del mundo 7, el rótulo de la parada siguiente");
-            }
-            else
-            {
-                AssertWorldPlateSeen(map, 7, "tramo del 300, al abrir");
-            }
-            (int moves, _) = CatchUpAndCheck(map, "tramo del 300");
-            if (!hidden7)
-            {
-                Assert.That(moves, Is.GreaterThan(0), "tramo del 300: al abrir, el arreglo mueve alguna placa para que quede entera (observación 3)");
-            }
+            Assert.That(PlateOfWorldHidden(map, 7), Is.True, "tramo del 300, al abrir: la placa del mundo 7, sin sitio");
+            Assert.That(map.StopLabelLocalRect(map.RemainingStopN()).width, Is.GreaterThan(0f), "tramo del 300, al abrir: el rótulo de la parada siguiente");
+            CatchUpAndCheck(map, "tramo del 300");
             Assert.That(Worlds(map), Does.Contain(8), "la placa del mundo 8 (Madidi)");
             Assert.That(map.HomeWindowShown, Is.True, "la ventanita de casa, a la vista (como en el teléfono)");
             CheckTheViews(map, "tramo del 300");
