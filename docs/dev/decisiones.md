@@ -4643,6 +4643,14 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **«Mundo» justo al acabar el viaje del 10** (el 79, con el tucuxi por presentar). Su primer plano apagaba los rótulos hasta que la cámara volvía del todo, unos 3,6 s.
   - **[P] del integrador:** al volver, los rótulos y las placas reaparecen en cuanto el zoom baja de ×1,15 (`CloseUpLabelsBackBelow`). A la ida se siguen apagando desde el primer fotograma.
 
+- **Pulido de la r2d** (rama `v11/mapa-r2d-pulido`, por las capturas del integrador: Leticia pegada al borde y «Lago de Tefé» bajo la canoa):
+  - Mientras la canoa viaja o la cámara escala (acercamiento de llegada, cola del primer plano), los rótulos de parada y de pueblo que pisan la canoa (con su mástil, Rosa y el tucuxi) o que se salen del borde se ocultan en cada fotograma, y vuelven al parar.
+  - El rótulo de la parada siguiente no se oculta nunca: se corre lo justo para quedar entero.
+  - Las placas de mundo siguen la misma regla. La que sale sola se corre, y se oculta si quedaría bajo la ventanita de casa. La placa de destino de la secuencia del 10 queda fuera de esta regla.
+  - **[P] del integrador:**
+    - los rótulos se encajan con el margen de las placas (`LabelEdgeDp`, 4 dp);
+    - un rótulo de pueblo que queda cortado con el encuadre quieto prueba el otro lado y, si tampoco cabe, no sale; vuelve al soltar un arrastre (las placas vuelven en cada paso del arrastre);
+    - con «Reducir movimiento» no hay viaje, así que no se recoloca nada al acabar.
 ### D-051, añadido del 2026-10-28: la intro de la marca dura unos 3,5 s y el vertido va fluido
 
 - **Estado:** pedido por el dueño en el chat el 2026-10-28: «podemos dejar la animación del principio también un poco más fluida, se siente muy tosca el vertido como pocos fotogramas, y podemos dejarla un segundo más para apreciarla mejor». Cambia la duración del añadido del 2026-10-26 (2,5 s); lo demás de ese añadido sigue.
