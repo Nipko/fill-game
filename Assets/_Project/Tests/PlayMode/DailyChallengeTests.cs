@@ -389,6 +389,7 @@ namespace AF.Tests.PlayMode
             ctx.UndoStock = 0;
             ctx.UndoAdReady = false;
             ctx.Seeds = 0;
+            ctx.UndoUseless = false; // la variante es de un bloqueo con historial (sin vertidos, Marea no se ofrecería: D-014, añadido del 2026-11-17)
             GameScreen view = daily.View!;
             view.ShowStuckVariant(StuckModalModel.Build(ctx, flow.Boosters));
             view.Stuck.Panel.parent.gameObject.SetActive(true); // el panel a la vista, como con un bloqueo de verdad
