@@ -430,6 +430,7 @@ namespace AF.UI
 
                 _capiSnap = false;
                 SetCargo(_catchTo);
+                ClearLabelMask(); // el encuadre final y la recolocación miran los rótulos en su sitio, no corridos ni apagados por la cámara
                 if (_capiFollowed)
                 {
                     _capiFollowed = false;
@@ -996,6 +997,7 @@ namespace AF.UI
             }
 
             RefitsAfterJourney++;
+            ClearLabelMask(); // los rótulos, en su sitio antes de volver a encajarlos
 
             CuiasRestore();
             PlatesFitView();
