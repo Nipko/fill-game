@@ -455,9 +455,24 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
             Assert.That(map.CatchingUp, Is.True, "«ponerse al día» por el tramo del 300");
-            AssertWorldPlateSeen(map, 7, "tramo del 300, al abrir"); // Madre de Dios, aún futuro al empezar el viaje
+            // Madre de Dios, aún futuro al empezar el viaje. Observación 2 de la prueba r2d de la 1.1: la parada siguiente (la 31, aún
+            // boya al empezar) ya no cede su sitio, y la placa del mundo 7, el que se juega, puede quedarse sin él al abrir (FX10: una
+            // placa sin sitio no sale); lo que no falta nunca es el rótulo de la parada siguiente con «faltan N».
+            map.Tick(16f);
+            bool hidden7 = PlateOfWorldHidden(map, 7);
+            if (hidden7)
+            {
+                Assert.That(map.StopLabelLocalRect(map.RemainingStopN()).width, Is.GreaterThan(0f), "tramo del 300, al abrir: sin la placa del mundo 7, el rótulo de la parada siguiente");
+            }
+            else
+            {
+                AssertWorldPlateSeen(map, 7, "tramo del 300, al abrir");
+            }
             (int moves, _) = CatchUpAndCheck(map, "tramo del 300");
-            Assert.That(moves, Is.GreaterThan(0), "tramo del 300: al abrir, el arreglo mueve alguna placa para que quede entera (observación 3)");
+            if (!hidden7)
+            {
+                Assert.That(moves, Is.GreaterThan(0), "tramo del 300: al abrir, el arreglo mueve alguna placa para que quede entera (observación 3)");
+            }
             Assert.That(Worlds(map), Does.Contain(8), "la placa del mundo 8 (Madidi)");
             Assert.That(map.HomeWindowShown, Is.True, "la ventanita de casa, a la vista (como en el teléfono)");
             CheckTheViews(map, "tramo del 300");
@@ -720,6 +735,20 @@ namespace AF.Tests.PlayMode
             moves = Mathf.Max(moves, map.PlateFitMoves);
             Debug.Log("FX10 " + at + ": PlateFitMoves " + open + " al abrir, " + moves + " como mucho");
             return (open, moves);
+        }
+
+        // La placa del mundo world existe y FX10 la ocultó (sin sitio con este encuadre).
+        private static bool PlateOfWorldHidden(RiverMapScreen map, int world)
+        {
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                if (map.SilhouetteWorld(i) == world)
+                {
+                    return map.PlateFitHidden(i);
+                }
+            }
+
+            return false;
         }
 
         // La placa del mundo world sale, no está oculta y asoma a la zona visible.
