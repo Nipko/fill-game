@@ -161,3 +161,4 @@ Las dos muestras de la Tinaja se metieron con `adb push`, como en la primera ron
 - **Las dos salidas:**
   - **subir el presupuesto de clase A a unos 485 MB** cubre el peor caso medido (480,6);
   - **mantener los 450 MB** exige recortar unos 31 MB de la memoria nativa del Mapa o de los datos mapeados del APK, porque ya no viene del `libil2cpp`.
+- **Respuesta del dueño (2026-11-22, a la vista de esta hoja):** «deja asi la memoria». No se hacen más recortes para la 1.1. El cambio de D-060 en `decisiones.md`, con el tope nuevo, queda para el integrador.
