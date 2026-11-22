@@ -4595,6 +4595,7 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
   - sin clip, la Lancha suena a −19 dBFS, el pico de su ficha, 1 dB menos que el remo de Capi;
   - la fanfarria se acepta como montaje original de muestras CC0, con licencia `cc0`. El encargo pedía obra original con cesión total, y la licencia `cc0` de las fuentes cumple ese fin para anuncios y tráilers.
 - **Pendiente del dueño:** escuchar las tres piezas en el teléfono, que es la condición del encargo. Una que no convenza vuelve a Gemini con su comentario.
+- **Aceptados por el dueño (2026-11-22):** los oyó en el S23 Ultra, dentro del juego (el Aguapé en el 303, la Lancha en el 363 y el estreno de la Liga, todos desde su clip), y en los altavoces del PC. En el chat con el integrador dijo: «si, me convencen los tres». Entran en la 1.1 tal cual.
 
 ### D-069, añadido del 2026-11-15: arreglos de la segunda ronda de la 1.1 en el teléfono
 
@@ -4868,6 +4869,18 @@ Cierra el «pendiente aparte» de D-040 y Q-B13-9 con su recomendada, que el due
 - **Si sigue por encima de 450 MB, decide el dueño** entre dos caminos:
   - subir el presupuesto de clase A a unos 480 MB, como propone Spark. El exceso es código mapeado que Android recupera, y no hubo cierres por memoria;
   - seguir recortando (profundidad y estencil, `GC.Collect` tras el catálogo, arte por código más tarde).
+
+### Añadido de D-060 del 2026-11-22: la memoria se queda como está para la 1.1
+
+- **Medida:** tercera ronda en el Moto G23 (`docs/dev/traspaso/pruebas-telefono-2026-11-22-moto-g23-r3.md`), con IL2CPP «smaller» y el lector JSON nuevo.
+  - El ensayo de release queda en 447,4 MB en el inicio.
+  - Desde que se abre el Mapa, se pasa del tope por 24-31 MB.
+  - El exceso es sobre todo código mapeado, que Android recupera, y no hubo cierres por memoria.
+- **Decisión del dueño (2026-11-22):** se lo dijo a la sesión del Moto («deja asi la memoria») y lo confirmó al integrador con la opción recomendada «Sí, déjala así». No se hacen más recortes, y la 1.1 sale con estas cifras.
+- **Lo que no cambia:** 08 §5.4 mantiene PSS ≤ 450 MB como objetivo de clase A. Las medidas que quedan se pueden retomar en otra versión:
+  - quitar la profundidad y el estencil;
+  - `GC.Collect` tras el catálogo;
+  - crear el arte por código más tarde.
 
 ## Nota técnica del 2026-10-29: el juego no se muestra sobre la pantalla de bloqueo (observación 9 de la jornada 6)
 
