@@ -86,15 +86,20 @@ namespace AF.Tests.EditMode
             ("sfx_mech_card", 16758, 0.547002375, 201.644822),
             ("sfx_morpho_idle", 16758, 0.230192602, 47.5962609),
             ("sfx_store_open", 25578, 0.527327299, 357.160892),
+
+            // Los 2 de la 1.1 no están en el laboratorio: sin clip, reutilizan la receta de lo que sonaba antes de su clip (el
+            // Remolino y el remo de Capi), así que dan lo mismo que esos dos.
+            ("sfx_mech_aguape", 22932, 0.352352768, 108.463291),
+            ("sfx_mech_lancha", 37485, 0.545589447, 301.351950),
         };
 
         private static AudioBank Bank => s_bank ??= AudioBank.Generate();
 
         [Test]
-        public void Catalog_Has61Effects_InEnumOrder_WithTheIdsOfTheList()
+        public void Catalog_Has63Effects_InEnumOrder_WithTheIdsOfTheList()
         {
             Assert.That(Enum.GetValues(typeof(SfxId)).Length, Is.EqualTo(SfxCatalog.Count));
-            Assert.That(SfxCatalog.Count, Is.EqualTo(61), "lista-de-sonidos.md: 13 + 17 + 21 + 10");
+            Assert.That(SfxCatalog.Count, Is.EqualTo(63), "lista-de-sonidos.md: 13 + 17 + 21 + 10, más los 2 de la 1.1");
             string list = File.ReadAllText(LocTables.ProjectPath("docs/audio/lista-de-sonidos.md"), Encoding.UTF8);
             var names = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < SfxCatalog.Count; i++)
@@ -131,7 +136,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void RawSynthesis_IsThePortOfTheLab_ForThe61Effects()
+        public void RawSynthesis_IsThePortOfTheLab_ForThe63Effects()
         {
             Assert.That(LabRaw.Length, Is.EqualTo(SfxCatalog.Count));
             foreach ((string id, int length, double peak, double energy) in LabRaw)
@@ -169,7 +174,7 @@ namespace AF.Tests.EditMode
         {
             AudioBank a = Bank;
             AudioBank b = Task.Run(() => AudioBank.Generate()).Result;
-            Assert.That(AudioBank.ClipCount, Is.EqualTo(89), "61 + 14 notas de select + 14 de tint (bajar la selección no suena, 02 §4.1)");
+            Assert.That(AudioBank.ClipCount, Is.EqualTo(91), "63 + 14 notas de select + 14 de tint (bajar la selección no suena, 02 §4.1)");
             for (int i = 0; i < AudioBank.ClipCount; i++)
             {
                 Assert.That(AudioAnalysis.Hash(b.Pcm(i)), Is.EqualTo(AudioAnalysis.Hash(a.Pcm(i))), "clip " + i + " (" + SfxCatalog.Name(AudioBank.IdOf(i)) + ")");
@@ -191,7 +196,7 @@ namespace AF.Tests.EditMode
                 Assert.That(AudioBank.TintOf(AudioBank.Index(SfxId.Tint, t)), Is.EqualTo(t));
             }
 
-            Assert.That(AudioBank.ClipCount, Is.EqualTo(SfxCatalog.Count + (2 * SfxCatalog.FruitCount)), "61 efectos y las 14 frutas de select y de tint; bajar la selección no suena (02 §4.1)");
+            Assert.That(AudioBank.ClipCount, Is.EqualTo(SfxCatalog.Count + (2 * SfxCatalog.FruitCount)), "63 efectos y las 14 frutas de select y de tint; bajar la selección no suena (02 §4.1)");
         }
 
         [Test]

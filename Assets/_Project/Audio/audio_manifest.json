@@ -1581,6 +1581,33 @@
       "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
       "url": "https://github.com/sgossner/VSCO-2-CE",
       "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "sfx_mech_aguape",
+      "file": "sfx/sfx_mech_aguape.wav",
+      "license": "cc0",
+      "source": "Roce húmedo de hojas flotantes de aguapé (Walk_in_the_rainforest.ogg PD + cabasa/shaker VSCO-2-CE CC0) + agua que se abre con shhh-plash suave (Ducks_landing_in_water.ogg PD + 433589_stream-river-water.wav CC0) + burbuja redonda al liberarse el grupo (Water_bubbles_chortling.ogg + Pouring_water_bottles.ogg PD)",
+      "author": "Tintalú Sound Design / Wikimedia Commons (CC0/PD) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Ducks_landing_in_water.ogg",
+      "notes": "Masterizado a 48 kHz / 16 bits PCM mono para altavoz móvil, sin sonidos de hielo ni cristal"
+    },
+    {
+      "id": "sfx_mech_lancha",
+      "file": "sfx/sfx_mech_lancha.wav",
+      "license": "cc0",
+      "source": "Motor de popa pequeño que llega y baja de vueltas puc-puc (slitdrum/curimbó/tumba VSCO-2-CE CC0 + Shallow_small_river.ogg PD) + golpe sordo de casco de madera contra el muelle (logdrum/slitdrum/cajón CC0) + chapoteo de ola en la orilla (On_a_pebble_beach.ogg + Ocean_Waves_on_a_Tropical_Beach.ogg + Ducks_landing_in_water.ogg CC0/PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0) & Wikimedia Commons (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:On_a_pebble_beach.ogg",
+      "notes": "Masterizado a 48 kHz / 16 bits PCM mono para altavoz móvil; claramente diferenciado del remo de Capi"
+    },
+    {
+      "id": "sting_league_debut",
+      "file": "music/stingers/sting_league_debut.wav",
+      "license": "cc0",
+      "source": "Fanfarria luminosa del estreno de la Liga en Do mayor pentatónico: golpe inicial de maracá, curimbó y tambor de marco + frase ascendente de guitarra acústica y flauta de madera con destellos de marimba de chonta y gotas afinadas + acorde abierto C6/9 (VSCO-2-CE & FreePats CC0 + Pouring_wine.ogg PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & FreePats (CC0) & Wikimedia Commons (PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 16 bits PCM estéreo en Do mayor pentatónico, sin metales militares ni voces"
     }
   ]
 }

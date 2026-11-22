@@ -168,8 +168,8 @@ namespace AF.Presentation
         // aparte (BuildBeaconHalo), para que salga de la caja de la baliza.
         private Sprite BuildMapBeacon(bool lit)
         {
-            const float px = UiPxPerDp;
-            const float k = UiPxPerDp * BeaconArtScale; // px por dp de diseño
+            float px = UiPxPerDp;
+            float k = UiPxPerDp * BeaconArtScale; // px por dp de diseño
             const float axis = MapBeaconWidthDp * 0.5f / BeaconArtScale;
             int pw = Mathf.RoundToInt(MapBeaconWidthDp * px);
             int ph = Mathf.RoundToInt(MapBeaconHeightDp * px);
@@ -206,7 +206,7 @@ namespace AF.Presentation
         // El halo: un disco blanco opaco hasta el canto del farol (unos 4 dp del centro) que se apaga hasta el borde de la pieza.
         private Sprite BuildBeaconHalo()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = MapBeaconHaloDp;
             const float inner = 4f;
             int pw = Mathf.RoundToInt(size * k);
@@ -234,7 +234,7 @@ namespace AF.Presentation
         // mismo centro que el vidrio en una caja MiniCuiaRimPadDp más grande por cada lado.
         private Sprite BuildMiniCuiaRim()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float u = MiniCuiaUnitDp;
             const float pad = MiniCuiaRimPadDp;
             const float axis = (MiniCuiaWidthDp * 0.5f) + pad;
@@ -269,8 +269,8 @@ namespace AF.Presentation
         // con los lóbulos de fuera del envés plateado.
         private Sprite BuildMapHome()
         {
-            const float px = UiPxPerDp;
-            const float k = UiPxPerDp * HomeArtScale; // px por dp de diseño
+            float px = UiPxPerDp;
+            float k = UiPxPerDp * HomeArtScale; // px por dp de diseño
             const float axis = 20f;
             int pw = Mathf.RoundToInt(MapHomeWidthDp * px);
             int ph = Mathf.RoundToInt(MapHomeHeightDp * px);

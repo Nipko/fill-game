@@ -79,8 +79,8 @@ namespace AF.Tests.EditMode
         [Test]
         public void StepKinds_AreTheContract_WithoutCaveReceive()
         {
-            string[] expected = { "Reveal", "MudWash", "Receive", "Open", "Seal", "Release", "RainDrop", "RainWait", "RainEnd", "Bite", "BiteLost", "Unhook", "Upend" };
-            Assert.That(Enum.GetNames(typeof(MechanicStepKind)), Is.EqualTo(expected), "el mordisco lo ejecuta la cueva: no hay CaveReceive; la suelta de la Tinaja (TJ3), al final");
+            string[] expected = { "Reveal", "MudWash", "Receive", "Open", "Seal", "Release", "RainDrop", "RainWait", "RainEnd", "Bite", "BiteLost", "Unhook", "Upend", "Loosen", "Dock" };
+            Assert.That(Enum.GetNames(typeof(MechanicStepKind)), Is.EqualTo(expected), "el mordisco lo ejecuta la cueva: no hay CaveReceive; la suelta de la Tinaja (TJ3), y después la suelta del Aguapé y el atraque de la Lancha (D-068), al final");
         }
 
         [Test]

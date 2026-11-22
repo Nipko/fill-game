@@ -13,7 +13,7 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Paradas del Mapa del río <c>af-river-stops/1</c> en el cliente (D-013; 08 §2.2 y §4.5; contrato 30; tarea M1.2): el lector
+    /// Paradas del Mapa del río <c>af-river-stops/2</c> en el cliente (D-013; 08 §2.2 y §4.5; contrato 30; tarea M1.2): el lector
     /// acepta el JSON mínimo y el archivo real, rechaza cada caso inválido con la ruta del valor (las reglas de
     /// <c>tools/river-map/stops.py --check</c>, entre ellas que la última parada termine en <see cref="WorldTable.LastLevelOf"/> de
     /// su mundo), y las búsquedas (<see cref="RiverStopCatalog.StopOf"/>, <see cref="RiverStopCatalog.ArrivalOnWin"/>…) no
@@ -81,7 +81,7 @@ namespace AF.Tests.EditMode
         private static IEnumerable<TestCaseData> InvalidCases()
         {
             yield return Case("no es JSON", "{\"format\": ", "no son JSON válido");
-            yield return Case("format ajeno", Doc(new[] { Stop(0) }, format: "af-river-map/1"), "format");
+            yield return Case("format ajeno", Doc(new[] { Stop(0) }, format: "af-river-map/2"), "format");
             yield return Case("sin paradas", Doc(Array.Empty<string>()), "stops");
             yield return Case("n no contiguo", Doc(Replace(TwoWorlds(), 1, Stop(2, world: 2, id: "uno"))), "stops[1].n");
             yield return Case("levels fuera de la cadencia", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio", levels: "[21, 31]"))),

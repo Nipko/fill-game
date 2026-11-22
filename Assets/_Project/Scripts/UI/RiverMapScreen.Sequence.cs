@@ -134,6 +134,7 @@ namespace AF.UI
         private bool _seqDone;
         private bool _seqSkipped;
         private bool _seqPlaceDirty;
+        private bool _seqEndingForView; // SetView acaba la secuencia y cambia de vista: lo que se coloca, con la vista nueva
         private float _seqMs;
         private float _seqOutMs = -1f;
         private int _seqTripFromMs;
@@ -299,7 +300,7 @@ namespace AF.UI
             _seqLayer = UiBuilder.Rect("L10Sequence", root);
             _seqSkip = UiBuilder.BareButton("L10Skip", _seqLayer, () => TapL10Sequence());
             A11yLabels.Set(_seqSkip, () => A11yText.TapToContinue); // TalkBack: «Continuar» salta lo que queda (D-053)
-            UiBuilder.Stretch((RectTransform)_seqSkip.transform);
+            ScreenColumn.Bleed((RectTransform)_seqSkip.transform); // también en los lados de la columna (añadido de D-059)
 
             _seqPlate = UiBuilder.Rect("L10FactPlate", _seqLayer);
             _seqPlateGroup = _seqPlate.gameObject.AddComponent<CanvasGroup>();
@@ -376,6 +377,7 @@ namespace AF.UI
                 if (a <= 0f)
                 {
                     HideL10Pieces();
+                    PlatesAfterL10Frame(); // observación 3 de la r2c: con la placa del destino en su sitio, todas enteras a la vista
                 }
             }
 
@@ -484,6 +486,7 @@ namespace AF.UI
             bool titino = _houseShown && _houseSloth != null;
             _seqHomeGrown = titino;
             FrameL10(); // TiTino (a su tamaño de la secuencia), Belém y Santarém a la vista: con la casa dentro, el bocadillo
+            PlatesAfterL10Frame(); // observación 3 de la prueba r2c de la 1.1: las placas, enteras con este encuadre (no la del destino)
             SetL10HomeScale(titino && ProgressReduceMotion ? L10HomeScale : 1f); // con movimiento, crece con su rebote
             _seqDim = 1f; // «Norte arriba» fuera y los rótulos que pisa la secuencia, atenuados (se deciden al colocar)
             if (_catchUp)
@@ -569,10 +572,14 @@ namespace AF.UI
             else
             {
                 HideL10Pieces();
+                if (fade && !_seqEndingForView)
+                {
+                    PlatesAfterL10Frame(); // observación 3 de la r2c (al cerrar el Mapa, fade es false: nada que encajar)
+                }
             }
 
             L10SequenceEnded?.Invoke();
-            if (Visible)
+            if (Visible && !_seqEndingForView)
             {
                 EmitLayout(); // el área táctil que la saltaba ya no está
             }
@@ -662,8 +669,8 @@ namespace AF.UI
                 FrameL10();
             }
 
-            float left = FrameInsetDp + FramePadDp;
-            float top = _safeTop + HeaderDp + 8f + FramePadDp;
+            float left = _live ? 0f : FrameInsetDp + FramePadDp; // D-069: el Mapa v2, de borde a borde y bajo la cabecera
+            float top = _live ? _safeTop + HeaderDp : _safeTop + HeaderDp + 8f + FramePadDp;
             if (_seqWithPlate && _seqPlate != null)
             {
                 PlaceL10Plate(left + L10InsetDp, top + L10InsetDp, Mathf.Max(96f, _viewW - (2f * L10InsetDp)));

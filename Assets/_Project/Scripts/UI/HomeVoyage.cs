@@ -209,12 +209,7 @@ namespace AF.UI
             _guideId = guideId;
             _name.text = place;
             _levels.text = _hasNext ? UiText.HomeVoyageLevels(levelsLeft) : string.Empty;
-            Sprite guide = string.Equals(guideId, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? _art.MapBufeo : _art.Rosa;
-            if (_guide.sprite != guide)
-            {
-                _guide.sprite = guide;
-            }
-
+            RefreshGuideSprite();
             if (_laidOut)
             {
                 Relayout();
@@ -272,12 +267,30 @@ namespace AF.UI
         public void SetVisible(bool on)
         {
             on = on && _laidOut;
+            if (on)
+            {
+                RefreshGuideSprite(); // el banner del mundo, al cerrarse, destruye el sprite de Rosa que compartimos
+            }
+
             if (_root.gameObject.activeSelf != on)
             {
                 _root.gameObject.SetActive(on);
             }
 
             SetInteractive(_interactive);
+        }
+
+        // Rosa o el bufeo, según el guía de Apply. El sprite de Rosa es el de ProceduralArt.Rosa, el mismo que usa el banner del
+        // mundo, y ReleaseBannerArt lo destruye al cerrarlo (fallo de la prueba de M1 en el iPhone, 2026-11-01): el Image se
+        // quedaba con un sprite destruido y uGUI pintaba un rectángulo blanco hasta reiniciar. Un sprite destruido compara igual
+        // a null, así que la comparación pide uno nuevo a ProceduralArt (que lo vuelve a generar).
+        private void RefreshGuideSprite()
+        {
+            Sprite guide = string.Equals(_guideId, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? _art.MapBufeo : _art.Rosa;
+            if (_guide.sprite != guide)
+            {
+                _guide.sprite = guide;
+            }
         }
 
         /// <summary>Reducir movimiento: la canoa y Rosa, quietas.</summary>

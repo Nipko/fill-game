@@ -421,6 +421,67 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ClosingTheAppWithTheLoopModalOpen_ReopensIt_AndAfterMareaItResumesPlaying()
+        {
+            // Añadidos de D-014 del 2026-11-06 (estancado solo al repetir) y del 2026-11-17 (Marea saca de vistos lo deshecho) con
+            // 02 §14: en el 66, tras los 12 vertidos del dueño, el modal sale; cerrar la app con él abierto lo reabre al instante
+            // (la sesión rehecha con los 12 vertidos vuelve a ver todos sus tableros). Marea desde el modal deshace el 12.º y deja
+            // jugar en el tablero del 11.º; cerrar la app entonces vuelve a la partida, sin modal.
+            int[][] owner =
+            {
+                new[] { 3, 6 }, new[] { 4, 3 }, new[] { 7, 4 }, new[] { 0, 5 }, new[] { 1, 5 }, new[] { 2, 0 },
+                new[] { 2, 1 }, new[] { 5, 2 }, new[] { 1, 5 }, new[] { 2, 1 }, new[] { 0, 7 }, new[] { 1, 2 },
+            };
+            var rig = new Rig(seeds: 1000, packs: TestPacks.Campaign);
+            rig.Start(66);
+            for (int i = 0; i < owner.Length; i++)
+            {
+                Assert.That(rig.Flow.TapCuia(owner[i][0]).Kind, Is.EqualTo(TapKind.Selected), "vertido " + (i + 1));
+                TapResult poured = rig.Flow.TapCuia(owner[i][1]);
+                Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "vertido " + (i + 1));
+                Assert.That(poured.Pour.Status, Is.EqualTo(i == owner.Length - 1 ? LevelStatus.Stuck : LevelStatus.Playing), "vertido " + (i + 1));
+            }
+
+            OpenModal(rig.Flow);
+            LevelStateData stuckSaved = rig.Store.Load()!;
+            StringAssert.StartsWith("h2|S|", stuckSaved.History);
+            Rig reopened = rig.Reopen();
+            Assert.That(reopened.Flow.Resume(stuckSaved), Is.True);
+            Assert.That(reopened.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal), "el modal se reabre al instante");
+            Assert.That(reopened.Flow.Session.Status, Is.EqualTo(LevelStatus.Stuck));
+            Assert.That(reopened.Flow.Session.AppliedPours, Is.EqualTo(owner.Length));
+            Assert.That(reopened.Flow.Session.UndoEscapes, Is.True, "el modal ofrece Marea");
+            Assert.That(reopened.Economy.Wallet.Canoes.Count, Is.EqualTo(5), "cerrar la app no cuesta canoa");
+
+            Assert.That(rig.Flow.Session.UndoEscapes, Is.True);
+            Assert.That(rig.Flow.Undo(), Is.True, "Marea desde el modal");
+            Assert.That(rig.Flow.Session.AppliedPours, Is.EqualTo(owner.Length - 1));
+            Assert.That(rig.Flow.Session.Status, Is.EqualTo(LevelStatus.Playing), "Marea deja jugar en el tablero del 11.º");
+            for (int i = 0; i < 400; i++)
+            {
+                rig.Flow.Tick(16, true);
+            }
+
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing), "el modal no vuelve");
+            LevelStateData saved = rig.Store.Load()!;
+            Rig again = rig.Reopen();
+            Assert.That(again.Flow.Resume(saved), Is.True);
+            Assert.That(again.Flow.Phase, Is.Not.EqualTo(FlowPhase.StuckModal), "sin modal al volver");
+            Assert.That(again.Flow.Session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(again.Flow.Session.AppliedPours, Is.EqualTo(owner.Length - 1));
+        }
+
+        private static void OpenModal(LevelFlow flow)
+        {
+            for (int i = 0; i < 400 && flow.Phase != FlowPhase.StuckModal; i++)
+            {
+                flow.Tick(16, true);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+        }
+
+        [Test]
         public void AreYouSure_ReopenedWithLivesOff_ReopensTheStuckModalWithThe1To30Footer()
         {
             // ¿Seguro? guardado con las canoas encendidas; biz_feature_lives llega apagado al volver (D-038): sin el embudo con

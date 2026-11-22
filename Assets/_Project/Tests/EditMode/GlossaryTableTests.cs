@@ -248,7 +248,7 @@ namespace AF.Tests.EditMode
                 Assert.That(glossary.ContainsKey(term), Is.True, "falta " + term);
             }
 
-            Assert.That(marked, Is.EqualTo(14 + 13 + 4 + 13 + CulturalBoosters.Length + RowsOfKind(glossary, "fauna") + RowsOfKind(glossary, "place")), "14 tintes, 13 mecánicas sin las de capacidad, 4 personajes (Capi, Rosa, TiTino y los Miquitos), 13 mundos y los comodines culturales");
+            Assert.That(marked, Is.EqualTo(14 + 16 + 4 + 13 + CulturalBoosters.Length + RowsOfKind(glossary, "fauna") + RowsOfKind(glossary, "place")), "14 tintes, 16 mecánicas sin las de capacidad (con el Aguapé, el espeso y la Lancha de la 1.1, D-068), 4 personajes (Capi, Rosa, TiTino y los Miquitos), 13 mundos y los comodines culturales");
         }
 
         [Test]

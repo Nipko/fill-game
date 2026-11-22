@@ -205,6 +205,51 @@ namespace AF.GameFlow
         /// <summary><c>intro_mechanic</c> del estreno de la Hoja (el 43; 02 §9.1 M1; 08 §4.1).</summary>
         public const string HojaIntroMechanic = "hoja";
 
+        /// <summary><c>intro_mechanic</c> del estreno del Aguapé (el 303 de la curva 2; D-068).</summary>
+        public const string AguapeIntroMechanic = "aguape";
+
+        /// <summary><c>intro_mechanic</c> del estreno del Aguapé espeso (ciclo 341-360; D-068) [P].</summary>
+        public const string AguapeThickIntroMechanic = "aguape_n2";
+
+        /// <summary><c>intro_mechanic</c> del estreno de la Lancha (el 363 de la curva 2; D-068).</summary>
+        public const string LanchaIntroMechanic = "lancha";
+
+        /// <summary>
+        /// El vertido de <paramref name="source"/> a <paramref name="target"/> es el del dedo guía del estreno del Aguapé (y del
+        /// espeso) sobre <paramref name="state"/> (02 §9.1 M8: «puedes verter en ellas, pero no sacar»; D-068) [P]: legal y a una
+        /// cuia que aún lleva la mata. Sin asignaciones.
+        /// </summary>
+        public static bool IsAguapeLesson(BoardState state, int source, int target)
+        {
+            if (state == null || source == target || (uint)source >= (uint)state.Count || (uint)target >= (uint)state.Count)
+            {
+                return false;
+            }
+
+            return state[target].Mechanic == MechanicType.Aguape && PourRules.IsLegal(state, source, target);
+        }
+
+        /// <summary>
+        /// El vertido de <paramref name="source"/> a <paramref name="target"/> es el del dedo guía del estreno de la Lancha sobre
+        /// <paramref name="state"/> (02 §9.1 M11: «atraca cuando tengas k cuias vacías»; D-068) [P]: legal, con la lancha aún sin
+        /// atracar en el tablero, y deja vacío el origen (una vacía más para el atraque). Sin asignaciones.
+        /// </summary>
+        public static bool IsLanchaLesson(BoardState state, int source, int target, PourMode mode)
+        {
+            if (state == null || source == target || (uint)source >= (uint)state.Count || (uint)target >= (uint)state.Count)
+            {
+                return false;
+            }
+
+            bool lancha = false;
+            for (int i = 0; i < state.Count && !lancha; i++)
+            {
+                lancha = state[i].Mechanic == MechanicType.Lancha;
+            }
+
+            return lancha && PourRules.IsLegal(state, source, target) && PourRules.Amount(state, source, target, mode) == state[source].Count;
+        }
+
         /// <summary>
         /// El vertido que señala el dedo guía del nivel <paramref name="level"/> con el estreno <paramref name="introMechanic"/>
         /// (su <c>intro_mechanic</c>, o null): el del tutorial (<see cref="FingerFor(int)"/>, el 1 y el 2) y, además (tarea DC7;
@@ -229,6 +274,18 @@ namespace AF.GameFlow
             if (TinajaTutorial.IsDebut(introMechanic))
             {
                 return FingerLesson.TinajaScoop;
+            }
+
+            // Los estrenos de la 1.1 (02 §9.1 M8 y M11; D-068, fase F4): tutorial de una pantalla con dedo guía [P].
+            if (string.Equals(introMechanic, AguapeIntroMechanic, StringComparison.Ordinal)
+                || string.Equals(introMechanic, AguapeThickIntroMechanic, StringComparison.Ordinal))
+            {
+                return FingerLesson.AguapeSeal;
+            }
+
+            if (string.Equals(introMechanic, LanchaIntroMechanic, StringComparison.Ordinal))
+            {
+                return FingerLesson.LanchaEmpty;
             }
 
             return FingerFor(level);
@@ -324,5 +381,16 @@ namespace AF.GameFlow
         /// En dos pasos: tinaja → su cuia y, después, su cuia → destino (el estreno de la Tinaja, el 323; 02 §9.1 M13; DC7).
         /// </summary>
         TinajaScoop = 4,
+
+        /// <summary>
+        /// Un vertido a una cuia bajo la mata, en cuanto es legal (el estreno del Aguapé, el 303, y el del espeso; 02 §9.1 M8;
+        /// D-068) [P].
+        /// </summary>
+        AguapeSeal = 5,
+
+        /// <summary>
+        /// Un vertido que deja vacío el origen, con la lancha aún sin atracar (el estreno de la Lancha, el 363; 02 §9.1 M11; D-068) [P].
+        /// </summary>
+        LanchaEmpty = 6,
     }
 }

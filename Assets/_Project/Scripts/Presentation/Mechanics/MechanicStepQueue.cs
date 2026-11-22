@@ -728,9 +728,9 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
-            if (!skip)
+            if (!skip && (se.Kind != MechanicStepKind.Loosen || se.Tint == MechanicStepPlan.LoosenLeadTint))
             {
-                AudioBoard.Step(se.Kind, owner); // AU1: el sonido de la mecánica, en el golpe que la dispara
+                AudioBoard.Step(se.Kind, owner); // AU1: el sonido de la mecánica, en el golpe que la dispara (el Aguapé, uno por grupo)
             }
 
             p.Start[e] = start;

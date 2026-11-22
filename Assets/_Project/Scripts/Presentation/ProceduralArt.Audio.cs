@@ -72,7 +72,7 @@ namespace AF.Presentation
                 pc.FillCapsule(14f, 66f, 64f, 12f, 4f, Palette.Cream);
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         // Dos corcheas unidas por la barra: cabezas ovaladas abajo, plicas a su derecha y la barra arriba, algo inclinada.

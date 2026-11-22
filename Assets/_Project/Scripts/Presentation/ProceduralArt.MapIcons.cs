@@ -96,7 +96,7 @@ namespace AF.Presentation
         // Con water, solo la máscara blanca de la cavidad hasta el nivel lleno.
         private Sprite BuildMiniCuia(bool water)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float u = MiniCuiaUnitDp;
             const float axis = MiniCuiaWidthDp * 0.5f;
             const float baseY = 0.5f;
@@ -179,7 +179,7 @@ namespace AF.Presentation
         // cestas ni personas.
         private Sprite BuildMapCanoe()
         {
-            const float k = MascotPxPerDp;
+            float k = MascotPxPerDp;
             int w = Mathf.RoundToInt(MapCanoeWidthDp * k);
             int h = Mathf.RoundToInt(MapCanoeHeightDp * k);
             var pc = new PixelCanvas(w, h);

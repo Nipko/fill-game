@@ -779,7 +779,7 @@ namespace AF.UI
                 _hero.sprite = heroIcon;
             }
 
-            string? tutorial = UiText.Tutorial(intro);
+            string? tutorial = UiText.Tutorial(intro, card.LanchaK);
             _tutorial.gameObject.SetActive(tutorial != null);
             _tutorialSource = tutorial ?? string.Empty;
             _tutorial.text = _tutorialSource;

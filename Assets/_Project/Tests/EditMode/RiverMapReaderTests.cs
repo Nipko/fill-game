@@ -13,7 +13,7 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Geometría del Mapa del río <c>af-river-map/1</c> en el cliente (D-013; 08 §2.2 y §4.5; contrato 29; codificación de P-M1;
+    /// Geometría del Mapa del río <c>af-river-map/2</c> en el cliente (D-013; 08 §2.2 y §4.5; contrato 29; codificación de P-M1;
     /// tarea M3.2): el lector acepta el archivo real y un documento mínimo, decodifica el base64 con sus deltas como
     /// <c>tools/river-map/geometry.py</c> (ida y vuelta, y los primeros puntos del archivo real), calcula la misma s, rechaza
     /// cada caso inválido con la ruta del valor, lee las rutas de las paradas (<c>at</c> y <c>leg</c>) contra el Mapa, y las
@@ -67,10 +67,15 @@ namespace AF.Tests.EditMode
             Assert.That(map.Line("pacaya")!.Water.Count, Is.EqualTo(0), "agua sin comprobar: solo vidrio");
             Assert.That(map.Line("pacaya")!.WaterAt(0.5f), Is.EqualTo(RiverWater.None));
 
-            Assert.That(map.Land.VertexCount, Is.EqualTo(473), "Natural Earth: el continente recortado y sus islas (M5.1)");
-            Assert.That(map.Land.TriangleCount, Is.EqualTo(457), "un anillo de n vértices da n − 2 triángulos: 473 − 2 × 8");
-            Assert.That(map.Land.Zones.Count, Is.EqualTo(1));
-            Assert.That(map.Land.Zones[0].Tile, Is.EqualTo("canopy"));
+            // D-069, M2-1 (af-river-map/2): el dosel de la 1.0 primero (473 vértices y 457 triángulos de Natural Earth, M5.1) y
+            // detrás las manchas de sabana, roca y nieve y la banda de la várzea.
+            RiverLandZone canopy = map.Land.Zones[0];
+            Assert.That(canopy.Tile, Is.EqualTo("canopy"));
+            Assert.That(canopy.First, Is.EqualTo(0));
+            Assert.That(canopy.Count, Is.EqualTo(457), "un anillo de n vértices da n − 2 triángulos: 473 − 2 × 8");
+            Assert.That(map.Land.VertexCount, Is.GreaterThan(473), "Natural Earth (M5.1) y las manchas del Mapa v2");
+            Assert.That(map.Land.Zones.Count, Is.EqualTo(5));
+            Assert.That(map.Land.Zones[4].IsBand, Is.True, "la várzea");
             Assert.That(map.Insets.Count, Is.EqualTo(0), "la 1.0 deja los recuadros vacíos");
             Assert.That(map.Lines[map.Home.Line].Id, Is.EqualTo("para"), "la casa de TiTino, en la bahía de Guajará");
             Assert.That(map.Home.S, Is.EqualTo(0.728669f), "M5.1: el ramal arranca en un vértice del cauce, a ~2 km de Gurupá");
@@ -81,7 +86,7 @@ namespace AF.Tests.EditMode
             Assert.That(map.Viewpoints[0].Id, Is.EqualTo("boca_del_amazonas"));
             Assert.That(map.Viewpoints[0].RevealOn, Is.EqualTo(10));
             Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.stop.estuario.dato_01"));
-            Assert.That(map.Passing.Count, Is.EqualTo(18), "17 de 1-200 y teotonio (M4.5a)");
+            Assert.That(map.Passing.Count, Is.EqualTo(31), "17 de 1-200, teotonio (M4.5a), los 12 pueblos nuevos (D-069, M2-2) y Porto Velho");
             Assert.That(map.Passing[17].Id, Is.EqualTo("teotonio"));
             Assert.That(map.Lines[map.Passing[17].At.Line].Id, Is.EqualTo("madeira"));
             Assert.That(map.Passing[17].Fact, Is.EqualTo("map.stop.teotonio.dato_01"));
@@ -177,7 +182,8 @@ namespace AF.Tests.EditMode
             Assert.That(santarem.Path[0].S1, Is.EqualTo(0f), "el ramal hasta Gurupá");
             Assert.That(map.Lines[santarem.Path[1].Line].Id, Is.EqualTo("amazonas"));
             Assert.That(santarem.Path[1].S1, Is.LessThan(santarem.Path[1].S0), "río arriba, s decrece");
-            Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "monte_alegre" }));
+            Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "almeirim", "prainha", "monte_alegre" }), "con los pueblos nuevos de M2-2");
+            Assert.That(santarem.ViaFraction(3), Is.EqualTo(0.6133f).Within(1e-5f), "Almeirim, al 61 % del tramo en km (M2-2)");
             // Santarém está en la confluencia: se ancla en la boca del Tapajós (geometry.confluence_s, revisión de M5.1; D-030, 1 a) y
             // al llegar se llena.
             Assert.That(santarem.Mouths.Count, Is.EqualTo(2));
@@ -210,7 +216,8 @@ namespace AF.Tests.EditMode
 
             RiverStopRoute heath = routes.At(30)!;
             Assert.That(heath.Id, Is.EqualTo("puerto_heath"));
-            Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A)");
+            Assert.That(heath.Via[heath.Via.Count - 2], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A), el último del Madeira");
+            Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("cachuela_esperanza"), "M2-2: Cachuela Esperanza, ya en el Beni");
             // M4.5b: el 500 baja el Beni y sube el Mamoré por Villa Bella (en HydroRIVERS, M5.1, sus bocas quedan a un tramo
             // de ~0,5 km del Madeira), y el viaje del 560 vuelve a pasar por Teotônio, Madeira abajo.
             RiverStopRoute guayaramerin = routes.At(50)!;
@@ -221,7 +228,7 @@ namespace AF.Tests.EditMode
             Assert.That(map.Lines[guayaramerin.Path[2].Line].Id, Is.EqualTo("mamore"));
             RiverStopRoute jenaro = routes.At(56)!;
             Assert.That(jenaro.Id, Is.EqualTo("jenaro_herrera"));
-            Assert.That(jenaro.Via[0], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A)");
+            Assert.That(jenaro.Via[1], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A); antes, Guajará-Mirim (M2-2)");
             Assert.That(routes.At(69)!.Id, Is.EqualTo("tambo"));
             Assert.That(routes.At(70)!.Id, Is.EqualTo(RiverRoutes.SourceGoalId), "tras la última parada, la meta (FX13)");
             Assert.That(routes.At(71), Is.Null);
@@ -306,8 +313,8 @@ namespace AF.Tests.EditMode
             // map.stop.*.dato_NN, así que las de país, mito y general se prueban aquí.
             string viewpoints = "[" + Viewpoint(fact: "\"map.country.br.dato_01\"") + ", "
                 + "{\"id\": \"mirador_boto\", \"xy\": [20, 20], \"reveal_on\": 20, \"fact\": \"map.myth.boto\"}]";
-            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": \"map.general.cuenca\"}, "
-                + "{\"id\": \"breves\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": \"map.stop.breves.dato_02\"}]";
+            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": \"map.general.cuenca\", \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}, "
+                + "{\"id\": \"breves\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": \"map.stop.breves.dato_02\", \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]";
             RiverMap map = RiverMapReader.Read(Doc(viewpoints: viewpoints, passing: passing));
             Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.country.br.dato_01"));
             Assert.That(map.Viewpoints[1].Fact, Is.EqualTo("map.myth.boto"));
@@ -321,7 +328,7 @@ namespace AF.Tests.EditMode
         {
             yield return new TestCaseData("{\"format\": ", "El Mapa del río no es JSON válido:")
                 .SetName("Reader_RejectsInvalid_WithThePath(no es JSON)");
-            yield return Case("format ajeno", Doc(format: "af-river-stops/1"), "format");
+            yield return Case("format ajeno", Doc(format: "af-river-stops/2"), "format");
             yield return Case("giro distinto", Doc(frame: Frame(rotation: "ccw90")), "frame.rotation");
             yield return Case("lat al reves", Doc(frame: Frame(lat: "[7.0, -18.0]")), "frame.lat");
             yield return Case("lat0 en el polo", Doc(frame: Frame(lat0: "90.0")), "frame.lat0");
@@ -364,9 +371,9 @@ namespace AF.Tests.EditMode
             yield return Case("zonas solapadas", Doc(land: Land(zones: "[{\"id\": \"a\", \"tile\": \"canopy\", \"first\": 0, \"count\": 2}, "
                 + "{\"id\": \"b\", \"tile\": \"rock\", \"first\": 1, \"count\": 1}]")), "land.zones[1]");
             yield return Case("casa en una linea desconocida", Doc(home: "{\"on\": \"nadie\", \"s\": 0.9}"), "home.on");
-            yield return Case("punto de paso en una linea desconocida", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"nadie\", \"s\": 0.8, \"fact\": null}]"),
+            yield return Case("punto de paso en una linea desconocida", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"nadie\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]"),
                 "passing[0].line");
-            yield return Case("punto de paso con el id de un mirador", Doc(passing: "[{\"id\": \"boca\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}]"),
+            yield return Case("punto de paso con el id de un mirador", Doc(passing: "[{\"id\": \"boca\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]"),
                 "passing[0].id");
             yield return Case("dato de mirador fuera de map.*", Doc(viewpoints: "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10, \"fact\": \"fruta.acai\"}]"),
                 "viewpoints[0].fact");
@@ -383,8 +390,8 @@ namespace AF.Tests.EditMode
             yield return Case("zona fuera de los triangulos", Doc(land: Land(zones: "[{\"id\": \"a\", \"tile\": \"canopy\", \"first\": 1, \"count\": 2}]")),
                 "land.zones[0]");
             yield return Case("id de mirador repetido", Doc(viewpoints: "[" + Viewpoint() + ", " + Viewpoint() + "]"), "viewpoints[1].id");
-            yield return Case("id de punto de paso repetido", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}, "
-                + "{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": null}]"), "passing[1].id");
+            yield return Case("id de punto de paso repetido", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}, "
+                + "{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]"), "passing[1].id");
             yield return Case("mirador revelado despues del 1000", Doc(viewpoints: "[" + Viewpoint(reveal: "1001") + "]"), "viewpoints[0].reveal_on");
             yield return Case("mirador sin fact", Doc(viewpoints: "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10}]"), "viewpoints[0].fact");
             yield return Case("fact con belen", Doc(viewpoints: "[" + Viewpoint(fact: "\"map.stop.belen.dato_01\"") + "]"), "viewpoints[0].fact");
@@ -600,13 +607,16 @@ namespace AF.Tests.EditMode
         internal static string Doc(string format = RiverMap.Format, string? frame = null, string? lines = null, string? land = null,
             string insets = "[]", string home = "{\"on\": \"amazonas\", \"s\": 0.9}", string labels = "[{\"country\": \"BR\", \"xy\": [100, 200]}]",
             string viewpoints = "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10, \"fact\": \"map.stop.estuario.dato_01\"}]",
-            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}]")
+            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null, \"vignette\": \"stilts\", \"country\": \"BR\", \"tier\": \"town\"}]", string? banks = null,
+            string? veg = null)
         {
             var sb = new StringBuilder();
             sb.Append("{\"format\": \"").Append(format).Append("\",\n");
             sb.Append("\"frame\": ").Append(frame ?? Frame()).Append(",\n");
             sb.Append("\"lines\": ").Append(lines ?? Lines(Main(), Trib())).Append(",\n");
             sb.Append("\"land\": ").Append(land ?? Land()).Append(",\n");
+            sb.Append("\"banks\": ").Append(banks ?? Banks()).Append(",\n");
+            sb.Append("\"veg\": ").Append(veg ?? Veg()).Append(",\n");
             sb.Append("\"insets\": ").Append(insets).Append(",\n");
             sb.Append("\"home\": ").Append(home).Append(",\n");
             sb.Append("\"labels\": ").Append(labels).Append(",\n");
@@ -654,11 +664,53 @@ namespace AF.Tests.EditMode
         }
 
         internal static string Land(string? verts = null, string? tris = null,
-            string zones = "[{\"id\": \"land\", \"tile\": \"canopy\", \"first\": 0, \"count\": 2}]")
+            string zones = "[{\"id\": \"canopy\", \"tile\": \"canopy\", \"first\": 0, \"count\": 2}, {\"id\": \"varzea\", \"tile\": \"varzea\", \"band\": 40}]",
+            string? shade = null)
         {
             verts ??= EncodePoints(new ushort[] { 0, 0, 65535, 0, 65535, 65535, 0, 65535 });
             tris ??= EncodeIndices(new ushort[] { 0, 1, 2, 0, 2, 3 });
-            return "{\"verts\": \"" + verts + "\", \"tris\": \"" + tris + "\", \"zones\": " + zones + "}";
+            if (shade == null)
+            {
+                var bytes = new byte[SafeVertexCount(verts)];
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    bytes[i] = 255;
+                }
+
+                shade = System.Convert.ToBase64String(bytes);
+            }
+
+            return "{\"verts\": \"" + verts + "\", \"tris\": \"" + tris + "\", \"zones\": " + zones + ", \"shade\": \"" + shade + "\"}";
+        }
+
+        // Vértices de un verts válido; con uno roto, 1 (el caso que se prueba es el verts, no el shade).
+        private static int SafeVertexCount(string verts)
+        {
+            try
+            {
+                return RiverMapReader.DecodePoints(verts, "verts").Length / 2;
+            }
+            catch (LevelFormatException)
+            {
+                return 1;
+            }
+        }
+
+        /// <summary>Orillas de prueba (D-069, M2-1): una playa a la izquierda y un barranco a la derecha en el cauce.</summary>
+        internal static string Banks(string? items = null)
+        {
+            return "[" + (items ?? "{\"line\": \"amazonas\", \"s0\": 0.1, \"s1\": 0.2, \"side\": \"left\", \"kind\": \"beach\", \"w\": 10}, "
+                + "{\"line\": \"amazonas\", \"s0\": 0.1, \"s1\": 0.2, \"side\": \"right\", \"kind\": \"bluff\", \"w\": 6}") + "]";
+        }
+
+        /// <summary>
+        /// Vegetación de prueba (D-069, M2-1): una copa de tamaño 2 y lod 0 a 80 km del río y una palmera de lod 1 y tono 3 a 10 km.
+        /// </summary>
+        internal static string Veg(string? pts = null, string? info = null, string cell = "30")
+        {
+            pts ??= EncodePoints(new ushort[] { 20000, 20000, 40000, 30000 });
+            info ??= System.Convert.ToBase64String(new byte[] { 0x08, 40, 0x11 | (3 << 5), 5 });
+            return "{\"cell\": " + cell + ", \"pts\": \"" + pts + "\", \"info\": \"" + info + "\"}";
         }
 
         private static string Viewpoint(string reveal = "10", string fact = "\"map.stop.estuario.dato_01\"")
@@ -682,7 +734,7 @@ namespace AF.Tests.EditMode
             path ??= n == 0
                 ? "[{\"line\": \"amazonas\", \"s0\": 0.9, \"s1\": 0.9}]"
                 : "[{\"line\": \"amazonas\", \"s0\": 0.9, \"s1\": 0.3}, {\"line\": \"negro\", \"s0\": 1.0, \"s1\": 0.5}]";
-            via ??= n == 0 ? "[]" : "[\"gurupa\"]";
+            via ??= n == 0 ? "[]" : "[{\"id\": \"gurupa\", \"f\": 0.5}]"; // M2-2: cada via, {id, f}
             mouths ??= n == 0 ? "[]" : "[\"negro\"]";
             leg ??= "{\"path\": " + path + ", \"via\": " + via + ", \"mouths\": " + mouths + "}";
             if (id != null && id.Length == 0)
@@ -696,7 +748,7 @@ namespace AF.Tests.EditMode
 
         private static string Routes(params string[] stops)
         {
-            return "{\"format\": \"af-river-stops/1\", \"stops\": [" + string.Join(", ", stops) + "]}";
+            return "{\"format\": \"af-river-stops/2\", \"stops\": [" + string.Join(", ", stops) + "]}";
         }
 
         // El lector escribe «Mapa del río, <ruta>: …» (y las rutas, «Rutas del Mapa, <ruta>: …»): se compara ese prefijo exacto,

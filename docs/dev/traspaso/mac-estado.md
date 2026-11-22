@@ -83,6 +83,25 @@ Rama `mac/m0-setup` desde `origin/integracion-fase1-fase2` (`f10cba52`).
 - **Arreglo de un test:** `AudioFocusPlayTests.Alarm_PausesMusicAndEffects_Gain_BringsThemBack_Duck_LowersTheMusic` fallaba siempre en la Mac por una carrera con el fundido de 0,5 s (esperaba el 90 % y luego pedía el 100 %). Ahora espera al final del fundido. Solo cambia el test; `mac-setup.md` §3 lo explica.
 - **Sin tocar:** `ProjectSettings/ProjectSettings.asset` y `ProjectSettings/GvhProjectSettings.xml`, que Unity reescribe al abrir el proyecto en la Mac (`mac-setup.md` §5), quedan fuera del commit.
 
+## Integración del escritorio (2026-11-03)
+
+- **Integradas en `integracion-fase1-fase2` y `main`:** `mac/m2-sistema` (con M0 y M1) y `mac/fix-rosa-banner`. El code-reviewer (Opus) dio **APROBADO**: Android no cambia. Las siguientes ramas, desde `origin/integracion-fase1-fase2`.
+- **Arreglado al integrar:** `BuildIos.EnsureGadApplicationId` solo pone el App ID de EJEMPLO de AdMob en los builds de desarrollo. Un build de iOS de release sin `adMobIOSAppId` falla (`BuildFailedException`).
+- **Para la Mac (sugerencias de la revisión, no bloquean):**
+  1. Rosa se refresca solo en `HomeVoyage.SetVisible(true)`. Si el banner del mundo se cierra con la travesía ya visible y sin cambiar de pantalla, podría seguir en blanco.
+     - Confirma ese recorrido en el iPhone.
+     - Si falla, refresca al cerrar `WorldBannerView`, con un test que lo cierre de verdad.
+  2. Actualiza el resumen: el país desde la tienda ya está hecho (`b727ebaf`). El docstring de `generar.py` todavía dice «pendiente de D-045».
+
+## Integración del escritorio (2026-11-07): la orientación cambia también en iOS
+
+- **Qué cambió:** con Q-BB-1 (b) (añadido de D-059 del 2026-11-06 (2), en `decisiones.md`), los Player Settings de orientación, que comparten Android e iOS, pasan a autorrotación con las cuatro orientaciones. Lo aplica `ProjectSetup`. El vertical lo pide el código: `AF.UI.OrientationPolicy`, en `BeforeSplashScreen`. En iOS (`iPhoneOnly`) siempre pide vertical.
+- **Efecto en iOS:** el Info.plist declarará las cuatro orientaciones.
+- **Para la Mac:**
+  1. Prueba en el iPhone 16 Pro Max que el juego no gira en ningún momento, incluido abrir con el iPhone tumbado. La pantalla de arranque de iOS puede salir girada un instante.
+  2. Si el arranque girado molesta, una opción es fijar `UISupportedInterfaceOrientations` a vertical en el post-proceso de `BuildIos`, porque solo hay iPhone. Va con su test, para que Android no cambie.
+  3. Actualiza el comentario de `ProjectSetup.Ios.cs` (`IosTargetDevice`), que todavía dice que el juego es vertical en el manifiesto.
+
 ## Enganches para el integrador
 
 - Fusionar `mac/m1-hola-iphone` (incluye `mac/m0-setup`): `ProjectSetup.Ios.cs`, `BuildIos.cs` (con sus `.meta`), `ProjectSetup` como `partial` y las claves de iPhone de `ProjectSettings.asset`. En Windows sin el módulo iOS compila igual: no usa `UnityEditor.iOS.Xcode`.

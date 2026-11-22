@@ -258,7 +258,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(ribbon.Line, Is.Not.Null, what + " con línea");
                     Assert.That(ribbon.Space, Is.EqualTo(map.Space),
                         what + " con el espacio de la vista (" + ribbon.Space.DpPerUnit + " frente a " + map.Space.DpPerUnit + " dp por unidad)");
-                    Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(map.View, ribbon.Line!.Class)).Within(1e-4f),
+                    Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(map.View, ribbon.Line!.Class, map.LiveActive)).Within(1e-4f),
                         what + " con el ancho de la vista");
                     if (drawn)
                     {

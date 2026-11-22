@@ -97,6 +97,7 @@ namespace AF.UI
         internal const float CompactRibbonScale = 0.75f;
 
         private static Sprite? s_ribbon;
+        private static float s_ribbonK; // la densidad con la que se pintó (el tope del arte puede cambiar de escena a escena)
 
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
@@ -410,12 +411,12 @@ namespace AF.UI
         /// </summary>
         internal static Sprite RibbonSprite()
         {
-            if (s_ribbon != null)
+            if (s_ribbon != null && s_ribbonK == ChipPaint.PxPerDp)
             {
                 return s_ribbon;
             }
 
-            const float k = ChipPaint.PxPerDp;
+            float k = ChipPaint.PxPerDp;
             const float wDp = ProceduralArt.RibbonTagWidthDp;
             const float hDp = ProceduralArt.RibbonTagHeightDp;
             const float x0 = ProceduralArt.RibbonTagBodyLeftDp;
@@ -477,6 +478,7 @@ namespace AF.UI
             // pone pixelsPerUnitMultiplier = 1 / s (RibbonPpuFor) para que el remache y la cola escalen con el resto.
             var border = new Vector4(Mathf.Ceil(RibbonSliceLeftDp * k), 0f, Mathf.Ceil(RibbonSliceRightDp * k), 0f);
             s_ribbon = ChipPaint.ToSprite(pixels, w, h, "label_ribbon_wood", border);
+            s_ribbonK = k;
             return s_ribbon;
         }
 

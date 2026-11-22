@@ -91,6 +91,8 @@ namespace AF.UI
         private static Sprite? s_drop;
         private static Sprite? s_plate;
         private static Sprite? s_plateCompact;
+        private static float s_plateK; // la densidad con la que se pintó cada placa (el tope del arte puede cambiar de escena a escena)
+        private static float s_plateCompactK;
 
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
@@ -384,12 +386,12 @@ namespace AF.UI
         internal static Sprite PlateSprite(bool compact)
         {
             Sprite? cached = compact ? s_plateCompact : s_plate;
-            if (cached != null)
+            if (cached != null && (compact ? s_plateCompactK : s_plateK) == ChipPaint.PxPerDp)
             {
                 return cached;
             }
 
-            const float k = ChipPaint.PxPerDp;
+            float k = ChipPaint.PxPerDp;
             float pillH = compact ? CompactHeightDp : HeightDp;
             float hDp = pillH + ShadowDp;
             int w = Mathf.RoundToInt(PlateSpriteWidthDp * k);
@@ -434,10 +436,12 @@ namespace AF.UI
             if (compact)
             {
                 s_plateCompact = sprite;
+                s_plateCompactK = k;
             }
             else
             {
                 s_plate = sprite;
+                s_plateK = k;
             }
 
             return sprite;
@@ -491,7 +495,7 @@ namespace AF.UI
                 }
             }
 
-            s_cloud = ChipPaint.ToSprite(pixels, w, h, "hud_counter_cloud", Vector4.zero);
+            s_cloud = ChipPaint.ToSprite(pixels, w, h, "hud_counter_cloud", Vector4.zero, ProceduralArt.MaxUiPxPerDp); // px fijos, a 3 px/dp
             return s_cloud;
         }
 
@@ -532,7 +536,7 @@ namespace AF.UI
                 }
             }
 
-            s_drop = ChipPaint.ToSprite(pixels, w, h, "hud_counter_drop", Vector4.zero);
+            s_drop = ChipPaint.ToSprite(pixels, w, h, "hud_counter_drop", Vector4.zero, ProceduralArt.MaxUiPxPerDp); // px fijos, a 3 px/dp
             return s_drop;
         }
     }

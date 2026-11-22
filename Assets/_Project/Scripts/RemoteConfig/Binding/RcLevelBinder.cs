@@ -48,5 +48,20 @@ namespace AF.RemoteConfig.Binding
         {
             return rc.TryGet(LevelOverrides.Key, out string json) ? json : LevelOverrides.LocalSource;
         }
+
+        /// <summary>
+        /// <c>lvl_curve2_enabled</c> (08 §9; D-068, P1 B y P10 A): la curva 2 de la 1.1 encendida (también el segmento del A/B). Sin
+        /// valor bool, el default de 08 §9 (<see cref="CurveSelection.EnabledDefault"/>), con el error anotado.
+        /// </summary>
+        public static bool Curve2Enabled(RcSnapshot rc, ICollection<string>? errors = null)
+        {
+            if (rc.TryGet(CurveSelection.EnabledKey, out bool enabled))
+            {
+                return enabled;
+            }
+
+            errors?.Add(CurveSelection.EnabledKey + ": sin valor bool; queda el default (" + (CurveSelection.EnabledDefault ? "true" : "false") + ").");
+            return CurveSelection.EnabledDefault;
+        }
     }
 }

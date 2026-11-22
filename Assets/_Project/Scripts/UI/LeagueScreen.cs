@@ -84,6 +84,11 @@ namespace AF.UI
             _probe = probe;
             _onClose = onClose ?? throw new ArgumentNullException(nameof(onClose));
             _canvas = new OverlayCanvas("LeagueCanvas", host, SortingOrder);
+            _canvas.Changed += () =>
+            {
+                Layout(); // giro o ventana redimensionada con la Liga abierta (añadido de D-059 del 2026-11-06)
+                EmitLayout();
+            };
             ModalKit.Dim("Dim", _canvas.Root, 0.62f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             _title = ModalKit.Header(_panel, art, LeagueText.Title, out _header);

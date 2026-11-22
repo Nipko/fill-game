@@ -157,6 +157,19 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>Solo tests: la imagen de los destellos del río.</summary>
+        internal Image StreaksImage => _streaks;
+
+        /// <summary>
+        /// Pone los destellos del río (<paramref name="streaks"/>; null los quita antes de que el arte los suelte mientras se juega,
+        /// <see cref="ProceduralArt.ReleaseHomeScene"/>).
+        /// </summary>
+        public void SetStreaks(Sprite? streaks)
+        {
+            _streaks.sprite = streaks;
+            _streaks.enabled = streaks != null;
+        }
+
         /// <summary>
         /// Coloca el río en un lienzo de <paramref name="w"/> dp: del horizonte (<paramref name="top"/>) a la viga del muelle
         /// (<paramref name="bottom"/>), con la columna del sol en <paramref name="sunX"/>. Solo al maquetar, nunca por fotograma.

@@ -44,6 +44,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null;
             RiverMapScreen.PlateTestStackedWorld = 0;
             RiverMapScreen.PlateTestObstacle = null;
             RiverMapScreen.PlateTestObstacleWorld = 0;
@@ -58,16 +59,33 @@ namespace AF.Tests.PlayMode
         /// mismo caso sí deja de salir.
         /// </summary>
         [UnityTest]
-        public IEnumerator BasinPlates_TheNextWorld_IsNeverHidden_EvenWithNoRoom([Values(LocLocale.SourceLocale, LocLocale.English)] string locale)
+        public IEnumerator BasinPlates_TheNextWorld_IsNeverHidden_EvenWithNoRoom([Values(LocLocale.SourceLocale, LocLocale.English)] string locale,
+            [Values(false, true)] bool mapV2)
         {
+            // Con la 1.0, una placa por mundo futuro; con el Mapa v2, solo la del mundo siguiente (observación 5 de la prueba r2b de la
+            // 1.1, RiverMapScreen.LiveFutureWorldPlates). La del mundo siguiente nunca se oculta, con las dos; que otra sin sitio no salga, solo
+            // con la 1.0 (con el v2 no hay otra).
+            if (!mapV2)
+            {
+                GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
+            }
+
             yield return Open(locale, 1.3f, 41);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             map.SetView(MapView.Basin);
             map.Tick(16f);
-            Assert.That(map.SilhouetteCount, Is.GreaterThanOrEqualTo(2), "placas de mundos futuros jugando el 41");
+            Assert.That(map.LiveActive, Is.EqualTo(mapV2));
+            if (mapV2)
+            {
+                Assert.That(map.SilhouetteCount, Is.EqualTo(RiverMapScreen.LiveFutureWorldPlates), "placas de mundos futuros jugando el 41");
+            }
+            else
+            {
+                Assert.That(map.SilhouetteCount, Is.GreaterThanOrEqualTo(2), "placas de mundos futuros jugando el 41");
+            }
             int next = map.SilhouetteWorld(0);
             int far = map.SilhouetteWorld(map.SilhouetteCount - 1);
-            foreach (int world in new[] { next, far })
+            foreach (int world in mapV2 ? new[] { next } : new[] { next, far })
             {
                 RiverMapScreen.PlateTestStackedWorld = world;
                 RiverMapScreen.PlateTestObstacleWorld = world;
@@ -127,8 +145,17 @@ namespace AF.Tests.PlayMode
 
         [UnityTest]
         public IEnumerator BasinPlates_NoOverlap_WholeInView_TextFits(
-            [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(100, 130)] int percent)
+            [Values(LocLocale.SourceLocale, LocLocale.English, LocLocale.PortugueseBrazil)] string locale, [Values(100, 130)] int percent,
+            [Values(false, true)] bool mapV2)
         {
+            // Con la 1.0, una placa por mundo futuro; con el Mapa v2, solo la del mundo siguiente (observación 5 de la prueba r2b de la
+            // 1.1, RiverMapScreen.LiveFutureWorldPlates). Lo demás (sitio, sin pisar nada, entera, texto) vale con las dos.
+            if (!mapV2)
+            {
+                GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
+            }
+
+
             float scale = percent / 100f;
             var problems = new List<string>();
             var twoLines = new List<string>();
@@ -142,6 +169,12 @@ namespace AF.Tests.PlayMode
                 map.Tick(16f);
                 yield return null;
                 Canvas.ForceUpdateCanvases();
+                Assert.That(map.LiveActive, Is.EqualTo(mapV2));
+                if (mapV2)
+                {
+                    Assert.That(map.SilhouetteCount, Is.EqualTo(RiverMapScreen.LiveFutureWorldPlates), "jugando el " + play + ": la del mundo siguiente");
+                }
+
                 plates += map.SilhouetteCount;
                 CheckBasinPlates(map, locale, scale, "jugando el " + play.ToString(CultureInfo.InvariantCulture), problems, twoLines, hidden);
             }
@@ -150,7 +183,15 @@ namespace AF.Tests.PlayMode
                 + plates.ToString(CultureInfo.InvariantCulture) + " placas, " + twoLines.Count.ToString(CultureInfo.InvariantCulture) + " en dos líneas, "
                 + hidden.Count.ToString(CultureInfo.InvariantCulture) + " sin sitio, " + problems.Count.ToString(CultureInfo.InvariantCulture) + " problemas\n"
                 + string.Join("\n", twoLines) + (hidden.Count > 0 ? "\n" + string.Join("\n", hidden) : string.Empty));
-            Assert.That(plates, Is.GreaterThan(10), "placas de mundos futuros mirados");
+            // Con la 1.0, todas las de los mundos futuros; con el v2, la del siguiente en cada apertura (todas tienen mundo futuro).
+            if (mapV2)
+            {
+                Assert.That(plates, Is.EqualTo(BasinPlays.Length), "placas de mundos futuros mirados");
+            }
+            else
+            {
+                Assert.That(plates, Is.GreaterThan(10), "placas de mundos futuros mirados");
+            }
             if (percent == 100)
             {
                 Assert.That(twoLines, Is.Empty, "al 100 % las placas van en una línea, como antes");

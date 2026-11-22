@@ -117,6 +117,46 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TheNotebookThatOpensAlone_WritesItsAfLayout_WithTheButtonsWhereTheyAre()
+        {
+            // Observación 7 de la prueba r2b de la 1.1: la libreta que sale sola en el inicio no escribía AF_LAYOUT y los toques
+            // por adb no la veían. Ahora escribe la suya al abrirse, al salir las tarjetas y al sellar.
+            using var log = new AfLayoutLog();
+            yield return Boot(playedToday: true);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Step(boot, Frame);
+            LogbookScreen screen = boot.LogbookScreen!;
+            Assert.That(screen.Visible, Is.True);
+            Assert.That(screen.Source, Is.EqualTo(LogbookOpenSource.Takeover));
+
+            // Detrás pueden salir las líneas del inicio que está debajo (lobby_market…): quien toca usa la última de la libreta.
+            string? open = log.LastOf("logbook", 0);
+            Assert.That(open, Is.Not.Null, "la libreta que sale sola escribe su AF_LAYOUT");
+            Assert.That(open!, Does.Contain("\"source\":\"takeover\",\"choosing\":false"));
+            Assert.That(AfLayoutLog.ButtonIds(open!), Is.EqualTo(new[] { "logbook_today", "logbook_close" }));
+            AfLayoutLog.AssertCenterInside(open!, "logbook_today", screen.CellRect(screen.TodayDay));
+            AfLayoutLog.AssertCenterInside(open!, "logbook_close", (RectTransform)screen.CloseButton.transform);
+
+            Assert.That(screen.PressToday(), Is.True);
+            string choosing = log.RequireLast("logbook", 0, "las tarjetas");
+            Assert.That(choosing, Does.Contain("\"choosing\":true"));
+            Assert.That(AfLayoutLog.ButtonIds(choosing), Is.EqualTo(new[] { "logbook_choice_seeds", "logbook_choice_booster", "logbook_choice_mix", "logbook_close" }));
+            AfLayoutLog.AssertCenterInside(choosing, "logbook_choice_mix", (RectTransform)screen.CardButton(LoginCalendarChoice.Mix).transform);
+
+            screen.CardButton(LoginCalendarChoice.Seeds).onClick.Invoke();
+            string claimed = log.RequireLast("logbook", 0, "tras sellar");
+            Assert.That(AfLayoutLog.ButtonIds(claimed), Is.EqualTo(new[] { "logbook_close" }), "sellada: solo «Cerrar»");
+            AfLayoutLog.AssertCenterInside(claimed, "logbook_close", (RectTransform)screen.CloseButton.transform);
+
+            int before = log.Count;
+            Step(boot, 10 * Frame);
+            Assert.That(log.Count, Is.EqualTo(before), "nunca por fotograma");
+            screen.CloseButton.onClick.Invoke();
+            Step(boot, Frame);
+            Assert.That(log.AllOf("logbook", 0).Count, Is.EqualTo(3), "al abrir, al elegir y al sellar; nada al cerrar");
+        }
+
+        [UnityTest]
         public IEnumerator ANewSession_AfterThirtyMinutes_CanOpenItAgain()
         {
             yield return Boot(playedToday: true);

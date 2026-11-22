@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo: Aguas turbias en una comodidad (304, C -> Tu) sin murky_normal falla MURKY-SLOT, como antes de la fase F1 de D-068 (T1).",
+  "expect_rule": "MURKY-SLOT",
+  "calendar": {
+    "304": "Tu"
+  }
+}

@@ -99,7 +99,7 @@ En el editor, en los tests y en cualquier build sin el backend real, la tienda d
   - Se saltan las compras de más de un producto y los campos con separadores.
 - **No escribe nada en el log** (ni el token ni el UID), no guarda nada en disco y **no abre ninguna conexión propia**: no conoce ningún host. `AfBillingPluginTests` lo vigila (sin `java.net`, HTTP, sockets, `Log`, `SharedPreferences` ni identificadores de publicidad; solo importa la API de facturación, `java.util` y cinco clases de Android).
 - La biblioteca sí envía a Google sus propios registros de diagnóstico (fuente `PLAY_BILLING_LIBRARY` por `com.google.android.datatransport`, leído en `classes.jar`): es Google Play, pero va a Data Safety (**Q-BILL-2**). Unity IAP traía la misma biblioteca, así que no es nuevo.
-- `proguard-rules.pro` como `consumerProguardFiles`: no se renombra nada del paquete `com.amazonfill.billing` (C# lo llama por nombre). Hoy el build no minimiza (`AndroidMinifyRelease: 0`).
+- `proguard-rules.pro` como `consumerProguardFiles`: no se renombra nada del paquete `com.amazonfill.billing` (C# lo llama por nombre). Desde la 1.1 el release va con R8 (`AndroidMinifyRelease: 1`; D-059, añadido del 2026-11-06; `docs/dev/release.md` §8), y estas reglas son las que lo protegen; `ci/check-r8-mapping.ps1` comprueba los nombres en el mapping del AAB.
 
 ### 1.4 El puerto (`AF.IAP.PlayBilling`)
 

@@ -59,7 +59,7 @@ namespace AF.Presentation
             pc.FillCapsule(22f, 34f, 58f, 14f, 3.2f, arrow);
             pc.FillTriangle(new Vector2(64f, 37f), new Vector2(51f, 38f), new Vector2(58f, 27f), arrow);
             pc.FillTriangle(new Vector2(64f, 11f), new Vector2(58f, 21f), new Vector2(51f, 10f), arrow);
-            return MakeSprite(pc, disabled ? "icon_wave_disabled" : "icon_wave", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, disabled ? "icon_wave_disabled" : "icon_wave", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildShuffleWave()

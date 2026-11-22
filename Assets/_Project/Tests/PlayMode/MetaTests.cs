@@ -44,6 +44,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = null;
             GameScreen.DifficultyLightEnabled = true;
             MapArtRule.ForceProvisional = null;
+            GameBootstrap.MapLiveConfigOverride = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
         }
@@ -202,6 +203,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Map_PassedWaypoints_TellTheirNameAndFact()
         {
+            // Los puntos de la 1.0 (y de M2-1): con ui_map_towns apagada. Con ella (D-069, M2-2), los pueblos van con su viñeta
+            // (MapTownsPlayTests) y aquí, al final, Breves con su ficha.
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapTowns = false };
             yield return MapMarkersTests.OpenApp(21); // max 20: los tramos a Santarém y a Alter do Chão
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.PassingCount, Is.GreaterThanOrEqualTo(4));
@@ -225,6 +229,18 @@ namespace AF.Tests.PlayMode
             Assert.That(map.Card!.TitleText, Is.EqualTo("Rápidos de Teotônio"));
             Assert.That(map.Card.FactText, Does.StartWith("Río arriba de Teotônio"));
             Assert.That(map.Card.FactKey, Is.EqualTo("map.stop.teotonio.dato_01"));
+
+            // Con ui_map_towns: Breves es un pueblo de paso, con su viñeta y su ficha; Teotônio, unos rápidos, sigue como punto.
+            GameBootstrap.MapLiveConfigOverride = null;
+            yield return MapMarkersTests.OpenApp(21);
+            map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(IndexOfPassing(map, "breves"), Is.LessThan(0), "ya no es un punto: es un pueblo");
+            int town = map.TownIndexOf("breves");
+            Assert.That(town, Is.GreaterThanOrEqualTo(0));
+            Assert.That(map.TownPassed(town), Is.True);
+            Assert.That(map.TownShown(town), Is.True, "Breves, con su viñeta (nada más importante la pisa)");
+            Assert.That(map.TapTown(town), Is.True);
+            StringAssert.StartsWith("Breves", map.Card!.TitleText);
         }
 
         [UnityTest]

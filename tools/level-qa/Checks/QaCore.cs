@@ -61,6 +61,9 @@ internal sealed class LevelEval
     public int TinajaS0Unproven { get; init; } = -1;
 
     public List<ReliefEval> Relief { get; init; } = [];
+
+    /// <summary>Bot atento ×40 (03 §17 #20; solo informe) en los retos e hitos de la curva 2 con tablero válido; null en los demás.</summary>
+    public double? Attentive { get; init; }
 }
 
 internal sealed class QaContext
@@ -94,6 +97,12 @@ internal static class Evaluator
             ? UnitsPerColor.Uniform(lv.UnitsDefault)
             : UnitsPerColor.FromObject(lv.UnitsOverrides);
         BoardData b = lv.Board;
+        if (lv.PendingTypes.Length > 0)
+        {
+            // Aguapé o Lancha con un núcleo sin F2: no se construye ni se mide (QA-AGUAPE y QA-LANCHA lo dicen).
+            return new LevelEval { Level = lv, Plan = plan, BuildError = $"el nucleo aun no conoce {string.Join(", ", lv.PendingTypes)} (D-068, F2)" };
+        }
+
         BoardBuildResult built = BoardBuilder.Build(
             b.Caps, b.Cuias, b.HasMechanics ? b.Attrs : null, b.Hidden.Length > 0 ? b.Hidden : null, units);
         if (!built.IsValid)
@@ -173,6 +182,7 @@ internal static class Evaluator
             Level = lv,
             Plan = plan,
             State = state,
+            Attentive = plan is { Curve: > 0, Role: SlotRole.Challenge or SlotRole.Milestone } && validation is null ? metrics.AttentiveFail(state, lv.Seed) : null,
             ValidationError = validation,
             Par = par,
             Bot = bot,

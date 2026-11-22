@@ -20,11 +20,11 @@ internal static class MurkyChecks
     public static readonly (string Id, string Rule)[] Ids =
     [
         ("QA-MURKY-FLAG", "murky = true si y solo si hay posiciones en hidden (08 sec. 4.1)"),
-        ("QA-MURKY-T1", "Aguas turbias solo desde el 100 y en niveles Dificil o Muy dificil (02 T1); la tinaja queda fuera (excepcion de D-019, Q-Ti1 A)"),
+        ("QA-MURKY-T1", "Aguas turbias solo desde el 100 y en niveles Dificil o Muy dificil (02 T1); la tinaja queda fuera (excepcion de D-019, Q-Ti1 A); en la curva 2 las Normales las comprueba QA-MURKY-NORMAL (D-068)"),
         ("QA-MURKY-LIMITS", "como mucho 3 cuias turbias y 4 dosis ocultas; T4 (02 T2-T4)"),
         ("QA-MURKY-SAFE", "ruta segura en cada estado de la ruta (03 sec. 8; 02 T5)"),
         ("QA-MURKY-COMBO", "sin Lluvia, Pirana, Liana ni Remolino en el nivel (Q14 A; [P] Remolino)"),
-        ("QA-MURKY-Q9", "estreno del 100: una cuia, 2 dosis ocultas y ninguna otra mecanica (Q9)"),
+        ("QA-MURKY-Q9", "estreno del 100: una cuia, 2 dosis ocultas y ninguna otra mecanica (Q9); el estreno en Normal de la curva 2, QA-MURKY-NORMAL"),
         ("QA-TINAJA-TIER", "dosis de la tinaja por tipo de nivel: estreno, comodidad y practica 3 (2 ocultas); retos 4-5 (3-4); hito 5 (4) (D-019, Q-Ti1 A; 02 sec. 9.1 M13)"),
     ];
 
@@ -65,7 +65,9 @@ internal static class MurkyChecks
             yield break;
         }
 
-        if (lv.Level < 100 || lv.Label == "normal")
+        // Curva 2 (D-068 P7 A; 02 §11 T1): las Aguas turbias también van en comodidades Normales, con sus topes (QA-MURKY-NORMAL).
+        bool curveNormal = e.Plan is { Curve: > 0 } && lv.Label == "normal";
+        if (lv.Level < 100 || (lv.Label == "normal" && !curveNormal))
         {
             yield return Fail("QA-MURKY-T1", $"Aguas turbias en el nivel {lv.Level} con etiqueta {lv.Label}");
         }
@@ -95,7 +97,7 @@ internal static class MurkyChecks
             yield return Fail("QA-MURKY-COMBO", $"Aguas turbias con {MechanicTypes.ToKey(a.Type)}");
         }
 
-        if (lv.Intro == "murky" && (cuias != 1 || murky != 2 || MechanicChecks.Codes(lv.Board).Count != 1))
+        if (lv.Intro == "murky" && e.Plan is not { Curve: > 0 } && (cuias != 1 || murky != 2 || MechanicChecks.Codes(lv.Board).Count != 1))
         {
             yield return Fail("QA-MURKY-Q9", string.Create(CultureInfo.InvariantCulture, $"estreno con {murky} dosis ocultas en {cuias} cuia(s) y mecanicas {string.Join("+", MechanicChecks.Codes(lv.Board))}"));
         }

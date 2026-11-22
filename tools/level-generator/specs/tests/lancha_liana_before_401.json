@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F3b): el reto 372 con la Lancha y la Liana antes del 401 falla CURVE-MECH (02 sec. 9.2 regla 7: Lancha y Liana juntas solo desde el 401).",
+  "expect_rule": "CURVE-MECH",
+  "calendar": {
+    "372": "La+Li (D)"
+  }
+}

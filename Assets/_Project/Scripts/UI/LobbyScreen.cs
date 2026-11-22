@@ -98,6 +98,7 @@ namespace AF.UI
         private readonly Canvas _canvas;
         private readonly CanvasScaler _scaler;
         private readonly RectTransform _root;
+        private readonly ScreenColumn _column;
 
         private readonly Image _skyFill;
         private readonly Image _panorama;
@@ -211,12 +212,14 @@ namespace AF.UI
             _scaler = canvasGo.GetComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             _scaler.referencePixelsPerUnit = 100f;
-            _root = (RectTransform)canvasGo.transform;
+            // La interfaz va en la columna (añadido de D-059 del 2026-11-06; ScreenFrame): en los teléfonos, el lienzo entero.
+            _column = ScreenColumn.Create((RectTransform)canvasGo.transform);
+            _root = _column.Rect;
 
             // ---- Escena: el panorama, la parada de «Jugar», el río vivo, el muelle, la rama de TiTino y el follaje (D-003; D-050). ----
             RectTransform scene = UiBuilder.Rect("Scene", _root);
             Image baseFill = UiBuilder.Image("BaseFill", scene, null, Palette.RiverFar);
-            UiBuilder.Stretch(baseFill.rectTransform);
+            ScreenColumn.Bleed(baseFill.rectTransform); // el agua del río llena los lados de la columna
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop);
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
 
@@ -335,7 +338,7 @@ namespace AF.UI
             // ---- Superposición: «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3), con el inicio atenuado detrás. ----
             _overlay = UiBuilder.Rect("Overlay", _root);
             Image dim = UiBuilder.Image("Dim", _overlay, null, new Color(0.04f, 0.06f, 0.05f, 0.62f), true);
-            UiBuilder.Stretch(dim.rectTransform);
+            ScreenColumn.Bleed(dim.rectTransform);
             _overlayPanel = UiBuilder.Rect("Panel", _overlay);
             _overlaySurface = UiBuilder.ModalBody(_overlayPanel, art);
             _overlayHeader = UiBuilder.Image("HeaderPlate", _overlayPanel, art.HeaderPlate, Color.white);
@@ -379,7 +382,7 @@ namespace AF.UI
         internal NoCanoesPanel NoCanoes => _noCanoes;
 
         /// <summary>
-        /// Paradas del Mapa del río (<c>af-river-stops/1</c>; M2.1). Null = sin el archivo o inválido: el inicio sin fondo de parada,
+        /// Paradas del Mapa del río (<c>af-river-stops/2</c>; M2.1). Null = sin el archivo o inválido: el inicio sin fondo de parada,
         /// sin travesía y sin TiTino. Al cambiarlo, el inicio se rehace en el siguiente fotograma.
         /// </summary>
         public RiverStopCatalog? RiverStops
@@ -789,6 +792,78 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Lo que tardó el último repintado del arte propio del inicio al volver de un nivel (ms; -1 si aún no hubo ninguno):
+        /// <see cref="RestoreHomeScene"/>.
+        /// </summary>
+        public double LastHomeSceneRebuildMs { get; private set; } = -1;
+
+        /// <summary>El arte propio del inicio está suelto (se juega un nivel): <see cref="ReleaseHomeScene"/>.</summary>
+        internal bool HomeSceneReleased => _homeSceneReleased;
+
+        private bool _homeSceneReleased;
+
+        /// <summary>
+        /// Quien más tiene el arte propio del inicio a la vista (la intro del arranque pone la rama de TiTino, <c>BootSplash</c>):
+        /// mientras devuelva true, no se suelta (se soltará al entrar en el nivel siguiente). Lo pone <c>GameBootstrap</c>.
+        /// </summary>
+        public Func<bool>? HomeSceneHeld { get; set; }
+
+        // Al entrar en un nivel: las Image del inicio sueltan los destellos del río, la rama de TiTino y la caja de cuias, y el arte
+        // libera sus texturas (ProceduralArt.ReleaseHomeScene; ≈ 1,5 MiB a 2 px/dp y ≈ 2 MiB a 3 px/dp). El panorama, el muelle, el
+        // follaje y TiTino se quedan: el nivel los pinta también.
+        private void ReleaseHomeScene()
+        {
+            if (_homeSceneReleased || !_art.HomeSceneLoaded || (HomeSceneHeld != null && HomeSceneHeld()))
+            {
+                return;
+            }
+
+            _river.SetStreaks(null);
+            _branch.sprite = null;
+            _crate.sprite = null;
+            _art.ReleaseHomeScene();
+            _homeSceneReleased = true;
+        }
+
+        // Al volver al inicio: repinta lo que soltó ReleaseHomeScene, con los búferes de los lienzos en préstamo (PixelBuffers, como
+        // el Mapa: el heap gestionado no crece por cada vuelta), y mide lo que tarda (AF_ART home_scene en desarrollo).
+        private void RestoreHomeScene()
+        {
+            if (!_homeSceneReleased)
+            {
+                return;
+            }
+
+            _homeSceneReleased = false;
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            bool pool = !PixelBuffers.Pooling;
+            if (pool)
+            {
+                PixelBuffers.BeginPooling();
+            }
+
+            try
+            {
+                _river.SetStreaks(_art.RiverStreaks);
+                _branch.sprite = _art.HomeBranch;
+                _crate.sprite = _art.DockCrate;
+            }
+            finally
+            {
+                if (pool)
+                {
+                    PixelBuffers.EndPooling();
+                }
+            }
+
+            LastHomeSceneRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("AF_ART home_scene " + LastHomeSceneRebuildMs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " ms");
+            }
+        }
+
+        /// <summary>
         /// Muestra la pantalla de <paramref name="screen"/>: el inicio, con «El río sigue creciendo» o Sin canoas encima si
         /// toca; en <see cref="AppScreen.Level"/> se oculta.
         /// </summary>
@@ -803,9 +878,15 @@ namespace AF.UI
 
             if (!visible)
             {
+                if (screen == AppScreen.Level)
+                {
+                    ReleaseHomeScene(); // mientras se juega, sin el arte que solo usa el inicio (memoria.md §7.5, punto 3; D-060)
+                }
+
                 return;
             }
 
+            RestoreHomeScene();
             _overlay.gameObject.SetActive(screen == AppScreen.ContentEnd);
             if (screen == AppScreen.ContentEnd)
             {
@@ -1108,12 +1189,14 @@ namespace AF.UI
 
             // La escala de la pantalla de nivel (GameScreen.CanvasScale): 360 dp de ancho (de 320 a 360 en los teléfonos de ese ancho,
             // Q-B11-5 (a)); si la pantalla es tan ancha que quedarían menos de 640 dp de alto, manda el alto.
-            float scale = GameScreen.CurrentCanvasScale(_screenW, _screenH);
-            _scaler.scaleFactor = scale;
-            _canvasW = _screenW / scale;
-            _canvasH = _screenH / scale;
-            _safeTop = Mathf.Max(GameScreen.MinSafeTop, (_screenH - _safeArea.yMax) / scale);
-            _safeBottom = Mathf.Max(GameScreen.MinSafeBottom, _safeArea.yMin / scale);
+            // En una ventana ancha, la columna (ScreenFrame; añadido de D-059 del 2026-11-06).
+            ScreenFrame frame = ScreenFrame.Compute(_screenW, _screenH, _safeArea, GameScreen.ReadPxPerDp());
+            _scaler.scaleFactor = frame.Scale;
+            _column.Apply(frame);
+            _canvasW = frame.ColumnWidth;
+            _canvasH = frame.CanvasHeight;
+            _safeTop = Mathf.Max(GameScreen.MinSafeTop, frame.InsetTop);
+            _safeBottom = Mathf.Max(GameScreen.MinSafeBottom, frame.InsetBottom);
             Layout();
         }
 

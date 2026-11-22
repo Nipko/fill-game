@@ -1,0 +1,9 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+a11y_map_crew_join_toucan,Se une al viaje: tucán,Joins the trip: toucan,Entrou na viagem: tucano,traducido,traducido
+a11y_map_crew_join_tucuxi,Se une al viaje: tucuxi,Joins the trip: tucuxi,Entrou na viagem: tucuxi,traducido,traducido
+map_crew_join_toucan,¡Se une al viaje! · Tucán,Joins the trip! · Toucan,Entrou na viagem! · Tucano,traducido,traducido
+map_crew_join_tucuxi,¡Se une al viaje! · Tucuxi,Joins the trip! · Tucuxi,Entrou na viagem! · Tucuxi,traducido,traducido
+map_stop_label_remaining,"{place}
+{n:plural:falta {} nivel|faltan {} niveles}","{place}
+{n:plural:{} level left|{} levels left}","{place}
+{n:plural:falta {} nível|faltam {} níveis}",traducido,traducido

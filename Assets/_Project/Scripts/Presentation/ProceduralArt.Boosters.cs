@@ -63,7 +63,7 @@ namespace AF.Presentation
                 pc.FillRoundedRect(21f, 15f, 46f, 40f, 7f, inner);
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconVideo()
@@ -73,7 +73,7 @@ namespace AF.Presentation
             pc.FillRoundedRect(3f, 9f, 57f, 51f, 9f, Palette.FamilyWood.Outline);
             pc.FillRoundedRect(6.5f, 12.5f, 53.5f, 47.5f, 6f, Palette.Cream);
             pc.FillTriangle(new Vector2(24f, 20f), new Vector2(24f, 40f), new Vector2(41f, 30f), Palette.FamilyWater.Base);
-            return MakeSprite(pc, "icon_video", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_video", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconClose()
@@ -87,14 +87,14 @@ namespace AF.Presentation
                 pc.FillCapsule(15f, 51f + oy, 51f, 15f + oy, 5.5f, c);
             }
 
-            return MakeSprite(pc, "icon_close", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_close", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildEmptyBasket()
         {
             // Cesta tejida de fibra (paleta de la cuerda de las cuias), vacía, con dos semillas caídas a la izquierda: «el
             // premio que no se cobra» (04 §6.6) sin el pedestal de monedas de Magic Sort. 96 × 72 dp a 3 px/dp; y hacia arriba.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(96f * k);
             int h = Mathf.RoundToInt(72f * k);
             var pc = new PixelCanvas(w, h);

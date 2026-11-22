@@ -387,7 +387,7 @@ namespace AF.UI
                 }
             }
 
-            if (_lobbyOffer && LobbyClear())
+            if (_lobbyOffer && LobbyClear() && !_leagueDebutOpenPending)
             {
                 // Sin anuncios y la skin salen al volver al inicio (Q-B5-6 [P]), con la sesión de ahora (el cupo es de esta).
                 _lobbyOffer = false;
@@ -481,6 +481,11 @@ namespace AF.UI
             if (PrePromptDueAtCampaignVictory(won))
             {
                 return; // 06 §8.1: el pre-prompt de push va primero; la Mochila (y cualquier oferta) pasa a la siguiente victoria
+            }
+
+            if (LeagueDebutDueAtCampaignVictory(won))
+            {
+                return; // añadido de D-046 del 2026-11-06: el estreno de la Liga sale al dejar esta victoria; la oferta, en la siguiente
             }
 
             int world = WorldTable.WorldOf(Math.Clamp(won, 1, WorldTable.LastLevel));
@@ -715,7 +720,8 @@ namespace AF.UI
                 && !HomeWindowCovered && !MarketCommerceOpen && (_settingsScreen == null || !_settingsScreen.Visible)
                 && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible) && !FruitSheetOpen
                 && !LeagueOpen // D-046: la pantalla de la Liga tapa el inicio
-                && !AvatarScreenOpen; // D-056: «Tu avatar» también
+                && !AvatarScreenOpen // D-056: «Tu avatar» también
+                && !LeagueDebutVisible; // añadido de D-046 del 2026-11-06: el estreno de la Liga tapa el inicio
         }
 
         // La victoria de campaña sin nada encima (ni el Mapa, ni la ficha de una fruta, ni un anuncio o la hoja de compra, ni otra

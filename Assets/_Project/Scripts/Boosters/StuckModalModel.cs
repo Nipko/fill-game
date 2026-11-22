@@ -13,7 +13,10 @@ namespace AF.Boosters
         T1 = 1,
     }
 
-    /// <summary>Opción de Marea del modal (regla 0 de 04 §6.2: siempre la primera).</summary>
+    /// <summary>
+    /// Opción de Marea del modal (regla 0 de 04 §6.2: la primera; desde el añadido de D-014 del 2026-11-17, solo si deshacer saca
+    /// del atasco).
+    /// </summary>
     public enum StuckUndoKind
     {
         /// <summary>«Deshacer · Marea» con cupo o stock (o ilimitada en 1-10).</summary>
@@ -24,6 +27,12 @@ namespace AF.Boosters
 
         /// <summary>Rama F [P]: sin cupo y sin rescate que vender, 1 recarga gratis de +1 uso (04 §6.3).</summary>
         Gift = 2,
+
+        /// <summary>
+        /// Deshacer no saca del atasco (<see cref="StuckContext.UndoUseless"/>; añadido de D-014 del 2026-11-17, la opción 3 del
+        /// dueño): ni «Deshacer · Marea» ni su recarga ni la de regalo; quedan delante el rescate y el pie [P].
+        /// </summary>
+        None = 3,
     }
 
     /// <summary>Opción de Cuia de rescate del modal (04 §6.2).</summary>
@@ -111,6 +120,13 @@ namespace AF.Boosters
 
         /// <summary>Hay historial que deshacer.</summary>
         public bool HasHistory;
+
+        /// <summary>
+        /// Deshacer no sacaría del atasco (añadido de D-014 del 2026-11-17, la opción 3 del dueño): <c>!LevelSession.UndoEscapes</c>,
+        /// sin historial o con el tablero de antes también agotado. Entonces el modal no ofrece Marea (<see cref="StuckUndoKind.None"/>).
+        /// En negativo para que un contexto armado sin este dato ofrezca Marea como antes.
+        /// </summary>
+        public bool UndoUseless;
 
         /// <summary>Hay anuncio de <c>rv_undo_refill</c> cargado y con tope (sin fill, solo el precio; rama E).</summary>
         public bool UndoAdReady;
@@ -210,8 +226,11 @@ namespace AF.Boosters
         /// <summary>Línea de canoa bajo el titular.</summary>
         public StuckCanoeLine CanoeLine { get; }
 
-        /// <summary>Opción de Marea (siempre presente: regla 0).</summary>
+        /// <summary>Opción de Marea (regla 0; <see cref="StuckUndoKind.None"/> si deshacer no saca del atasco).</summary>
         public StuckUndoKind Undo { get; }
+
+        /// <summary>El modal ofrece Marea o su recarga (no <see cref="StuckUndoKind.None"/>).</summary>
+        public bool UndoOffered => Undo != StuckUndoKind.None;
 
         /// <summary>Badge de Marea: cupo + stock (0 si ilimitada).</summary>
         public int UndoBadge { get; }
@@ -321,9 +340,13 @@ namespace AF.Boosters
             bool atOrAfter31 = ctx.Level >= ctx.RescueMinLevel;
             StuckRescueKind rescue = RescueKind(ctx, out int missing);
 
-            // Regla 0: Marea primero, o su recarga.
+            // Regla 0: Marea primero, o su recarga; nada si deshacer no saca del atasco (añadido de D-014 del 2026-11-17).
             StuckUndoKind undo;
-            if (ctx.UndoUnlimited || ctx.UndoFree + ctx.UndoStock > 0)
+            if (ctx.UndoUseless)
+            {
+                undo = StuckUndoKind.None;
+            }
+            else if (ctx.UndoUnlimited || ctx.UndoFree + ctx.UndoStock > 0)
             {
                 undo = StuckUndoKind.Undo;
             }

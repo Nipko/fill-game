@@ -237,7 +237,7 @@ namespace AF.UI
                 AF.Audio.AudioCues.Play(AF.Audio.SfxId.UiBack); // como la X: cerrar suena a madera grave (AU1)
                 _onClose();
             });
-            UiBuilder.Stretch((RectTransform)scrim.transform);
+            ScreenColumn.Bleed((RectTransform)scrim.transform);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             _surface.raycastTarget = true; // la hoja se queda con sus toques: no cierran la ficha
             _title = ModalKit.Header(_panel, art, UiText.FactSheetTitle, out _header);
@@ -756,7 +756,7 @@ namespace AF.UI
             float s = Mathf.Clamp(UiBuilder.TextScale, 1f, UiBuilder.MaxTextScale);
             float cw = _canvas.Width;
             float ch = _canvas.Height;
-            float px = _screenW > 0 ? _screenW / Mathf.Max(1f, cw) : 1f;
+            float px = _canvas.Scale; // px por dp (la columna puede ser más estrecha que la pantalla: añadido de D-059)
             float safeTop = Mathf.Max(GameScreen.MinSafeTop, _screenH > 0 ? (_screenH - _safeArea.yMax) / px : 0f);
             float safeBottom = _screenH > 0 ? Mathf.Max(0f, _safeArea.yMin / px) : 0f;
             float w = Mathf.Min(MaxWidthDp, cw);

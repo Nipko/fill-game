@@ -16,10 +16,30 @@ namespace AF.Core.Session
     /// <item><description>I1: <see cref="Status"/> se recalcula tras cada cambio en el orden de R10: victoria (R12) y
     /// después bloqueo: R13 (sin vertidos útiles) y, si aún queda alguno, R13 ampliada (D-014): <see cref="DeadEndProbe"/>
     /// recorre los estados alcanzables con todos los vertidos legales (opción (a) de la pregunta 46 de <c>docs/GDD.md</c>
-    /// §6.3, decidida el 2026-10-13; D-020) y, si son como mucho 64 [P] y ninguno es victoria, la partida queda en
-    /// <see cref="LevelStatus.Stuck"/> aunque le queden vertidos útiles (el vaivén sin salida del nivel 66).
+    /// §6.3, decidida el 2026-10-13; D-020) y, si son como mucho 64 [P] y ninguno es victoria, el tablero está perdido; la
+    /// partida queda en <see cref="LevelStatus.Stuck"/> solo cuando, además, <b>todo vertido legal lleva a un tablero ya visto
+    /// en el intento</b> (añadido de D-014 del 2026-11-06, punto 1 del añadido de D-059 del 2026-10-31: el regreso del nivel
+    /// 26). Mientras quede un vertido a un tablero no visto, sigue en <see cref="LevelStatus.Playing"/> aunque esté perdido.
     /// Con más de 64 estados o una victoria alcanzable sigue en <see cref="LevelStatus.Playing"/> (conservador). No depende de
     /// <see cref="FutileRuleEnabled"/>.</description></item>
+    /// <item><description>I6 (añadidos de D-014 del 2026-11-06 y del 2026-11-17): tableros vistos en el intento = todo tablero
+    /// que fue <see cref="Current"/> desde la creación o el último <see cref="Restart"/>, comparados por su hash canónico de 64
+    /// bits (el del cierre: cuias ordenadas, así que el orden en pantalla no cuenta), <b>salvo lo deshecho con Marea</b>. La
+    /// partida lleva un contador por hash [P]: cada vez que un tablero queda en pantalla por un vertido (o por la creación,
+    /// <see cref="Restart"/>, la Pororoca, la Luciérnaga o <see cref="RestoreRevealed"/>) suma 1; <see cref="Undo"/> resta 1 al
+    /// tablero que deja y, a 0, ese tablero deja de estar visto. Así, si el mismo tablero salió dos veces en el historial (ida y
+    /// vuelta), deshacer la segunda lo deja visto por la primera. El tablero al que vuelve Marea ya estaba contado; solo entra
+    /// (con 1) si no lo estaba, porque lo revelado lo cambió (I5). Así Marea deja los vistos como estaban antes de su vertido,
+    /// cuando la partida estaba en <see cref="LevelStatus.Playing"/>: sin dosis ocultas, con historial, Marea siempre saca de
+    /// Aguas estancadas. Solo puede no sacar si el vertido deshecho reveló una dosis (Aguas turbias), porque entonces el tablero
+    /// de vuelta es el de antes con lo revelado y puede estar bloqueado; o sin historial. <see cref="UndoEscapes"/> lo dice
+    /// antes de gastarla. <see cref="Restart"/> (Volver a la
+    /// orilla: un intento nuevo, 04 §2.7) los olvida [P]. La Pororoca (<see cref="ApplyShuffle"/>), la Luciérnaga (<see cref="Reveal"/>) y
+    /// <see cref="RestoreRevealed"/> los conservan y su tablero nuevo entra como visto al quedar en pantalla, no antes (en un
+    /// nivel turbio, la Pororoca anota además el tablero de antes con todo revelado, que su <see cref="RevealAll"/> evalúa; no
+    /// cambia nada, porque tras el barajado no se vuelve a él). Una
+    /// sesión rehecha (la Cuia extra o de rescate, reanudar) solo conoce los tableros de su historial rehecho: más
+    /// conservador; para reabrir el modal al reanudar está <see cref="ResumeStuck"/> [P].</description></item>
     /// <item><description>I2: un vertido ilegal (R11) o con <see cref="Status"/> distinto de
     /// <see cref="LevelStatus.Playing"/> devuelve false y no cambia nada (con Aguas estancadas el input está
     /// bloqueado desde el instante lógico del bloqueo, R15).</description></item>
@@ -60,6 +80,21 @@ namespace AF.Core.Session
         // Cierre acotado de R13 ampliada (D-014): búferes propios, reservados una vez por partida.
         private readonly DeadEndProbe _deadEnd = new DeadEndProbe();
 
+        // Tableros vistos en el intento (I6; añadidos de D-014 del 2026-11-06 y del 2026-11-17): veces que cada hash canónico
+        // quedó en pantalla sin deshacerse. Solo se consulta por clave: nunca se decide iterándolo (CLAUDE.md, regla dura 1). La
+        // capacidad inicial evita que crezca (y asigne) en una partida normal; Remove deja la entrada en la lista libre del
+        // diccionario, así que deshacer y volver a verter no asigna.
+        private readonly Dictionary<ulong, int> _seen = new Dictionary<ulong, int>(SeenCapacity);
+
+        // Tablero de antes de la última Marea con lo revelado aplicado, para UndoEscapes sin crear un BoardState.
+        private readonly Cuia[] _undoBoard = new Cuia[BoardState.MaxCuias];
+
+        /// <summary>
+        /// Capacidad inicial del contador de tableros vistos (I6) [P]: 256 tableros distintos sin crecer, unos 7 KB por partida.
+        /// Con más, el diccionario crece (amortizado), como lo hacía el conjunto anterior.
+        /// </summary>
+        internal const int SeenCapacity = 256;
+
         /// <summary>Empieza una partida en <paramref name="initial"/> con el modo de vertido <paramref name="pourMode"/>.</summary>
         /// <param name="initial">Tablero inicial del nivel.</param>
         /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c> (08 §9; kill-switch de R16).</param>
@@ -82,11 +117,12 @@ namespace AF.Core.Session
             }
 
             _revealed = new int[initial.Count];
+            initial = SettleLancha(initial);
             Initial = initial;
             Current = initial;
             FutileRuleEnabled = futileRuleEnabled;
             PourMode = pourMode;
-            Status = Evaluate(initial);
+            Status = Enter(initial);
         }
 
         /// <summary>
@@ -130,6 +166,59 @@ namespace AF.Core.Session
         /// movidas.
         /// </summary>
         public int AppliedPours => _pours.Count;
+
+        /// <summary>
+        /// Tableros distintos vistos en el intento (I6), por su hash canónico; al menos 1, el actual. Lo deshecho con Marea deja de
+        /// contar cuando ya no queda en el historial (añadido de D-014 del 2026-11-17). Diagnóstico para tests y registros.
+        /// </summary>
+        public int SeenBoardCount => _seen.Count;
+
+        /// <summary>
+        /// Marea sacaría del atasco (añadido de D-014 del 2026-11-17, la opción 3 del dueño): hay historial y, tras deshacer el
+        /// último vertido (con el tablero deshecho fuera de los vistos, I6), la partida quedaría en <see cref="LevelStatus.Playing"/>:
+        /// el tablero de antes no está bloqueado por R13 y tiene al menos un vertido legal a un tablero no visto, o su cierre no está
+        /// perdido (R13 ampliada, el mismo <see cref="DeadEndProbe"/> que la partida). False sin historial; con historial, solo
+        /// puede ser false si el vertido deshecho reveló una dosis oculta (I5, I6). No cambia nada: el modal Aguas estancadas lo
+        /// pregunta para no ofrecer una Marea que no sirve.
+        /// </summary>
+        /// <remarks>
+        /// No asigna una vez calentado (CLAUDE.md, regla dura 2): copia el tablero de antes a un búfer propio, le aplica lo revelado
+        /// cuia a cuia y pregunta al cierre con una vista del contador (<see cref="SeenBoards.AfterUndo"/>) que resta 1 al tablero
+        /// que se deja y da por visto aquel al que se vuelve, sin tocarlo. Recorre como mucho <see cref="DeadEndProbe.MaxStates"/>
+        /// estados.
+        /// </remarks>
+        public bool UndoEscapes
+        {
+            get
+            {
+                int last = _pours.Count - 1;
+                if (last < 0)
+                {
+                    return false;
+                }
+
+                BoardState previous = _previous[last];
+                int width = previous.Count;
+                for (int i = 0; i < width; i++)
+                {
+                    Cuia cuia = previous.CuiaAt(i);
+                    int revealed = i < _revealed.Length ? cuia.HiddenMask & _revealed[i] : 0;
+                    _undoBoard[i] = revealed == 0 ? cuia : cuia.WithRevealed(revealed); // como BoardState.WithRevealed (I5)
+                }
+
+                int[] units = previous.UnitsTable;
+                if (BoardRules.EvaluateStatus(_undoBoard, 0, width, units, FutileRuleEnabled) != LevelStatus.Playing)
+                {
+                    return false;
+                }
+
+                BoardState current = Current;
+                ulong leaving = _deadEnd.CanonicalHash(current.CuiasArray, 0, current.Count);
+                ulong back = _deadEnd.CanonicalHash(_undoBoard, 0, width);
+                SeenBoards seen = SeenBoards.AfterUndo(_seen, leaving, back);
+                return !_deadEnd.IsStagnant(_undoBoard, 0, width, units, PourMode, in seen);
+            }
+        }
 
         /// <summary>Hay historial que Marea puede deshacer (04 §2.1).</summary>
         public bool CanUndo => _pours.Count > 0;
@@ -205,7 +294,7 @@ namespace AF.Core.Session
             _previous.Add(current);
             _pours.Add(pour);
             Current = next;
-            Status = Evaluate(next);
+            Status = Enter(next);
             events.Finish(Status);
             result = new PourResult(pour, next.IsSealed(events.Receiver), Status, events, LevelCounter.Of(next));
             return true;
@@ -213,8 +302,10 @@ namespace AF.Core.Session
 
         /// <summary>
         /// Marea (04 §2.1): deshace el último vertido y restaura el estado anterior exacto, también desde
-        /// Aguas estancadas o desde la victoria, salvo el conocimiento: las dosis ya reveladas siguen visibles (I5). Devuelve
-        /// false si el historial está vacío. Los cupos son de la UI.
+        /// Aguas estancadas o desde la victoria, salvo el conocimiento: las dosis ya reveladas siguen visibles (I5). El tablero que
+        /// deja pierde una de sus veces vistas (I6; añadido de D-014 del 2026-11-17), así que repetir el vertido deshecho vuelve a
+        /// ser jugar. Devuelve false si el historial está vacío. Los cupos son de la UI. No asigna una vez calentado, salvo el
+        /// tablero con lo revelado cuando el vertido deshecho reveló una dosis oculta (Aguas turbias).
         /// En <see cref="AF.Core.Rules.PourMode.Run"/> (por defecto, D-005) cada uso deshace el vertido entero, con todas las
         /// dosis que movió (04 §2.1); en <see cref="AF.Core.Rules.PourMode.Single"/> (pruebas), una sola dosis.
         /// </summary>
@@ -226,10 +317,19 @@ namespace AF.Core.Session
                 return false;
             }
 
-            Current = _previous[last].WithRevealed(_revealed);
+            BoardState leaving = Current;
+            Forget(_deadEnd.CanonicalHash(leaving.CuiasArray, 0, leaving.Count));
+            BoardState back = _previous[last].WithRevealed(_revealed);
             _previous.RemoveAt(last);
             _pours.RemoveAt(last);
-            Status = Evaluate(Current);
+            Current = back;
+            ulong hash = _deadEnd.CanonicalHash(back.CuiasArray, 0, back.Count);
+            if (!_seen.ContainsKey(hash))
+            {
+                _seen[hash] = 1; // lo revelado lo cambió (I5): entra como visto al quedar en pantalla
+            }
+
+            Status = Judge(back);
             return true;
         }
 
@@ -241,8 +341,9 @@ namespace AF.Core.Session
         {
             _previous.Clear();
             _pours.Clear();
+            _seen.Clear(); // intento nuevo (I6) [P]
             Current = Initial.WithRevealed(_revealed);
-            Status = Evaluate(Current);
+            Status = Enter(Current);
         }
 
         /// <summary>
@@ -263,7 +364,7 @@ namespace AF.Core.Session
 
             _revealed[cuia] |= hidden;
             Current = Current.WithRevealed(_revealed);
-            Status = Evaluate(Current);
+            Status = Enter(Current);
             return PopCount(hidden);
         }
 
@@ -285,7 +386,7 @@ namespace AF.Core.Session
             if (total > 0)
             {
                 Current = Current.WithRevealed(_revealed);
-                Status = Evaluate(Current);
+                Status = Enter(Current);
             }
 
             return total;
@@ -342,8 +443,9 @@ namespace AF.Core.Session
             RevealAll();
             _previous.Clear();
             _pours.Clear();
+            shuffled = SettleLancha(shuffled);
             Current = shuffled;
-            Status = Evaluate(shuffled);
+            Status = Enter(shuffled);
             return true;
         }
 
@@ -401,8 +503,28 @@ namespace AF.Core.Session
 
             _revealed[cuia] |= added;
             Current = Current.WithRevealed(_revealed);
-            Status = Evaluate(Current);
+            Status = Enter(Current);
             return PopCount(added);
+        }
+
+        /// <summary>
+        /// Reanudar en Aguas estancadas (02 §14; R8): el modal ya salió en este intento antes de cerrar la app, pero la sesión
+        /// rehecha desde lo guardado solo conoce como vistos los tableros de su historial (I6), no los que se deshicieron, así
+        /// que puede quedar en <see cref="LevelStatus.Playing"/> sobre un tablero que el jugador ya agotó. Si la partida está en
+        /// <see cref="LevelStatus.Playing"/> y el cierre da el tablero por perdido (R13 ampliada, D-014), pasa a
+        /// <see cref="LevelStatus.Stuck"/> y devuelve true; si no, no cambia nada y devuelve false. Nunca declara un tablero
+        /// desde el que se puede ganar (R14) [P].
+        /// </summary>
+        public bool ResumeStuck()
+        {
+            BoardState state = Current;
+            if (Status != LevelStatus.Playing || !_deadEnd.IsDeadEnd(state.CuiasArray, 0, state.Count, state.UnitsTable, PourMode))
+            {
+                return false;
+            }
+
+            Status = LevelStatus.Stuck;
+            return true;
         }
 
         /// <summary>
@@ -415,6 +537,28 @@ namespace AF.Core.Session
             {
                 _revealed[i] |= before.CuiaAt(i).HiddenMask & ~after.CuiaAt(i).HiddenMask;
             }
+        }
+
+        /// <summary>
+        /// La Lancha (1.1, D-068 [P]; 02 §9.1 M11) atraca «en cuanto el tablero tiene k o más cuias vacías», también cuando la
+        /// vacía que falta no llega con un vertido: la Cuia extra o la de rescate, que el cliente añade rehaciendo la sesión desde
+        /// el tablero inicial con la cuia nueva (04 §2.2 y §6), o el tablero de la Pororoca. Por eso la partida asienta su tablero
+        /// inicial y el de la ola (R10 d-f′, <see cref="PourRules.Settle"/>) si llevan una lancha sin atracar. En un nivel válido
+        /// no cambia nada (<c>k</c> ≥ vacíos + 1), así que solo actúa con una cuia vacía de más; rehacer el historial sobre un
+        /// tablero con la lancha ya atracada sigue siendo legal, porque atracar solo añade vertidos. Las demás mecánicas no lo
+        /// necesitan: ningún nivel válido empieza con sellos (03 §17 #5).
+        /// </summary>
+        private static BoardState SettleLancha(BoardState state)
+        {
+            for (int i = 0; i < state.Count; i++)
+            {
+                if (state.CuiaAt(i).Mechanic == AF.Core.Mechanics.MechanicType.Lancha)
+                {
+                    return PourRules.Settle(state, out _);
+                }
+            }
+
+            return state;
         }
 
         private static bool HasRemolino(BoardState state)
@@ -442,12 +586,43 @@ namespace AF.Core.Session
             return count;
         }
 
-        private LevelStatus Evaluate(BoardState state)
+        /// <summary>
+        /// <paramref name="state"/> pasa a ser el tablero en pantalla: suma 1 a sus veces vistas en el intento (I6) y se evalúa (I1).
+        /// </summary>
+        private LevelStatus Enter(BoardState state)
+        {
+            ulong hash = _deadEnd.CanonicalHash(state.CuiasArray, 0, state.Count);
+            _seen[hash] = _seen.TryGetValue(hash, out int times) ? times + 1 : 1;
+            return Judge(state);
+        }
+
+        /// <summary>Marea deja el tablero de hash <paramref name="hash"/>: resta 1 a sus veces vistas y, a 0, deja de estar visto (I6).</summary>
+        private void Forget(ulong hash)
+        {
+            if (!_seen.TryGetValue(hash, out int times))
+            {
+                return;
+            }
+
+            if (times > 1)
+            {
+                _seen[hash] = times - 1;
+            }
+            else
+            {
+                _seen.Remove(hash);
+            }
+        }
+
+        /// <summary>Estado de <paramref name="state"/> con los tableros vistos de ahora (I1).</summary>
+        private LevelStatus Judge(BoardState state)
         {
             // R10 (g) victoria y (h) bloqueo, en ese orden: R13 (sin vertidos útiles) y, si aún hay alguno, R13 ampliada
-            // (D-014): el cierre acotado de estados alcanzables no tiene victoria.
+            // (D-014 con su añadido del 2026-11-06): el cierre acotado de estados alcanzables no tiene victoria y todo vertido
+            // legal lleva a un tablero ya visto en el intento.
             LevelStatus status = BoardRules.EvaluateStatus(state.CuiasArray, 0, state.Count, state.UnitsTable, FutileRuleEnabled);
-            if (status == LevelStatus.Playing && _deadEnd.IsDeadEnd(state.CuiasArray, 0, state.Count, state.UnitsTable, PourMode))
+            if (status == LevelStatus.Playing
+                && _deadEnd.IsStagnant(state.CuiasArray, 0, state.Count, state.UnitsTable, PourMode, SeenBoards.Of(_seen)))
             {
                 return LevelStatus.Stuck;
             }

@@ -343,6 +343,31 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FirstFrame_InAWideWindow_TheMeasuredIconLandsInTheColumn()
+        {
+            // Añadido de D-059 del 2026-11-06 (revisión): en media pantalla dividida (1080 × 1150 px a 2,625 px/dp) la escena es la
+            // columna de 400 dp centrada en un lienzo de 601 dp; la DecorView mide el lienzo entero. El icono del sistema, centrado y de
+            // 486 px, cae en el centro de la columna y con su diámetro en px.
+            AndroidOsSplash.IconOverrideForTests = new SplashIconBox(297, 332, 486, 486, 0, 0, 1080, 1150);
+            GameScreen.SimulatedScreen = new Vector4(1080f, 1150f, 96f, 0f);
+            GameScreen.SimulatedPxPerDp = 2.625f;
+            _host ??= new GameObject("BrandIntroMorphTestHost");
+            _splash = new BootSplash(_host.transform, withSloth: false, withIntro: true);
+            BrandIntro intro = _splash.Intro!;
+            yield return null;
+            _splash.Tick(16f);
+            ScreenFrame frame = ScreenFrame.Current;
+            Assert.That(frame.IsFullWidth, Is.False, "condición del test: una columna");
+            Assert.That(intro.Morph.Measured, Is.True);
+            Assert.That(intro.MorphDiameter, Is.EqualTo(486f / frame.Scale).Within(0.01f), "el diámetro del sistema, en dp del lienzo");
+            Assert.That(intro.MorphCenter.x, Is.EqualTo(frame.ColumnWidth * 0.5f).Within(0.01f), "en el centro de la columna");
+            Assert.That(intro.MorphCenter.y, Is.EqualTo(575f / frame.Scale).Within(0.01f));
+            Assert.That(intro.Morph.StartDiameterPx, Is.EqualTo(486f).Within(0.01f), "en px de pantalla, los del sistema");
+            Assert.That(intro.Morph.StartCenterPx.x, Is.EqualTo(540f).Within(0.01f));
+            Assert.That(intro.Morph.StartCenterPx.y, Is.EqualTo(575f).Within(0.01f));
+        }
+
+        [UnityTest]
         public IEnumerator FirstFrame_FollowsAnOffCentreBox_AndStillOpensToTheCorners()
         {
             AndroidOsSplash.IconOverrideForTests = new SplashIconBox(100, 200, 486, 480, 0, 0, 1080, 2340);

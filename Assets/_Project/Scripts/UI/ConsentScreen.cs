@@ -118,6 +118,7 @@ namespace AF.UI
         {
             _art = art ?? throw new ArgumentNullException(nameof(art));
             _canvas = new OverlayCanvas("ConsentCanvas", host, SortingOrder);
+            _canvas.Changed += Layout; // giro o ventana redimensionada (añadido de D-059 del 2026-11-06)
             ModalKit.Dim("Dim", _canvas.Root, 0.62f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             _title = ModalKit.Header(_panel, art, string.Empty, out _header);

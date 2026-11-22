@@ -364,6 +364,7 @@ namespace AF.UI
 
             CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
             EnsureOrientationFades();
+            CancelSettle(); // observación 3 de la segunda ronda de la 1.1: el encuadre final tras el viaje, anulado
             _northUpOn = !_northUpOn;
             if (_northUpOn)
             {
@@ -1008,7 +1009,7 @@ namespace AF.UI
                 for (int s = 0; s < 2; s++)
                 {
                     float f = s == 0 ? -1f : 1f;
-                    var foot = canoe + new Vector2(-f * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+                    var foot = canoe + new Vector2(-f * CanoeWidthDp * SternFraction, 2f);
                     Rect box = GearBox(canoe, foot, mastH, f);
                     gear = s == 0 ? box : Rect.MinMaxRect(Mathf.Min(gear.xMin, box.xMin), Mathf.Min(gear.yMin, box.yMin),
                         Mathf.Max(gear.xMax, box.xMax), Mathf.Max(gear.yMax, box.yMax));
@@ -1040,10 +1041,10 @@ namespace AF.UI
             if (_northUpBuilt)
             {
                 Rect b = NorthUpButtonFrameRect();
-                float x0 = b.xMin - FramePadDp - (_viewW * 0.5f);
-                float x1 = b.xMax - FramePadDp - (_viewW * 0.5f);
-                float y0 = (_viewH * 0.5f) - (b.yMax - FramePadDp);
-                float y1 = (_viewH * 0.5f) - (b.yMin - FramePadDp);
+                float x0 = b.xMin - ViewPadDp - (_viewW * 0.5f);
+                float x1 = b.xMax - ViewPadDp - (_viewW * 0.5f);
+                float y0 = (_viewH * 0.5f) - (b.yMax - ViewPadDp);
+                float y1 = (_viewH * 0.5f) - (b.yMin - ViewPadDp);
                 float cx = _contentH * 0.5f;
                 float cy = _contentW * 0.5f;
                 Rect button = Rect.MinMaxRect((x0 / scale) + cx, (y0 / scale) + cy, (x1 / scale) + cx, (y1 / scale) + cy);
@@ -1333,13 +1334,13 @@ namespace AF.UI
         {
             float labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_northUpLabel!));
             float w = Mathf.Min(_viewW - 16f, Mathf.Max(MinTouchDp * 2f, labelW + 32f));
-            float x = FramePadDp + _viewW - NorthUpInsetDp - w;
-            float y = FramePadDp + NorthUpInsetDp;
+            float x = ViewPadDp + _viewW - NorthUpInsetDp - w;
+            float y = ViewPadDp + NorthUpInsetDp;
             TextMeshProUGUI? andes = AndesLabel;
             if (andes != null && !string.IsNullOrEmpty(andes.text))
             {
-                Rect a = FixedViewRect(andes.rectTransform); // en la zona visible; en el marco, + FramePadDp
-                var label = new Rect(a.x + FramePadDp, a.y + FramePadDp, a.width, a.height);
+                Rect a = FixedViewRect(andes.rectTransform); // en la zona visible; en el marco, + ViewPadDp
+                var label = new Rect(a.x + ViewPadDp, a.y + ViewPadDp, a.width, a.height);
                 if (label.Overlaps(new Rect(x, y, w, MinTouchDp)))
                 {
                     y = label.yMax + 4f;
@@ -1376,7 +1377,7 @@ namespace AF.UI
             if (_northUpBuilt)
             {
                 Rect b = NorthUpButtonFrameRect();
-                _basinControls[_basinControlCount++] = Grow(FromView(new Rect(b.x - FramePadDp, b.y - FramePadDp, b.width, b.height), o), MarkerObstacleGapDp);
+                _basinControls[_basinControlCount++] = Grow(FromView(new Rect(b.x - ViewPadDp, b.y - ViewPadDp, b.width, b.height), o), MarkerObstacleGapDp);
             }
 
             Rect andes = FixedViewRect(AndesLabel);
@@ -1403,7 +1404,7 @@ namespace AF.UI
                 for (int side = 0; side < 2; side++)
                 {
                     float f = side == 0 ? -1f : 1f;
-                    var foot = canoe + new Vector2(-f * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+                    var foot = canoe + new Vector2(-f * CanoeWidthDp * SternFraction, 2f);
                     Rect box = GearBox(canoe, foot, mastH, f);
                     gear = side == 0 ? box : Rect.MinMaxRect(Mathf.Min(gear.xMin, box.xMin), Mathf.Min(gear.yMin, box.yMin),
                         Mathf.Max(gear.xMax, box.xMax), Mathf.Max(gear.yMax, box.yMax));

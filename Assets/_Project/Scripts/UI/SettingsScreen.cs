@@ -541,7 +541,7 @@ namespace AF.UI
             float s = _fontScale;
             float cw = _canvas.Width;
             float ch = _canvas.Height;
-            float scale = _screenW > 0 ? _screenW / Mathf.Max(1f, cw) : 1f;
+            float scale = _canvas.Scale; // px por dp (la columna puede ser más estrecha que la pantalla: añadido de D-059)
             float safeTop = Mathf.Max(GameScreen.MinSafeTop, _screenH > 0 ? (_screenH - _safeArea.yMax) / scale : 0f);
             float safeBottom = Mathf.Max(GameScreen.MinSafeBottom, _screenH > 0 ? _safeArea.yMin / scale : 0f);
 

@@ -53,6 +53,8 @@ namespace AF.UI
         {
             AvatarPickOverride = null;
             AvatarConfigOverride = null;
+            FrameGrantOverride = null;
+            LogbookDayOverride = null;
         }
 
         /// <summary>El servicio de los avatares (null antes del arranque).</summary>
@@ -101,6 +103,7 @@ namespace AF.UI
             }
 
             _avatarScreen = new AvatarScreen(transform, _art, _probe, () => CloseAvatarScreen()) { Tapped = id => ChooseAvatar(id) };
+            SetUpAvatarFrames(profile, clock); // Q-M6 (añadido del 2026-11-08): los marcos de país (GameBootstrap.AvatarFrames.cs)
             if (_lobby != null)
             {
                 _lobby.AvatarTapped = () => OpenAvatarScreen("home");
@@ -329,7 +332,8 @@ namespace AF.UI
             AvatarInfo current = avatars.Current;
             float density = Mathf.Clamp(_lobby != null ? _lobby.ScaleFactor : ProceduralArt.UiPxPerDp, 2f, 4f);
             int px = Mathf.CeilToInt(AvatarScreen.HeaderPortraitDp * density);
-            return _art.AvatarPortrait(current.Id, current.Index, AvatarScreen.BackdropOf(current), px);
+            AvatarFrameInfo? frame = AvatarFrameNow; // Q-M6: el marco va dentro del retrato, así se ve en todas partes
+            return _art.AvatarPortrait(current.Id, current.Index, AvatarScreen.BackdropOf(current), px, frame?.World ?? 0, frame?.Country);
         }
 
         /// <summary>El retrato del inicio, la fila de Ajustes, la línea de la victoria y, si está abierta, «Tu avatar».</summary>
@@ -344,10 +348,13 @@ namespace AF.UI
             bool shown = AvatarsShownInHome;
             Sprite? portrait = shown || AvatarScreenOpen || (AvatarsEnabled && LeagueActive) ? AvatarPortraitNow() : null;
             int maxLevel = _profile?.Progress.MaxLevel ?? 0;
-            bool dot = AvatarRules.DotShown(avatars.Data, maxLevel);
+            bool avatarDot = AvatarRules.DotShown(avatars.Data, maxLevel);
+            bool frameDot = AvatarFrameDot(maxLevel);
+            bool dot = avatarDot || frameDot;
             AvatarInfo current = avatars.Current;
-            _lobby?.SetAvatar(shown ? portrait : null, shown, dot, AvatarText.HomeA11y(current, dot));
-            _settingsScreen?.SetAvatarRow(shown ? portrait : null, shown, AvatarText.HomeA11y(current, false));
+            AvatarFrameInfo? frame = AvatarFrameNow;
+            _lobby?.SetAvatar(shown ? portrait : null, shown, dot, AvatarText.HomeA11y(current, frame, avatarDot, frameDot));
+            _settingsScreen?.SetAvatarRow(shown ? portrait : null, shown, AvatarText.HomeA11y(current, frame, false, false));
             if (_screen != null)
             {
                 _screen.LeagueAvatar = AvatarsEnabled ? portrait : null;
@@ -423,7 +430,14 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Abre «Tu avatar» desde <paramref name="source"/> (<c>home</c>, <c>settings</c> o <c>league</c>), con <c>af_avatar_open</c>.
+        /// <c>source</c> de <c>af_avatar_open</c> desde «Ver tu avatar» de la libreta de la Bitácora (08 §8.2; añadido de Q-M6 de D-033
+        /// del 2026-11-08).
+        /// </summary>
+        internal const string AvatarOpenSourceLogbook = "logbook";
+
+        /// <summary>
+        /// Abre «Tu avatar» desde <paramref name="source"/> (<c>home</c>, <c>settings</c>, <c>league</c> o <c>logbook</c>, el de
+        /// <see cref="AnalyticsCatalog.AvatarOpenSources"/>), con <c>af_avatar_open</c>.
         /// False si los avatares están apagados, si ya está abierta o (desde el inicio y Ajustes) antes del 10.
         /// </summary>
         public bool OpenAvatarScreen(string source)
@@ -447,6 +461,7 @@ namespace AF.UI
             }
 
             screen.ReduceMotion = ReduceMotionNow;
+            PrepareAvatarScreenFrames(screen);
             screen.Open(avatars, portrait, AvatarAtlasForUi(), LeagueEnabledForAvatars, _profile?.Progress.MaxLevel ?? 0, AvatarLeagueNow());
             _analytics?.Log(AnalyticsEvent.Create("af_avatar_open").Add("source", source)); // 08 §8.2 (D-056)
             AvatarProbe("open");
@@ -469,6 +484,7 @@ namespace AF.UI
                 using (Saves())
                 {
                     _avatars.MarkSeen();
+                    _avatarFrames?.MarkAllSeen(); // Q-M6: los marcos que se vieron
                 }
             }
 
@@ -527,6 +543,7 @@ namespace AF.UI
             }
 
             sb.Append("],\"new\":").Append(AvatarRules.DotShown(data, _profile?.Progress.MaxLevel ?? 0) ? "true" : "false");
+            AppendFrameProbe(sb); // Q-M6: frame, frames y frames_new
             sb.Append(",\"cause\":\"").Append(cause).Append('"');
             MarketProbe("avatar", sb.ToString());
         }

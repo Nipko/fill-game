@@ -21,13 +21,16 @@ namespace AF.UI
         private readonly OverlayCanvas _canvas;
         private readonly DockCard _card;
         private int _rank = -2;
+        private bool _new;
 
         public LeagueLobbyButton(Transform host, ProceduralArt art, Action onPress)
         {
             _canvas = new OverlayCanvas("LeagueButtonCanvas", host, SortingOrder);
             _card = new DockCard(_canvas.Root, art, "LeagueTab", art.CardIconLeague, onPress);
             SetRank(null);
-            A11yLabels.Set(_card.Button, () => UiText.HomeCardA11y(LeagueText.Button, _card.State.text));
+            A11yLabels.Set(_card.Button, () => _new
+                ? A11yText.Append(UiText.HomeCardA11y(LeagueText.Button, _card.State.text), LeagueText.New)
+                : UiText.HomeCardA11y(LeagueText.Button, _card.State.text));
         }
 
         public Canvas Canvas => _canvas.Canvas;
@@ -64,6 +67,22 @@ namespace AF.UI
 
             _rank = r;
             _card.SetTexts(LeagueText.Button, r > 0 ? UiText.HomeCardLeagueRank(r) : string.Empty, Palette.LeafShine);
+            return true;
+        }
+
+        /// <summary>«Nueva» en la esquina (tras el estreno de la Liga, hasta abrirla; añadido de D-046 del 2026-11-06).</summary>
+        public bool NewShown => _new;
+
+        /// <summary>Pone o quita «Nueva» en la esquina. Solo toca la tarjeta si cambia; true si cambió.</summary>
+        public bool SetNew(bool on)
+        {
+            if (on == _new)
+            {
+                return false;
+            }
+
+            _new = on;
+            _card.SetBadge(on ? LeagueText.New : string.Empty);
             return true;
         }
 

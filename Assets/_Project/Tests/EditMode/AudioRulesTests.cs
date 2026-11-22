@@ -420,6 +420,25 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheAguapeAndTheLancha_PlayTheirOwnSoundsOf11_NotTheBorrowedOnes()
+        {
+            // docs/audio/encargo-audios-1-1.md §3: la suelta del Aguapé (Loosen) y el atraque de la Lancha (Dock) dejan el Remolino y
+            // el remo de Capi que tomaban prestados.
+            AudioBoard.Step(MechanicStepKind.Loosen, MechanicType.Aguape);
+            AudioBoard.Step(MechanicStepKind.Dock, MechanicType.Lancha);
+            Assert.That(_fake.Events.Count, Is.EqualTo(2));
+            Assert.That(_fake.Events[0].Sfx, Is.EqualTo(SfxId.MechAguape), "Loosen");
+            Assert.That(_fake.Events[1].Sfx, Is.EqualTo(SfxId.MechLancha), "Dock");
+            Assert.That(_fake.Requested(SfxId.MechRemolino) || _fake.Requested(SfxId.CapiPaddle), Is.False, "ya no los prestados");
+
+            // Sin clip, suenan como antes: la receta del Remolino y la del remo de Capi.
+            Assert.That(AudioAnalysis.Hash(SfxSynth.RenderRaw(SfxId.MechAguape)), Is.EqualTo(AudioAnalysis.Hash(SfxSynth.RenderRaw(SfxId.MechRemolino))));
+            Assert.That(AudioAnalysis.Hash(SfxSynth.RenderRaw(SfxId.MechLancha)), Is.EqualTo(AudioAnalysis.Hash(SfxSynth.RenderRaw(SfxId.CapiPaddle))));
+            Assert.That(AudioClipIds.Id(AudioBank.Index(SfxId.MechAguape, 0)), Is.EqualTo("sfx_mech_aguape"), "su ranura en el registro");
+            Assert.That(AudioClipIds.Id(AudioBank.Index(SfxId.MechLancha, 0)), Is.EqualTo("sfx_mech_lancha"));
+        }
+
+        [Test]
         public void IntroCues_FollowThePlan_RiverFillPerRowPlipPerFruitAndTintPerRun()
         {
             IntroInput input = IntroChoreographyTests.Input(16, 780f, 1400f, IntroPerch.Branch);

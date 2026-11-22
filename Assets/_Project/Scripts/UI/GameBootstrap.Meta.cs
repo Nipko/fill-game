@@ -252,7 +252,7 @@ namespace AF.UI
         {
             OverlayCanvas canvas = _metaCanvas!;
             GameScreen.ReadScreen(out int sw, out int sh, out Rect safe);
-            float scale = sw > 0 ? sw / Mathf.Max(1f, canvas.Width) : 1f;
+            float scale = canvas.Scale; // px por dp (la columna puede ser más estrecha que la pantalla: añadido de D-059)
             float safeTop = Mathf.Max(GameScreen.MinSafeTop, sh > 0 ? (sh - safe.yMax) / scale : 0f);
             float w = Mathf.Min(Toast.FullWidthDp(canvas.Width), Mathf.Max(160f, _skinToast!.FitWidthDp(canvas.Width)));
             float h = Mathf.Max(_skinToast.MinHeightDp(canvas.Width), 44f);

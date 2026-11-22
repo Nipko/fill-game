@@ -13,7 +13,7 @@ namespace AF.Save
     /// lanza una excepción, conserva el archivo anterior sin tocarlo.
     /// <para>
     /// Pasos de esta build: <c>1 → 2</c> (<see cref="MigrateV1ToV2"/>, tarea DC15: <c>fauna.sighted</c>, Q11 del guion de la
-    /// intro, D-029). Para un esquema nuevo: subir <see cref="Profile.CurrentSchema"/>, adaptar <see cref="Profile"/> y
+    /// intro, D-029) y <c>2 → 3</c> (<see cref="MigrateV2ToV3"/>, la 1.1: <c>progress.curve2_from_level</c>, D-068). Para un esquema nuevo: subir <see cref="Profile.CurrentSchema"/>, adaptar <see cref="Profile"/> y
     /// <see cref="ProfileJson"/>, y registrar en <see cref="Current"/> el paso <c>Step(n, MigrateVnToVn1)</c>, con su test
     /// de ida (documento vn → vn+1).
     /// </para>
@@ -23,7 +23,7 @@ namespace AF.Save
         private readonly Dictionary<int, Action<JsonNode>> _steps = new Dictionary<int, Action<JsonNode>>();
 
         /// <summary>Las migraciones de esta build: hasta <see cref="Profile.CurrentSchema"/>.</summary>
-        public static ProfileMigrations Current { get; } = new ProfileMigrations(Profile.CurrentSchema, Step(1, MigrateV1ToV2));
+        public static ProfileMigrations Current { get; } = new ProfileMigrations(Profile.CurrentSchema, Step(1, MigrateV1ToV2), Step(2, MigrateV2ToV3));
 
         /// <summary>Crea un juego de migraciones hasta <paramref name="targetSchema"/>.</summary>
         /// <param name="targetSchema">Esquema final.</param>
@@ -64,6 +64,52 @@ namespace AF.Save
             JsonNode fauna = JsonNode.NewObject();
             fauna.Set("sighted", JsonNode.NewArray());
             root.Set("fauna", fauna);
+        }
+
+        /// <summary>
+        /// Paso <c>2 → 3</c> (la 1.1; D-068, P1 B; 08 §4.3 y §4.4): fija <c>progress.curve2_from_level</c> con el siguiente nivel que
+        /// el jugador no ha jugado, una sola vez. Es <c>max_level</c> + 1 (08 §4.3) y, si el nivel en curso (<c>level_state</c>, el
+        /// que se reanuda) va más allá, ese + 1 [P]: un nivel empezado ya está jugado y su tablero no cambia. Si el documento ya
+        /// trae el campo (escrito por otra build), se deja tal cual. Sin <c>progress</c> (un perfil sin avance) no escribe nada: la
+        /// lectura da 1 con <c>max_level</c> 0. No toca ninguna otra clave y no depende de nada más que del documento.
+        /// </summary>
+        internal static void MigrateV2ToV3(JsonNode root)
+        {
+            JsonNode? progress = root.Get("progress");
+            if (progress == null || progress.Kind != JsonKind.Object || progress.Get(Curve2Key) != null)
+            {
+                return;
+            }
+
+            int from = Math.Max(0, IntOr(progress.Get("max_level"), 0)) + 1;
+            JsonNode? state = root.Get("level_state");
+            if (state != null && state.Kind == JsonKind.Object)
+            {
+                from = Math.Max(from, IntOr(state.Get("level"), 0) + 1);
+            }
+
+            progress.Set(Curve2Key, JsonNode.FromInt(from));
+        }
+
+        // progress.curve2_from_level (08 §4.3).
+        private const string Curve2Key = "curve2_from_level";
+
+        // Entero del nodo, o fallback si falta o no es un entero (la lectura del perfil decide después si es corrupción).
+        private static int IntOr(JsonNode? node, int fallback)
+        {
+            if (node == null || node.Kind != JsonKind.Number)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return node.AsInt();
+            }
+            catch (FormatException)
+            {
+                return fallback;
+            }
         }
 
         /// <summary>Esquema al que llegan las migraciones.</summary>

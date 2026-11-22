@@ -810,7 +810,7 @@ namespace AF.Presentation
         // chip de 18 dp) acaba a ≈ 14,1 dp, así que nunca cae sobre él y queda entera sobre la madera.
         private Sprite BuildTinajaChipPill()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int h = Mathf.RoundToInt(TinajaChipHeightDp * k);
             int w = h + 24;
             float r = h * 0.5f;
@@ -826,7 +826,7 @@ namespace AF.Presentation
         // piezas). Dos varas, y no tres, para que el jirau quepa entero en la cara superior de la repisa (TinajaOverlay).
         private Sprite BuildTinajaJirau()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int h = Mathf.RoundToInt(TinajaJirauDesignDp * k);
             int border = Mathf.RoundToInt(TinajaJirauBorderDp * k);
             int w = (2 * border) + 48;

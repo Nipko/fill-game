@@ -46,7 +46,7 @@ namespace AF.Levels
     }
 
     /// <summary>
-    /// Una parada del Mapa del río (<c>af-river-stops/1</c>; 08 §4.5; contrato 30): la parada k = <see cref="N"/> cubre los niveles
+    /// Una parada del Mapa del río (<c>af-river-stops/2</c>; 08 §4.5; contrato 30): la parada k = <see cref="N"/> cubre los niveles
     /// <c>10k+1</c> … <c>10k+10</c> y se llega a ella al ganar el <c>10k</c>. Solo claves de texto (sus textos van en
     /// <c>facts.csv</c>, contrato 32) y nombres por convención sin campo (<see cref="NameKey"/>, <see cref="RiverKey"/> y
     /// <see cref="CountryNameKeyOrDefault"/>). Los campos <c>at</c> y <c>leg</c> (ruta de la canoa) los leerá M3.2 cuando existan.
@@ -153,14 +153,14 @@ namespace AF.Levels
     }
 
     /// <summary>
-    /// Catálogo de las paradas del Mapa del río (<c>af-river-stops/1</c>; 08 §2.2 y §4.5; contrato 30), sin motor: lo lee y lo
+    /// Catálogo de las paradas del Mapa del río (<c>af-river-stops/2</c>; 08 §2.2 y §4.5; contrato 30), sin motor: lo lee y lo
     /// contrasta con <see cref="WorldTable"/> <see cref="RiverStopCatalogReader"/>. Las búsquedas (<see cref="At"/>,
     /// <see cref="StopOf"/>, <see cref="ArrivalOnWin"/> y <see cref="FirstStopOfWorld"/>) no asignan memoria. Inmutable.
     /// </summary>
     public sealed class RiverStopCatalog
     {
         /// <summary>Formato que lee este cliente.</summary>
-        public const string Format = "af-river-stops/1";
+        public const string Format = "af-river-stops/2";
 
         /// <summary>Tope del dato del Mapa en español, en caracteres (08 §4.5) [P].</summary>
         public const int FactMaxChars = 90;

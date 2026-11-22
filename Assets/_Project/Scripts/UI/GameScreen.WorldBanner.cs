@@ -117,6 +117,12 @@ namespace AF.UI
         /// <summary>Geometría del Mapa para el viaje de mundo del banner (la pone GameBootstrap; null = sin viaje).</summary>
         internal RiverGeometrySource? RiverGeometry { get; set; }
 
+        /// <summary>
+        /// La tripulación en el plano final del viaje de mundo (D-069, M2-4; propuesta del Mapa v2 §5.5): <c>ui_map_v2</c> y
+        /// <c>ui_map_crew</c> de Remote Config (la pone GameBootstrap; null = sin tripulación).
+        /// </summary>
+        internal Func<bool>? BannerCrewOn { get; set; }
+
         /// <summary>Veces que «Ver mapa» del banner abrió el Mapa (tests).</summary>
         internal int BannerMapOpened => _bannerMapOpened;
 
@@ -170,6 +176,7 @@ namespace AF.UI
             Color water = Palette.WaterBase(flow.Level.WaterBase);
             ApplyBannerArtHooks();
             _worldBanner.AsyncArt = LaunchOptions.BannerArtSyncOverride != true; // el arte, fuera del fotograma de la carga
+            _worldBanner.CrewOn = BannerCrewOn != null && BannerCrewOn(); // D-069, M2-4: la tripulación en el plano final del viaje
             _worldBanner.Show(world, water, flow.ReduceMotion, _canvasW, _canvasH, _safeTop, _safeBottom, travel);
             _worldBanner.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
             flow.WorldBannerWaiting = !_worldBanner.CardShown; // sin tarjeta a la vista, ningún toque lo cierra

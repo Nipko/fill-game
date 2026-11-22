@@ -180,6 +180,7 @@ namespace AF.GameFlow
             ProgressData progress = profile.Progress;
             progress.NextLevel = nextLevel;
             progress.MaxLevel = Math.Max(progress.MaxLevel, nextLevel - 1);
+            progress.Curve2FromLevel = Math.Max(progress.Curve2FromLevel, nextLevel); // D-068: lo jugado no cambia de tablero
             if (!store.TrySave(profile))
             {
                 return LegacyProgressOutcome.MigratedNotSaved;

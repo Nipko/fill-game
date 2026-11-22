@@ -46,6 +46,13 @@ namespace AF.EditorTools
     /// <c>Assets/Plugins/Android/settingsTemplate.gradle</c> excluye de ella <c>firebase-appcheck-debug</c> (release y ensayo;
     /// D-033, añadido del 2026-10-22, punto 9). Compuerta: <c>ci/check-release-classes.ps1</c>.
     ///
+    /// R8 y símbolos (D-059, añadido del 2026-11-06; <c>docs/dev/release.md</c>, «R8 y símbolos»): la variante <c>release</c> va
+    /// con R8 (<see cref="ProjectSetup.MinifyRelease"/>, que exige <see cref="ProjectSetup.Validate"/>), así que release y ensayo
+    /// salen igual. Unity deja el <c>mapping.txt</c> de R8 junto al AAB (<see cref="MappingPath"/>; el CI lo guarda como artefacto)
+    /// y, si falta tras el build, este falla con 4 (el de un build anterior se borra antes de empezar). El AAB lleva además el
+    /// mapping y la tabla de símbolos nativos en <c>BUNDLE-METADATA</c> (<see cref="ReleaseDebugSymbols"/>), de donde los toma
+    /// Play Console al subirlo.
+    ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta; en el escritorio x64, <c>--architecture x86_64</c>):
     ///   unity run &lt;repo&gt; --architecture arm64 --log-file Logs/build-release.log --no-tail --timeout 5400 --non-interactive
     ///             -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildRelease.BuildAndroid -afRehearsal -afApk
@@ -56,8 +63,9 @@ namespace AF.EditorTools
     ///   0  build construido
     ///   2  los Player Settings no son los fijados (ejecuta antes ProjectSetup.ApplyAndroidDefaults)
     ///      o los de Google Mobile Ads no tienen el App ID de AdMob y no se pudieron aplicar (AF.Ads.Google.Editor.GoogleAdsProjectSetup; D-049)
+    ///      o, sin la plataforma Android activa al compilar, no está la API de símbolos nativos (<see cref="ReleaseDebugSymbols"/>)
     ///   3  falta el módulo Android o no se pudo cambiar la plataforma activa
-    ///   4  falló el build o hubo una excepción (lee el log)
+    ///   4  falló el build o hubo una excepción (lee el log), o, con R8, Unity no dejó el mapping junto al AAB
     ///   5  Build Settings no incluye Assets/_Project/Scenes/Game.unity
     ///   6  compuerta de release de los textos (<see cref="LocReleaseGate"/>; 08 §4.7)
     ///   7  identidad inválida: sin <c>-afApplicationId</c> ni <c>-afRehearsal</c>, el ID provisional o con "amazon" en un
@@ -742,7 +750,14 @@ namespace AF.EditorTools
                 return ExitNoGameScene;
             }
 
+            if (!ReleaseDebugSymbols.Available)
+            {
+                Debug.LogError(LogPrefix + "sin la API de simbolos de Android (la plataforma activa no es Android al compilar): lanza con -buildTarget Android.");
+                return ExitSettings;
+            }
+
             NamedBuildTarget android = NamedBuildTarget.Android;
+            ReleaseDebugSymbols.State previousSymbols = ReleaseDebugSymbols.Capture();
             string previousId = PlayerSettings.GetApplicationIdentifier(android);
             string previousName = PlayerSettings.productName;
             int previousVersionCode = PlayerSettings.Android.bundleVersionCode;
@@ -798,14 +813,29 @@ namespace AF.EditorTools
                     PlayerSettings.Android.bundleVersionCode = o.VersionCode;
                 }
 
+                ReleaseDebugSymbols.Apply();
+
                 string kind = o.Rehearsal ? "ENSAYO (identidad de prueba). "
                     : signing != null ? "RELEASE firmado con la clave de subida. " : "RELEASE sin firma (clave de depuracion). ";
                 Debug.Log(LogPrefix + kind
                     + ProjectSetup.Describe() + ", versionName=" + PlayerSettings.bundleVersion
                     + ", versionCode=" + PlayerSettings.Android.bundleVersionCode
+                    + ", " + ReleaseDebugSymbols.Describe()
                     + ", escenas=" + string.Join(",", scenes));
 
-                bool ok = BuildOne(scenes, OutputPath(o, false), true);
+                string aab = OutputPath(o, false);
+                string mapping = MappingPath(aab);
+                if (File.Exists(mapping))
+                {
+                    File.Delete(mapping); // el de un build anterior: Unity copia el nuevo con la fecha de Gradle, que puede ser vieja
+                }
+
+                bool ok = BuildOne(scenes, aab, true);
+                if (ok && PlayerSettings.Android.minifyRelease)
+                {
+                    ok = CheckMapping(mapping);
+                }
+
                 if (ok && o.Apk)
                 {
                     ok = BuildOne(scenes, OutputPath(o, true), false);
@@ -815,6 +845,7 @@ namespace AF.EditorTools
             }
             finally
             {
+                ReleaseDebugSymbols.Restore(previousSymbols);
                 if (signing != null)
                 {
                     previousSigning.Restore();
@@ -838,6 +869,34 @@ namespace AF.EditorTools
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Dónde deja Unity 6000.3 el mapping de R8 de un build: <c>rehearsal.aab</c> → <c>rehearsal_mapping.txt</c> (el APK del
+        /// mismo ensayo escribe el mismo archivo, con el mismo contenido).
+        /// </summary>
+        internal static string MappingPath(string outputPath)
+        {
+            string ext = Path.GetExtension(outputPath);
+            string stem = ext.Length > 0 ? outputPath.Substring(0, outputPath.Length - ext.Length) : outputPath;
+            return stem + "_mapping.txt";
+        }
+
+        /// <summary>
+        /// Exige el mapping de R8 de este build en <paramref name="path"/> (el de uno anterior se borra antes de construir). Sin
+        /// él, los fallos de Java de esta versión no se desofuscan fuera de Play.
+        /// </summary>
+        private static bool CheckMapping(string path)
+        {
+            var mapping = new FileInfo(path);
+            if (!mapping.Exists || mapping.Length == 0)
+            {
+                Debug.LogError(LogPrefix + "R8 activo pero Unity no dejo el mapping de este build en " + path + ".");
+                return false;
+            }
+
+            Debug.Log(LogPrefix + "mapping de R8 en " + path + " (" + mapping.Length.ToString(CultureInfo.InvariantCulture) + " bytes).");
+            return true;
         }
 
         /// <summary>

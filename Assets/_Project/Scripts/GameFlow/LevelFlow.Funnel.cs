@@ -142,6 +142,7 @@ namespace AF.GameFlow
                 UndoFree = undo.FreeLeft,
                 UndoStock = undo.Stock,
                 HasHistory = _session != null && _session.CanUndo,
+                UndoUseless = _session != null && !_session.UndoEscapes, // añadido de D-014 del 2026-11-17: Marea solo si saca del atasco
                 UndoAdReady = undoAdReady,
                 Seeds = _wallet?.Seeds ?? 0,
                 UndoRefillPrice = _wallet?.Price(SeedSink.UndoRefill) ?? EconomyConfig.Defaults.UndoRefillSeedPrice,

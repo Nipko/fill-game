@@ -4,6 +4,47 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+### Marea saca de vistos lo que deshace y dice si saca del atasco (añadido de D-014 del 2026-11-17)
+
+- **Opción 1 del dueño:** los tableros vistos del intento pasan de `HashSet<ulong>` a un contador por hash
+  (`Dictionary<ulong, int>`, capacidad inicial 256 [P]). `LevelSession.Undo()` resta 1 al tablero que deja y, a 0, deja de estar
+  visto; un tablero repetido en el historial sigue visto por la otra vez [P]. Tras Aguas estancadas, Marea deja jugar (el 66: Marea
+  al 11.º sigue en `Playing`; rehacer el 12.º vuelve a `Stuck`). Volver a la orilla, la Pororoca, la Luciérnaga, `RestoreRevealed`
+  y las sesiones rehechas no cambian.
+- **Opción 3 del dueño:** `LevelSession.UndoEscapes`, sin asignaciones, dice si tras Marea la partida quedaría en `Playing` (el
+  mismo `DeadEndProbe` con una vista del contador, `SeenBoards.AfterUndo`). Con historial y sin dosis ocultas siempre es true:
+  Marea deja los vistos como antes de su vertido.
+- `DeadEndProbe.IsStagnant` recibe `in SeenBoards` (interno) en lugar del `HashSet<ulong>`.
+- Pruebas: `DeadEndProbeTests` (Marea y repetir en el 66, ida y vuelta, sin historial y el tablero turbio en que Marea
+  vuelve con lo revelado a un tablero bloqueado: `UndoEscapes` false con historial), `RuleCatalogTests` (R15),
+  `TinajaSolverTests` y el oráculo `StagnationOracle` con contador, `CheckUndo` y `WalkUntilStuck`; solo dotnet,
+  `StagnationPropertyTests` (Marea en las partidas al azar, también sobre dos tableros turbios, y sin ocultas `CanUndo` ⇒
+  `UndoEscapes` y `UndoEscapes` en todas las historias de hasta 7 vertidos) y
+  `HotLoopAllocationTests.WarmUndoAndUndoEscapes_DoNotAllocate`.
+
+### Curva de la 1.1, fase F2: Aguapé, Aguapé espeso, Lancha y bot atento (D-068)
+
+- **Aguapé (M8) y Aguapé espeso:** `MechanicType.Aguape` (12), filtro de origen; suelta de todo el grupo en R10 (d) con `n` sellos
+  del grupo (1, o 2 en el espeso); grupo en los bits del id de pareja y `n` en los de `n`. `BoardRules.ReleaseBySeals` decide las
+  sueltas de una pasada antes de aplicarlas (sin cambio para la Liana y la Flor).
+- **Lancha (M11):** `MechanicType.Lancha` (13), ni origen ni destino hasta atracar en R10 (f) con `k` cuias vacías; atracada =
+  sin mecánica. `PourRules.Settle` y `LevelSession` asientan el tablero inicial y el de la Pororoca con una lancha [P].
+- **Carga `pack_schema` 5:** `MechanicSpec.Group` (parámetro opcional `group`); `BoardBuilder` lee `aguape {group, n?}` y
+  `lancha {k}`. `LevelValidation`: reglas de grupo y de lancha, combinaciones con Aguas turbias y la Tinaja, y
+  `ValidateRows`. `CurveMechanics`: consultas para el cliente y las herramientas.
+- **Clave canónica:** `BoardCanon.Sort` renumera los grupos del Aguapé (`RelabelGroups`, sin asignaciones en el montón). Los
+  hashes de la 1.0 no cambian (golden de todos los packs publicados).
+- **Bot atento ×40 [P]** (`AttentiveBot`): lookahead de 2 y sin vertidos que bloquean; solo informe.
+- Eventos `AguapeReleasedMask` y `LanchaDockedMask`. Pruebas P1-P3, D-014, golden, asignaciones y ayudas.
+
+### Aguas estancadas solo al repetir (añadido de D-014 del 2026-11-06, 1.1)
+
+- **`LevelSession` espera a que el jugador repita** (punto 1 del añadido de D-059 del 2026-10-31, el nivel 26): con el cierre de
+  `DeadEndProbe` perdido, la partida solo pasa a `Stuck` si todo vertido legal lleva a un tablero ya visto en el intento (hash
+  canónico de 64 bits). Nuevo: `DeadEndProbe.IsStagnant` y `CanonicalHash` (internos, sin asignaciones),
+  `LevelSession.SeenBoardCount` y `LevelSession.ResumeStuck()`. Lo deshecho con Marea cuenta como visto y `Restart` lo olvida [P].
+  El 66 da Aguas estancadas tras el vertido 12 del dueño (antes, tras el 9). Solver, bot, generador, level-qa y packs sin cambios.
+
 ### Pruebas de asignaciones estables (FX9)
 
 - **Las pruebas «sin asignaciones» ya no fallan de vez en cuando** (CLAUDE.md, regla dura 2). Con la suite completa,

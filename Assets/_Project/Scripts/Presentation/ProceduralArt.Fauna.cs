@@ -234,7 +234,7 @@ namespace AF.Presentation
         private Sprite SubSprite(Texture2D tex, Rect rect, string name, float borderPx)
         {
             var border = new Vector4(0f, borderPx, 0f, borderPx);
-            Sprite sprite = Sprite.Create(tex, rect, new Vector2(0.5f, 0.5f), 100f * UiPxPerDp, 0, SpriteMeshType.FullRect, border);
+            Sprite sprite = Sprite.Create(tex, rect, new Vector2(0.5f, 0.5f), 100f * MaxUiPxPerDp, 0, SpriteMeshType.FullRect, border);
             sprite.name = tex.name + "_" + name;
             sprite.hideFlags = HideFlags.DontSave;
             _owned.Add(sprite);

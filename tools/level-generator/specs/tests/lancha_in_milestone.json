@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, añadido «las preguntas de F3 y F3b»): el hito 440 con la Lancha en lugar del Aguapé falla CURVE-MECH (la Lancha necesita T >= K + k + 1 y no cabe en el tope de un hito ni de la cúspide).",
+  "expect_rule": "CURVE-MECH",
+  "calendar": {
+    "440": "La+Ho+Re (MD)"
+  }
+}

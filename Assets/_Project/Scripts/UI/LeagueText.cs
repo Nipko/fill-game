@@ -43,6 +43,13 @@ namespace AF.UI
         public const string TimeNowKey = "league_time_now";
         public const string CountryPrefix = "league_country_";
 
+        /// <summary>El estreno de la Liga (añadido de D-046 del 2026-11-06): título, línea, «Ver la Liga», «Luego» y la píldora «Nueva».</summary>
+        public const string DebutTitleKey = "league_debut_title";
+        public const string DebutBodyKey = "league_debut_body";
+        public const string DebutOpenKey = "league_debut_open";
+        public const string DebutLaterKey = "league_debut_later";
+        public const string NewKey = "league_new";
+
         /// <summary>«Otro país»: el nombre de un país sin fila en la tabla, junto a la placa neutra con su código ISO.</summary>
         public const string CountryOtherKey = "league_country_other";
 
@@ -65,6 +72,7 @@ namespace AF.UI
                     ButtonKey, TitleKey, TabGlobalKey, WeekKey, EndsInKey, UpdatedAgoKey, OfflineKey, LoadingKey, EmptyWeekKey, YouKey,
                     PercentileKey, NoPointsKey, VictoryPointsKey, SettingsCountryKey, PlayerNameKey, PlayerFallbackKey, RowA11yKey,
                     RowPlayerKey, MeRankA11yKey, MePercentileA11yKey, PointsKey, TimeDaysKey, TimeHoursKey, TimeMinutesKey, TimeNowKey, CountryOtherKey,
+                    DebutTitleKey, DebutBodyKey, DebutOpenKey, DebutLaterKey, NewKey,
                 };
                 keys.AddRange(LeagueRules.NameKeys);
                 for (int i = 0; i < NamedCountries.Length; i++)
@@ -77,6 +85,21 @@ namespace AF.UI
         }
 
         public static string Button => Loc.T(ButtonKey);
+
+        /// <summary>«¡Llegó la Liga del río!» (estreno).</summary>
+        public static string DebutTitle => Loc.T(DebutTitleKey);
+
+        /// <summary>La línea del estreno que explica qué es la Liga.</summary>
+        public static string DebutBody => Loc.T(DebutBodyKey);
+
+        /// <summary>«Ver la Liga» (estreno).</summary>
+        public static string DebutOpen => Loc.T(DebutOpenKey);
+
+        /// <summary>«Luego» (estreno).</summary>
+        public static string DebutLater => Loc.T(DebutLaterKey);
+
+        /// <summary>«Nueva»: la píldora de la tarjeta «Liga» del inicio hasta que se abre tras el estreno.</summary>
+        public static string New => Loc.T(NewKey);
 
         public static string Title => Loc.T(TitleKey);
 

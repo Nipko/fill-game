@@ -35,7 +35,7 @@ namespace AF.Presentation
 
         private Sprite BuildIconBasket()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int s = Mathf.RoundToInt(BasketIconDp * k);
             var pc = new PixelCanvas(s, s);
             float u = s / 32f; // 1 dp del icono en px

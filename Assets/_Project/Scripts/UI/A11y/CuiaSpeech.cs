@@ -78,6 +78,8 @@ namespace AF.UI
                 case MechanicType.Lluvia: return "lluvia";
                 case MechanicType.Pirana: return "pirana";
                 case MechanicType.Flor: return "flor";
+                case MechanicType.Aguape: return cuia.MechanicN >= 2 ? "aguape_n2" : "aguape"; // D-068: el espeso, por n
+                case MechanicType.Lancha: return "lancha";
                 default: return string.Empty;
             }
         }

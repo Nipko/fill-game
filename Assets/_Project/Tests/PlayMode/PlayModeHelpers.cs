@@ -171,6 +171,38 @@ namespace AF.Tests.PlayMode
             NoShuffleUnlessSet();
             NoLogbookUnlessSet();
             NoPrePromptUnlessSet();
+            NoLeagueDebutUnlessSet();
+            NoCurve2UnlessSet();
+        }
+
+        /// <summary>
+        /// Juega la curva 1 de 301-700 (los packs <c>mundo_07..09_v1</c> de la 1.0) si el test no fijó <c>lvl_curve2_enabled</c>
+        /// (<see cref="LaunchOptions.Curve2EnabledOverride"/> = null) ni trae sus propios packs de la curva
+        /// (<see cref="LaunchOptions.CurvePackJsonOverride"/>): desde F5 (D-068) la escena enlaza los packs de la curva 2 y la clave
+        /// está encendida por defecto (08 §9), así que un perfil nuevo jugaría su tablero. Los tests que no tratan de la curva 2
+        /// (Tinaja del 323, variantes, filas de 374 y 640…) siguen con los tableros de la 1.0, que siguen sirviéndose a quien ya los
+        /// alcanzó (08 §4.4); los que la prueban (<c>CurveBootTests</c>, <c>CurvePlayTests</c>) la fijan.
+        /// </summary>
+        public static void NoCurve2UnlessSet()
+        {
+            if (LaunchOptions.Curve2EnabledOverride == null && LaunchOptions.CurvePackJsonOverride == null)
+            {
+                LaunchOptions.Curve2EnabledOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga el estreno de la Liga (añadido de D-046 del 2026-11-06) si el test no lo fijó
+        /// (<see cref="GameBootstrap.LeagueDebutOverride"/> = null): los tests que no tratan de él entran al inicio con la Liga y dejan la
+        /// victoria del 41 como antes de que existiera. Los que lo prueban (<c>LeagueDebutTests</c>) lo encienden y lo vuelven a null
+        /// en su TearDown (<see cref="GameBootstrap.ResetLeagueOverrides"/>).
+        /// </summary>
+        public static void NoLeagueDebutUnlessSet()
+        {
+            if (GameBootstrap.LeagueDebutOverride == null)
+            {
+                GameBootstrap.LeagueDebutOverride = false;
+            }
         }
 
         /// <summary>
@@ -507,8 +539,11 @@ namespace AF.Tests.PlayMode
                 new MemoryProgressStore(level, level - 1));
         }
 
-        /// <summary>Paquete <c>af-level/1</c> (subconjunto de v0) de un solo nivel con capacidad 4.</summary>
-        public static string BoardPack(int world, string worldId, string water, int level, string[] palette, int[][] board)
+        /// <summary>
+        /// Paquete <c>af-level/1</c> (subconjunto de v0) de un solo nivel con capacidad 4; con <paramref name="label"/>
+        /// (<c>normal</c>, <c>hard</c> o <c>very_hard</c>), su <c>difficulty.label</c>.
+        /// </summary>
+        public static string BoardPack(int world, string worldId, string water, int level, string[] palette, int[][] board, string? label = null)
         {
             var cuias = new System.Text.StringBuilder();
             var caps = new System.Text.StringBuilder();
@@ -533,7 +568,8 @@ namespace AF.Tests.PlayMode
                 + ", \"world_id\": \"" + worldId + "\", \"lap\": 1, \"water_base\": \"" + water + "\", \"levels\": [ { \"id\": \"" + id + "\", "
                 + "\"level\": " + level + ", \"world\": " + world + ", \"lap\": 1, \"water_base\": \"" + water + "\", \"palette\": [\""
                 + string.Join("\", \"", palette) + "\"], \"units_per_color\": 4, \"caps\": [" + caps + "], \"cuias\": [" + cuias + "], \"attrs\": ["
-                + attrs + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
+                + attrs + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1"
+                + (label == null ? string.Empty : ", \"label\": \"" + label + "\"") + " }, \"relief\": [] } ] }";
         }
 
         /// <summary>Paso fijo del reloj manual (≈60 fps, 08 §5.4).</summary>

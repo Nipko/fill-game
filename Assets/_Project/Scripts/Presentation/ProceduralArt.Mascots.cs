@@ -116,7 +116,7 @@ namespace AF.Presentation
         public const float BannerSceneSunX = 0.78f;
 
         /// <summary>Densidad de la viñeta (px por dp): la de las mascotas, porque Capi va dibujado en ella.</summary>
-        public const float BannerScenePxPerDp = UiPxPerDp;
+        public static float BannerScenePxPerDp => UiPxPerDp;
 
         /// <summary>Pelaje de Capi #8B6A3E (07 §6.1).</summary>
         public static readonly Color CapiFur = Palette.Hex(0x8B6A3E);
@@ -142,7 +142,7 @@ namespace AF.Presentation
         /// <summary>Alto de la onda de Rosa (dp).</summary>
         public const float RosaRippleHeightDp = 14f;
 
-        private const float MascotPxPerDp = UiPxPerDp;
+        private static float MascotPxPerDp => UiPxPerDp;
 
         // Celdas de la poda de las siluetas (px): solo se evalúan las que pueden tocar la silueta o su contorno.
         private const int SilhouetteCell = 6;
@@ -782,8 +782,15 @@ namespace AF.Presentation
         // diagonal, ningún píxel de la celda se pinta (el resultado es el mismo).
         private static void DrawCapi(PixelCanvas pc, int ox, int oy, int s)
         {
+            DrawCapi(pc, ox, oy, s, MascotPxPerDp);
+        }
+
+        // pxPerDp: la densidad del contorno y los pliegues; el rig de Capi del Mapa, atlas de tamaño fijo, la pasa a 3 px/dp
+        // (MaxUiPxPerDp) aunque el arte lleve tope (memoria.md §9.1).
+        private static void DrawCapi(PixelCanvas pc, int ox, int oy, int s, float pxPerDp)
+        {
             float inv = 1f / s;
-            float outline = Mathf.Max(1.6f, CapiEdgeDp * MascotPxPerDp * Mathf.Min(1f, s / (CapiPresentDp * MascotPxPerDp * 0.5f)));
+            float outline = Mathf.Max(1.6f, CapiEdgeDp * pxPerDp * Mathf.Min(1f, s / (CapiPresentDp * pxPerDp * 0.5f)));
             float reach = outline + 1f + (0.5f * 1.4143f * SilhouetteCell) + 1f;
             float domePx = CapiDome * s;
             float band = domePx + outline + 2f; // más dentro, la cúpula ya mira de frente: no hace falta la normal del borde
@@ -825,8 +832,8 @@ namespace AF.Presentation
 
             // Los pliegues del muslo sobre la grupa y de la pata de apoyo contra el pecho: sombras suaves, no trazos de tinta.
             float thin = 1.1f * CapiEdgeDp;
-            StrokeArcUnits(pc, s, ox, oy, 0.285f, 0.20f, 0.135f, 30f, 118f, thin, CapiToy.Crease);
-            StrokeArcUnits(pc, s, ox, oy, 0.545f, 0.235f, 0.05f, 195f, 285f, 0.85f * thin, CapiToy.Crease);
+            StrokeArcUnits(pc, s, ox, oy, 0.285f, 0.20f, 0.135f, 30f, 118f, thin, CapiToy.Crease, pxPerDp);
+            StrokeArcUnits(pc, s, ox, oy, 0.545f, 0.235f, 0.05f, 195f, 285f, 0.85f * thin, CapiToy.Crease, pxPerDp);
 
             // La nariz lacada arriba en el frente del hocico (como la de la capibara), el ojo de juguete, pequeño y alto (1,25 veces
             // el de antes), y la boca.
@@ -835,7 +842,7 @@ namespace AF.Presentation
             pc.FillEllipseSoft(ox + (0.876f * k), oy + (0.664f * k), 0.008f * k, 0.006f * k, 1f, new Color(0f, 0f, 0f, 0.6f));
             pc.FillEllipseSoft(ox + (0.86f * k), oy + (0.672f * k), 0.008f * k, 0.004f * k, 0.8f, new Color(1f, 1f, 1f, 0.7f));
             DrawToyEye(pc, ox + (0.665f * k), oy + (0.70f * k), Mathf.Max(1.1f, 0.026f * k), CapiToy.Iris);
-            StrokeArcUnits(pc, s, ox, oy, 0.845f, 0.548f, 0.026f, 205f, 300f, 0.8f * thin, CapiToy.Fur.Outline);
+            StrokeArcUnits(pc, s, ox, oy, 0.845f, 0.548f, 0.026f, 205f, 300f, 0.8f * thin, CapiToy.Fur.Outline, pxPerDp);
         }
 
         // Pelaje de Capi en (x, y) (unidades del lado s), a d px del borde (negativa dentro) con la normal del borde: las
@@ -1751,9 +1758,9 @@ namespace AF.Presentation
 
         // Arco fino del color color en unidades del lado s del cuadrado con la esquina en el píxel (ox, oy) (centro, radio y ángulos en
         // grados, y grosor en dp).
-        private static void StrokeArcUnits(PixelCanvas pc, int s, int ox, int oy, float cx, float cy, float r, float fromDeg, float toDeg, float thickDp, Color color)
+        private static void StrokeArcUnits(PixelCanvas pc, int s, int ox, int oy, float cx, float cy, float r, float fromDeg, float toDeg, float thickDp, Color color, float pxPerDp)
         {
-            pc.StrokeArc(ox + (cx * s), oy + (cy * s), r * s, thickDp * MascotPxPerDp, fromDeg, toDeg, color);
+            pc.StrokeArc(ox + (cx * s), oy + (cy * s), r * s, thickDp * pxPerDp, fromDeg, toDeg, color);
         }
 
         /// <summary>

@@ -93,6 +93,17 @@ namespace AF.GameFlow
         /// <summary>Tope de ponerse al día en el Mapa: 1.500 ms (propuesta del Mapa §4.2) [P].</summary>
         public const int CatchUpMaxMs = 1500;
 
+        /// <summary>
+        /// Viaje del tramo en los Mapas con viaje (D-053: el del 10, «Ver mapa» de la victoria y el fin de contenido): 450 ms por
+        /// boya, 4,5 s un tramo de 10 niveles (añadido de D-069 del 2026-11-08, observación 3 de la prueba de la 1.1: con los 150 ms
+        /// de «ponerse al día» no se veían los gestos de Capi, la burbuja ni la cámara) [P]. Entre <see cref="JourneyMinMs"/> y
+        /// <see cref="AnimMapWorldMs"/>. «Ponerse al día» desde la pestaña sigue con <see cref="CatchUpPerBuoyMs"/>.
+        /// </summary>
+        public const int JourneyPerBuoyMs = 450;
+
+        /// <summary>Lo menos que dura el viaje del tramo de un Mapa con viaje: 3.000 ms (añadido de D-069 del 2026-11-08) [P].</summary>
+        public const int JourneyMinMs = 3000;
+
         /// <summary>Izado de la bandera al cambiar de país: 800 ms (08 §9, columna «Uso» de <c>anim_map_world_ms</c>) [P].</summary>
         public const int FlagRaiseMs = 800;
 

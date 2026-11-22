@@ -71,6 +71,15 @@ namespace AF.UI
             /// <summary>«+ Marco de país» (fijo en el día 30).</summary>
             public const string ItemFrame = "logbook_item_frame";
 
+            /// <summary>
+            /// «Marco de {world}: ya lo lleva tu avatar», tras sellar la casilla 30 (Q-M6 de D-033, añadido del 2026-11-08): el marco
+            /// ganado se pone solo y la libreta lo enseña en el retrato del jugador.
+            /// </summary>
+            public const string FrameReveal = "logbook_frame_reveal";
+
+            /// <summary>«Ver tu avatar»: cierra la libreta y abre «Tu avatar» con la fila de los marcos.</summary>
+            public const string FrameView = "logbook_frame_view";
+
             /// <summary>Botón de la secuencia del 10: «Seguir» (06 §2.3: «Un solo botón "Seguir"»).</summary>
             public const string Continue = "logbook_continue";
 
@@ -117,6 +126,12 @@ namespace AF.UI
         public static string Units(string key, int units)
         {
             return Loc.T(key, LocArgs.OfDigits("n", units));
+        }
+
+        /// <summary>«Marco de Estuario: ya lo lleva tu avatar».</summary>
+        public static string FrameReveal(int world)
+        {
+            return Loc.T(Keys.FrameReveal, LocArgs.Of("world", UiText.WorldName(world)));
         }
 
         /// <summary>Texto sin argumentos.</summary>

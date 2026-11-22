@@ -38,6 +38,62 @@ namespace AF.Presentation
         private Color _flatColor = Color.white;
         private int[] _remap = Array.Empty<int>();
         private int _vertexCount;
+        private bool _live;
+        private bool _canopyOnly;
+
+        /// <summary>Sabana del Mapa v2 (<c>savanna</c>, los Llanos de Moxos): amarilla [P] (propuesta del Mapa v2 §3.1, capa 1).</summary>
+        public static readonly Color SavannaLive = Palette.Hex(0xC8B65A);
+
+        /// <summary>Roca andina del Mapa v2 (<c>rock</c>) [P].</summary>
+        public static readonly Color RockLive = new Color(0x84 / 255f, 0x80 / 255f, 0x60 / 255f, 0.72f);
+
+        /// <summary>Nieve del Mapa v2 (<c>snow</c>) [P].</summary>
+        public static readonly Color SnowLive = new Color(0xE2 / 255f, 0xEB / 255f, 0xEE / 255f, 0.8f);
+
+        /// <summary>
+        /// Acabado del Mapa v2 (D-069, M2-1): cada zona con su color del Mapa v2 y la opacidad de su vértice
+        /// (<see cref="RiverLand.Shade"/>: las manchas de sabana, roca y nieve se difuminan en su borde).
+        /// </summary>
+        public bool Live => _live;
+
+        /// <summary>Solo las zonas de dosel (<c>canopy</c>): el Mapa de la 1.0 con los datos <c>/2</c> (<c>ui_map_v2</c> apagada).</summary>
+        public bool CanopyOnly => _canopyOnly;
+
+        /// <summary>Enciende el acabado del Mapa v2 (<see cref="Live"/>).</summary>
+        public void SetLive(bool on)
+        {
+            if (on != _live)
+            {
+                _live = on;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Dibuja solo el dosel (<see cref="CanopyOnly"/>).</summary>
+        public void SetCanopyOnly(bool on)
+        {
+            if (on != _canopyOnly)
+            {
+                _canopyOnly = on;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Color de un mosaico en el Mapa v2 [P]; los que no cambian, el de <see cref="TileColor"/>.</summary>
+        public static Color LiveTileColor(string tile)
+        {
+            switch (tile)
+            {
+                case "savanna":
+                    return SavannaLive;
+                case "rock":
+                    return RockLive;
+                case "snow":
+                    return SnowLive;
+                default:
+                    return TileColor(tile);
+            }
+        }
 
         /// <summary>Configura el gráfico (sin raycast).</summary>
         public void Setup()
@@ -113,7 +169,7 @@ namespace AF.Presentation
                 return _flatColor;
             }
 
-            return TileColor(_land.Zones[zone].Tile);
+            return _live ? LiveTileColor(_land.Zones[zone].Tile) : TileColor(_land.Zones[zone].Tile);
         }
 
         /// <inheritdoc />
@@ -132,9 +188,9 @@ namespace AF.Presentation
             for (int z = 0; z < land.Zones.Count; z++)
             {
                 RiverLandZone zone = land.Zones[z];
-                if (zone.Count == 0)
+                if (zone.Count == 0 || (_canopyOnly && zone.Tile != "canopy"))
                 {
-                    continue;
+                    continue; // las de banda (la várzea) las dibuja el río; sin el Mapa v2, solo el dosel (D-069, M2-1)
                 }
 
                 // Cada zona lleva sus propios vértices (el color es por vértice); dentro de la zona se comparten.
@@ -146,17 +202,29 @@ namespace AF.Presentation
                 Color c = ZoneColor(z);
                 c.a *= color.a;
                 Color32 c32 = c;
+                bool shaded = _live && !_flat;
                 int end = (zone.First + zone.Count) * 3;
                 for (int t = zone.First * 3; t < end; t += 3)
                 {
-                    int a = Vertex(vh, xy, tris[t], c32);
-                    int b = Vertex(vh, xy, tris[t + 1], c32);
-                    int d = Vertex(vh, xy, tris[t + 2], c32);
+                    int a = Vertex(vh, xy, tris[t], Shaded(c32, land, tris[t], shaded));
+                    int b = Vertex(vh, xy, tris[t + 1], Shaded(c32, land, tris[t + 1], shaded));
+                    int d = Vertex(vh, xy, tris[t + 2], Shaded(c32, land, tris[t + 2], shaded));
                     vh.AddTriangle(a, b, d);
                 }
             }
 
             _vertexCount = vh.currentVertCount;
+        }
+
+        // El color de la zona con la opacidad de su vértice (land.shade; D-069, M2-1).
+        private static Color32 Shaded(Color32 c, RiverLand land, int index, bool shaded)
+        {
+            if (shaded)
+            {
+                c.a = (byte)Mathf.RoundToInt(c.a * land.ShadeOf(index));
+            }
+
+            return c;
         }
 
         private int Vertex(VertexHelper vh, float[] xy, int index, Color32 c)

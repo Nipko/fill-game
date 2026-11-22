@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
@@ -677,6 +678,104 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(level66, Is.True);
             Assert.That(total, Is.EqualTo(20 * warm));
             Assert.That(allocated.Bytes, Is.EqualTo(0), allocated.Describe("cierre acotado"));
+        }
+
+        [Test]
+        public void WarmStagnationCheck_DoesNotAllocate()
+        {
+            // Añadido de D-014 del 2026-11-06 (CLAUDE.md, regla dura 2): la comprobación de repetición (todo vertido lleva a un
+            // tablero ya visto) y el hash canónico del tablero en pantalla no asignan una vez calentados: solo una búsqueda en un
+            // Dictionary<ulong, int> (el contador del añadido de D-014 del 2026-11-17), sin boxing.
+            BoardState[] boards = { Level66Board.Final(), Level26Board.Lost(), Board() };
+            var probe = new DeadEndProbe();
+            var counts = new Dictionary<ulong, int>();
+            for (int i = 0; i < boards.Length; i++)
+            {
+                counts[probe.CanonicalHash(boards[i].CuiasArray, 0, boards[i].Count)] = 1;
+            }
+
+            // Los hijos del 66 final también vistos: ahí la comprobación recorre todos los vertidos y declara (camino completo).
+            BoardState loop = boards[0];
+            for (int a = 0; a < loop.Count; a++)
+            {
+                for (int b = 0; b < loop.Count; b++)
+                {
+                    if (a != b && PourRules.IsLegal(loop, a, b))
+                    {
+                        counts[PourRules.Apply(loop, a, b, PourMode.Run).CanonicalHash()] = 1;
+                    }
+                }
+            }
+
+            SeenBoards seen = SeenBoards.Of(counts);
+            int warm = 0;
+            for (int i = 0; i < boards.Length; i++)
+            {
+                warm += probe.IsStagnant(boards[i].CuiasArray, 0, boards[i].Count, boards[i].UnitsTable, PourMode.Run, in seen) ? 1 : 0;
+            }
+
+            int total = 0;
+            ulong hashes = 0;
+            AllocationReading allocated = AllocationMeter.Measure(() =>
+            {
+                total = 0;
+                for (int repeat = 0; repeat < 20; repeat++)
+                {
+                    for (int i = 0; i < boards.Length; i++)
+                    {
+                        hashes ^= probe.CanonicalHash(boards[i].CuiasArray, 0, boards[i].Count);
+                        total += probe.IsStagnant(boards[i].CuiasArray, 0, boards[i].Count, boards[i].UnitsTable, PourMode.Run, in seen) ? 1 : 0;
+                    }
+                }
+            }, 1);
+
+            Assert.That(warm, Is.EqualTo(1), "el 66 final, con sus hijos vistos, declara; el 26 y el de 14 cuias no");
+            Assert.That(total, Is.EqualTo(20 * warm));
+            Assert.That(allocated.Bytes, Is.EqualTo(0), allocated.Describe("repetición"));
+        }
+
+        [Test]
+        public void WarmUndoAndUndoEscapes_DoNotAllocate()
+        {
+            // Añadido de D-014 del 2026-11-17 (CLAUDE.md, regla dura 2): Marea resta 1 al tablero que deja en el contador de
+            // vistos, y UndoEscapes pregunta al cierre con una vista del contador; una vez calentados (el diccionario con sus
+            // entradas libres y los búferes del cierre), ni la pregunta ni Marea asignan. Es el 66 completo: el 12.º vertido lo deja
+            // en Aguas estancadas y Marea lo saca. El vertido que rehace el bloqueo (crea su BoardState) va fuera de la medida.
+            var session = new LevelSession(Level66Board.Initial(), true, PourMode.Run);
+            for (int i = 0; i < Level66Board.PourCount; i++)
+            {
+                Assert.That(session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out _), Is.True);
+            }
+
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
+            int source = Level66Board.Source(Level66Board.PourCount - 1);
+            int target = Level66Board.Target(Level66Board.PourCount - 1);
+            int passes = 0;
+            int escapes = 0;
+            int playing = 0;
+            AllocationReading allocated = AllocationMeter.Measure(
+                () =>
+                {
+                    if (session.Status != LevelStatus.Stuck)
+                    {
+                        Assert.That(session.TryPour(source, target, out _), Is.True);
+                    }
+
+                    Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck), "rehacer el 12.º lo vuelve a bloquear");
+                },
+                () =>
+                {
+                    passes++;
+                    escapes += session.UndoEscapes ? 1 : 0;
+                    session.Undo();
+                    playing += session.Status == LevelStatus.Playing ? 1 : 0;
+                },
+                1);
+
+            Assert.That(passes, Is.GreaterThan(1));
+            Assert.That(escapes, Is.EqualTo(passes), "Marea saca del atasco");
+            Assert.That(playing, Is.EqualTo(passes), "y deja jugar");
+            Assert.That(allocated.Bytes, Is.EqualTo(0), allocated.Describe("Marea y UndoEscapes"));
         }
 
         [Test]

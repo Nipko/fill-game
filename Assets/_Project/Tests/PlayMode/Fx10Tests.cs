@@ -60,6 +60,7 @@ namespace AF.Tests.PlayMode
         {
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ContentEndMapOverride = null;
+            GameBootstrap.MapLiveConfigOverride = null;
             RiverMapScreen.PlateTestObstacle = null;
             RiverMapScreen.PlateTestObstacleWorld = 0;
             MapArtRule.ForceProvisional = null;
@@ -411,9 +412,13 @@ namespace AF.Tests.PlayMode
         public IEnumerator PauseMap_At41_ThePlatesWholeInTheView_ClearOfTheHomeWindow_AlsoWhileCatchingUp()
         {
             MapArtRule.ForceProvisional = true; // la casa con su arte: la ventanita sale (como en el teléfono)
-            foreach ((int max, int seen) in new[] { (40, 30), (40, 0), (40, 40), (39, 39), (20, 20), (58, 58) })
+            // Añadido de D-069 del 2026-11-08: con el Mapa v2, «Faltan N» va en el rótulo de la parada siguiente (también en un
+            // abanico) y su placa ya no empuja el encuadre: la del mundo 4 cabe sin moverse. El caso del teléfono, que pide mover una
+            // placa, se repite con el Mapa de la 1.0 (ui_map_v2 apagada), que es donde se vio.
+            foreach ((int max, int seen, bool v2) in new[] { (40, 30, true), (40, 0, true), (40, 40, true), (39, 39, true), (20, 20, true), (58, 58, true), (40, 30, false) })
             {
-                string at = "pausa del 41 con max " + max + " y map_seen_level " + seen;
+                string at = "pausa del 41 con max " + max + " y map_seen_level " + seen + (v2 ? string.Empty : ", Mapa de la 1.0");
+                GameBootstrap.MapLiveConfigOverride = v2 ? null : new MapLiveConfig { UiMapV2 = false };
                 yield return OpenFromPause41(max, seen);
                 RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
                 Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
@@ -430,7 +435,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(Worlds(map), Does.Contain(4), at + ": la placa del mundo 4 (Trapecio)");
                 }
 
-                if (phone)
+                if (phone && !v2)
                 {
                     // El caso del teléfono (observación 3): la placa del 4 heredaba el sitio de la del 3, cortada por la derecha.
                     Assert.That(moves, Is.GreaterThan(0), at + ": al abrir, el arreglo mueve alguna placa para que quede entera");
@@ -450,9 +455,13 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
             Assert.That(map.CatchingUp, Is.True, "«ponerse al día» por el tramo del 300");
-            AssertWorldPlateSeen(map, 7, "tramo del 300, al abrir"); // Madre de Dios, aún futuro al empezar el viaje
-            (int moves, _) = CatchUpAndCheck(map, "tramo del 300");
-            Assert.That(moves, Is.GreaterThan(0), "tramo del 300: al abrir, el arreglo mueve alguna placa para que quede entera (observación 3)");
+            // Madre de Dios, aún futuro al empezar el viaje. Observación 2 de la prueba r2d de la 1.1 [P]: la parada siguiente (la 31,
+            // aún boya al empezar) ya no cede su sitio, y la placa del mundo 7, el que se juega, se queda sin él al abrir y no sale
+            // (FX10: una placa sin sitio no sale); el rótulo de la parada siguiente con «faltan N», sí.
+            map.Tick(16f);
+            Assert.That(PlateOfWorldHidden(map, 7), Is.True, "tramo del 300, al abrir: la placa del mundo 7, sin sitio");
+            Assert.That(map.StopLabelLocalRect(map.RemainingStopN()).width, Is.GreaterThan(0f), "tramo del 300, al abrir: el rótulo de la parada siguiente");
+            CatchUpAndCheck(map, "tramo del 300");
             Assert.That(Worlds(map), Does.Contain(8), "la placa del mundo 8 (Madidi)");
             Assert.That(map.HomeWindowShown, Is.True, "la ventanita de casa, a la vista (como en el teléfono)");
             CheckTheViews(map, "tramo del 300");
@@ -490,6 +499,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WorldView_APlateWithNoRoom_IsHidden_IsNoObstacle_ComesBackOnDrag_AndIsWeighedAgainWithTheView()
         {
+            // La geometría de esta prueba (una placa que no cabe con 299) es la de la zona del Mapa de la 1.0, con su marco: en el Mapa
+            // v2 (D-069), a pantalla completa, la placa cabe. La regla de la placa es la misma en los dos.
+            GameBootstrap.MapLiveConfigOverride = new AF.GameFlow.MapLiveConfig { UiMapV2 = false };
             LaunchOptions.LanguageOverride = LocLocale.Pseudo;
             LaunchOptions.FontScaleOverride = UiBuilder.MaxTextScale;
             MapArtRule.ForceProvisional = true;
@@ -712,6 +724,20 @@ namespace AF.Tests.PlayMode
             moves = Mathf.Max(moves, map.PlateFitMoves);
             Debug.Log("FX10 " + at + ": PlateFitMoves " + open + " al abrir, " + moves + " como mucho");
             return (open, moves);
+        }
+
+        // La placa del mundo world existe y FX10 la ocultó (sin sitio con este encuadre).
+        private static bool PlateOfWorldHidden(RiverMapScreen map, int world)
+        {
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                if (map.SilhouetteWorld(i) == world)
+                {
+                    return map.PlateFitHidden(i);
+                }
+            }
+
+            return false;
         }
 
         // La placa del mundo world sale, no está oculta y asoma a la zona visible.

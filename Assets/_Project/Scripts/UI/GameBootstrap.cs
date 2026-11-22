@@ -303,7 +303,7 @@ namespace AF.UI
         public TextAsset? RiverStopsAsset => riverStops;
 
         /// <summary>
-        /// Paradas del Mapa del río leídas al arrancar (<c>af-river-stops/1</c>; D-013; 08 §4.5). Null si falta el archivo o no
+        /// Paradas del Mapa del río leídas al arrancar (<c>af-river-stops/2</c>; D-013; 08 §4.5). Null si falta el archivo o no
         /// valida: se avisa y el juego sigue igual, sin el Mapa.
         /// </summary>
         public RiverStopCatalog? RiverStops { get; private set; }
@@ -324,7 +324,7 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Geometría del Mapa del río (<c>af-river-map/1</c>; 08 §4.5), leída y decodificada la primera vez que se abre el Mapa
+        /// Geometría del Mapa del río (<c>af-river-map/2</c>; 08 §4.5), leída y decodificada la primera vez que se abre el Mapa
         /// (null hasta entonces, o si falta o no valida).
         /// </summary>
         public RiverMap? RiverMapData => _riverMapData;
@@ -516,13 +516,19 @@ namespace AF.UI
         public bool PressNext()
         {
             AppFlow? app = _app;
-            if (app == null || PrePromptHoldsLeave)
+            if (app == null || PrePromptHoldsLeave || LeagueDebutVisible)
             {
-                return false; // con la tarjeta del pre-prompt (o su diálogo nativo) delante, la victoria espera
+                return false; // con la tarjeta del pre-prompt (o su diálogo nativo) o el estreno de la Liga delante, la victoria espera
             }
 
             // 06 §8.1 (B6-Q16 (a)): si esta victoria lleva el pre-prompt de push, sale antes del nivel siguiente (GameBootstrap.PushUi.cs).
             if (VictoryOnScreen() && TryPrePromptOnLeave(false, false, () => app.PressNext()))
+            {
+                return true;
+            }
+
+            // Añadido de D-046 del 2026-11-06: el estreno de la Liga, si está pendiente (GameBootstrap.LeagueDebut.cs).
+            if (VictoryOnScreen() && TryLeagueDebutOnLeave(false, () => app.PressNext()))
             {
                 return true;
             }
@@ -534,12 +540,17 @@ namespace AF.UI
         public bool PressHome()
         {
             AppFlow? app = _app;
-            if (app == null || PrePromptHoldsLeave)
+            if (app == null || PrePromptHoldsLeave || LeagueDebutVisible)
             {
                 return false;
             }
 
             if (VictoryOnScreen() && TryPrePromptOnLeave(false, true, () => app.PressHome()))
+            {
+                return true;
+            }
+
+            if (VictoryOnScreen() && TryLeagueDebutOnLeave(true, () => app.PressHome()))
             {
                 return true;
             }
@@ -1006,6 +1017,12 @@ namespace AF.UI
                 return true;
             }
 
+            // El estreno de la Liga (añadido de D-046 del 2026-11-06), encima de la victoria o del inicio: Atrás es «Luego».
+            if (PressLeagueDebutBack())
+            {
+                return true;
+            }
+
             if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
             {
                 return false;
@@ -1131,7 +1148,10 @@ namespace AF.UI
             }
 
             int play = app.PlayLevel;
-            map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable, DailyPlayUnlocked); // «Jugar» como en el inicio (D-032, punto 6)
+            map.LiveRequested = MapLiveSettings.UiMapV2; // D-069, P8 (a): el Mapa v2 o, apagada, el de la 1.0 (GameBootstrap.MapLive.cs)
+            map.TownsRequested = MapLiveSettings.UiMapTowns; // D-069, M2-2: los pueblos de paso y la excursión local
+            map.CrewRequested = MapLiveSettings.UiMapCrew; // D-069, M2-4: la tripulación (el tucán, el tucuxi y el cameo de los miquitos)
+            OpenMapPooled(map, source, stops, progress, play, app.PlayLevelAvailable); // «Jugar» como en el inicio (D-032, punto 6); GameBootstrap.MapMemory.cs
             if (app.Screen != AppScreen.Level)
             {
                 // La ventanita de casa se va ya, antes del siguiente paso de TiTino en el inicio: con la secuencia del Mapa del 10,
@@ -1140,8 +1160,9 @@ namespace AF.UI
             }
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
-            _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
-            DevProbe.Mem("map", play); // AF_PERF mem (DevProbe.Memory.cs)
+            _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom, map.JourneyWideFromZoom);
+            MapMemOpened(play); // la vuelta y la línea map_settled (GameBootstrap.MapMemory.cs; observación 5 de la prueba de la 1.1)
+            DevProbe.Mem("map", play, DevProbe.Enabled ? map.LiveMemJson() + map.TownsMemJson() + map.CapiMemJson() + map.CrewMemJson() + map.GfxMemJson(_mapOpens) : null); // AF_PERF mem (DevProbe.Memory.cs), con el Mapa v2 (D-069)
             TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
@@ -1158,10 +1179,13 @@ namespace AF.UI
             }
 
             MapCloseStats stats = map.Close();
+            MapMemClosed();
+            DevProbe.Mem("map_close", 0, DevProbe.Enabled ? map.GfxMemJson(_mapOpens).Substring(1) : null); // D-069, M2-1: el arte del Mapa v2 se soltó; map_* a cero (RiverMapScreen.Memory.cs)
             IProgressStore? progress = _progress;
             if (progress != null)
             {
-                MarkMapSeen(progress.MaxLevel);
+                // Observación 1 de la prueba r2b de la 1.1: si el compañero que se unía no llegó a verse, hasta antes de su punto.
+                MarkMapSeen(Math.Min(progress.MaxLevel, map.CrewSeenCap));
             }
 
             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
@@ -1674,6 +1698,11 @@ namespace AF.UI
                     store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
                 }
 
+                if (ApplyDevLogbookDay(profile, clock, DevLogbookDay()))
+                {
+                    store.TrySave(profile); // extra af_logbook_day (Q-M6, GameBootstrap.AvatarFrames.cs)
+                }
+
                 // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio. Con <13
                 // guardado, sin nube (B12).
                 _dataServicesAtBoot = DataServicesAllowedAtBoot(profile);
@@ -1812,6 +1841,7 @@ namespace AF.UI
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)
+            _screen.BannerCrewOn = () => MapLiveSettings.UiMapV2 && MapLiveSettings.UiMapCrew; // D-069, M2-4: la tripulación en el plano final
             _screen.RiverMapOpenable = RiverMapAvailable; // «Mapa del río» en la pausa y «Ver mapa» en la victoria (M4.3)
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
@@ -1827,6 +1857,7 @@ namespace AF.UI
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _lobby.Seasons = Seasons; // la LUT de temporada del fondo del inicio, como el tablero (SE2)
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
+            _lobby.HomeSceneHeld = () => _splash != null; // la intro tiene la rama de TiTino: el arte propio del inicio no se suelta aún
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _mapScreen.A11y = _a11y; // D-053 (si el lector ya está; si no, lo pone SetUpA11y)
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
@@ -2007,6 +2038,8 @@ namespace AF.UI
                 _mapScreen.Tick(dt);
             }
 
+            MapMemTick(Time.unscaledDeltaTime * 1000f); // AF_PERF mem map_settled y map_after (GameBootstrap.MapMemory.cs)
+
             if (_settingsScreen != null && _settingsScreen.Visible)
             {
                 // Ajustes solo vive sobre el inicio (el Atrás de Android la cierra en PressAndroidBack).
@@ -2174,7 +2207,7 @@ namespace AF.UI
             }
         }
 
-        // Paradas del Mapa del río de la escena (af-river-stops/1; 08 §4.5), como los miquitos: si falta el archivo, un aviso; si no
+        // Paradas del Mapa del río de la escena (af-river-stops/2; 08 §4.5), como los miquitos: si falta el archivo, un aviso; si no
         // valida, un error con la ruta del valor. En los dos casos, null y el juego queda como sin el Mapa (nada visible depende aún
         // de ellas).
         internal static RiverStopCatalog? LoadRiverStops(TextAsset? stops)
@@ -2273,7 +2306,21 @@ namespace AF.UI
                 // paquetes de campaña y en los de reserva (D-033, Q-B11-7 a; GameBootstrap.Reserve.cs).
                 MechanicSwitches switches = ResolveCatalogSwitches();
                 string overridesJson = ResolveCatalogOverridesJson();
-                LevelOverrides overrides = LevelOverrides.Create(overridesJson, OverridePool(packs, overridesJson));
+
+                // La curva 2 de la 1.1 (D-068; GameBootstrap.Curve.cs): sus paquetes, su reserva (solo con alguna mecánica apagada o
+                // con level_overrides) y el selector con lvl_curve2_enabled y curve2_from_level.
+                List<LevelPack> curvePacks = LoadCurvePacks(curve: true);
+                bool anyOverride = HasEntries(overridesJson);
+                List<LevelPack> curveReserve = curvePacks.Count > 0 && (switches.AnyOff || anyOverride) ? LoadCurvePacks(curve: false) : new List<LevelPack>();
+                CurveSelection curve = ResolveCurveSelection();
+                List<LevelPack> pool = OverridePool(packs, overridesJson);
+                if (anyOverride)
+                {
+                    pool.AddRange(curvePacks); // level_overrides puede pedir un tablero _c{c} o _c{c}_r{k} de su slot (08 §9)
+                    pool.AddRange(curveReserve);
+                }
+
+                LevelOverrides overrides = LevelOverrides.Create(overridesJson, pool);
                 for (int i = 0; i < overrides.Problems.Count; i++)
                 {
                     Debug.LogWarning(LogPrefix + overrides.Problems[i]);
@@ -2281,7 +2328,12 @@ namespace AF.UI
 
                 // lvl_label_override (08 §9; B11): el de Remote Config (SetUpRemoteConfig, antes de cargar el catálogo).
                 LevelLabelOverrides labels = LevelLabelSource.Create(_rcConfigs, w => Debug.LogWarning(LogPrefix + w));
-                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels);
+                LevelCatalog catalog = LevelCatalog.Create(
+                    packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w), labels, curvePacks, curve, curveReserve);
+                if (curvePacks.Count > 0)
+                {
+                    Debug.Log(LogPrefix + curve + ": " + catalog.Curve2Levels.Count + " niveles con la curva 2 (" + curvePacks.Count + " paquetes).");
+                }
                 watch.Stop();
                 if (DevProbe.Enabled)
                 {
@@ -2416,17 +2468,102 @@ namespace AF.UI
 
         // El arte procedural se genera una vez por sesión y por agua base (guía visual v2, 8: la generación al arrancar
         // cuesta CPU): recargar la escena o pasar de nivel no lo repite. Vive mientras dure la app.
+        // Con el tope de densidad del teléfono (ArtDensityCap): una densidad distinta pinta otro arte. Al reutilizarlo en otra
+        // escena, vuelve a ser el arte activo (su tope es el de las piezas que pinte desde ahora).
         private static ProceduralArt SharedArt(string waterBase)
         {
-            string key = waterBase;
+            float cap = ArtDensityCap();
+            string key = waterBase + "@" + cap.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
             if (s_art == null || s_artKey != key)
             {
                 s_art?.Dispose();
-                s_art = new ProceduralArt(waterBase);
+                s_art = new ProceduralArt(waterBase, cap);
                 s_artKey = key;
+            }
+            else
+            {
+                s_art.Activate();
             }
 
             return s_art;
+        }
+
+        /// <summary>Solo tests: false pinta el arte a la densidad fija de antes (las capturas de antes y después). En el juego, true.</summary>
+        internal static bool ArtDensityCapEnabledForTests { get; set; } = true;
+
+        /// <summary>
+        /// Tope de densidad del arte por código en este dispositivo (<see cref="ProceduralArt.DensityCap"/>; <c>docs/dev/memoria.md</c>
+        /// §7.5, pregunta 1, opción (a), §9, y D-060), con la densidad del teléfono (<see cref="GameScreen.ReadPxPerDp"/>) y la
+        /// resolución del dispositivo entero, no la de la ventana (<see cref="ReadDeviceResolution"/>): <see cref="ArtDensityCapFor"/>.
+        /// Sin densidad conocida (el Editor sin pantalla simulada con densidad) o con el interruptor de los tests apagado, 0.
+        /// </summary>
+        internal static float ArtDensityCap()
+        {
+            if (!ArtDensityCapEnabledForTests)
+            {
+                return 0f;
+            }
+
+            float pxPerDp = GameScreen.ReadPxPerDp();
+            if (pxPerDp <= 0f)
+            {
+                return 0f;
+            }
+
+            ReadDeviceResolution(out int w, out int h);
+            return ArtDensityCapFor(w, h, pxPerDp);
+        }
+
+        /// <summary>
+        /// El tope para un dispositivo de <paramref name="deviceWidth"/> × <paramref name="deviceHeight"/> px (la pantalla entera, en
+        /// cualquier orientación) a <paramref name="pxPerDp"/> px por dp físico [P, decisión del integrador]:
+        /// <list type="bullet">
+        /// <item>solo en los teléfonos (<see cref="OrientationPolicy.IsPhone"/> con el lado menor en dp); en tabletas, plegables
+        /// abiertos y Chromebooks, que giran y cambian de ventana, 0 (sin tope);</item>
+        /// <item>en un teléfono, la escala del lienzo del dispositivo en vertical, el mayor de <see cref="GameScreen.CanvasScale(int,
+        /// int, float)"/> con los lados en un orden y en el otro: así la pantalla dividida (una ventana más pequeña) no lo baja, y arrancar
+        /// en horizontal da lo mismo;</item>
+        /// <item>redondeada hacia arriba a 0,05; por debajo de 1 px/dp (una medida rara), 0.</item>
+        /// </list>
+        /// En el SM-S938B sale 3 (sin cambio); en clase A (720 × 1600 a 2 px/dp), 2.
+        /// </summary>
+        internal static float ArtDensityCapFor(int deviceWidth, int deviceHeight, float pxPerDp)
+        {
+            if (!(pxPerDp > 0f) || float.IsInfinity(pxPerDp) || deviceWidth <= 0 || deviceHeight <= 0)
+            {
+                return 0f;
+            }
+
+            int shortSide = Mathf.Min(deviceWidth, deviceHeight);
+            int longSide = Mathf.Max(deviceWidth, deviceHeight);
+            int smallestWidthDp = Mathf.FloorToInt((shortSide / pxPerDp) + 0.001f);
+            if (!OrientationPolicy.IsPhone(smallestWidthDp))
+            {
+                return 0f;
+            }
+
+            float scale = Mathf.Max(GameScreen.CanvasScale(shortSide, longSide, pxPerDp), GameScreen.CanvasScale(longSide, shortSide, pxPerDp));
+            if (!(scale >= 1f) || float.IsInfinity(scale))
+            {
+                return 0f;
+            }
+
+            return Mathf.Ceil((scale * 20f) - 0.001f) / 20f;
+        }
+
+        // La resolución del dispositivo entero: la pantalla simulada de los tests o, en el reproductor, Screen.currentResolution (la
+        // de la pantalla, no la de la ventana: con la pantalla dividida, Screen.width y Screen.height son los de la ventana).
+        private static void ReadDeviceResolution(out int width, out int height)
+        {
+            if (GameScreen.SimulatedScreen.HasValue)
+            {
+                GameScreen.ReadScreen(out width, out height, out Rect _);
+                return;
+            }
+
+            Resolution r = Screen.currentResolution;
+            width = r.width > 0 ? r.width : Screen.width;
+            height = r.height > 0 ? r.height : Screen.height;
         }
 
         private void OnApplicationQuit()
@@ -2612,11 +2749,17 @@ namespace AF.UI
             PersistNow("destruir la escena");
             ClearA11y(); // B9: TalkBack no se queda con los nodos de esta escena (recarga por idioma o por borrar la cuenta)
             DisposeBilling(); // D-040: la tienda de Play de esta escena suelta su conexión con Play (GameBootstrap.Backend.cs)
+            _avatarScreen?.ReleaseFrameArt(); // Q-M6: los marcos de las celdas de «Tu avatar» (DontSave) no sobreviven a la escena
 
             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
             // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
             // destruida en este punto.
             RiverMapScreen.RestoreFullRenderRate();
+            _mapScreen?.ReleaseLiveArt(); // D-069, M2-1: las texturas del Mapa v2 no sobreviven a la escena (DontSave)
+            _mapScreen?.ReleaseTownArt(); // D-069, M2-2: ni el atlas de los pueblos
+            _mapScreen?.ReleaseCapiArt(); // D-069, M2-3: ni el del rig de Capi
+            _mapScreen?.ReleaseCrewArt(); // D-069, M2-4: ni el de la tripulación
+            _screen?.WorldBannerView.TravelStrip.ReleaseCrewArt(); // ni el de la tripulación del banner de mundo
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;

@@ -387,7 +387,7 @@ namespace AF.UI
             UiBuilder.Stretch(_root);
 
             _background = UiBuilder.Image("Petroleum", _root, null, Petroleum);
-            UiBuilder.Stretch(_background.rectTransform);
+            ScreenColumn.Bleed(_background.rectTransform); // el petróleo, de borde a borde (añadido de D-059)
             var sceneGo = new GameObject("Scene", typeof(RectTransform));
             sceneGo.transform.SetParent(_root, false);
             _scene = (RectTransform)sceneGo.transform;
@@ -699,7 +699,9 @@ namespace AF.UI
         {
             _art = art;
             _images.Place(art);
-            _morph.Layout(art, UnitsPerDp(art), AndroidOsSplash.ReadIcon(), ScreenPxPerUnit(art));
+            ScreenFrame frame = ScreenFrame.Current; // en una ventana ancha, la escena es la columna (añadido de D-059)
+            _morph.Layout(art, UnitsPerDp(art), AndroidOsSplash.ReadIcon(), ScreenPxPerUnit(art), frame.IsFullWidth ? 0f : frame.ColumnX,
+                frame.IsFullWidth ? 0f : frame.CanvasWidth);
             Apply(_clockMs);
             if (_reduceMotion && _begun)
             {
@@ -902,8 +904,7 @@ namespace AF.UI
                 return 1f;
             }
 
-            GameScreen.ReadScreen(out int sw, out _, out _);
-            return sw / art.Width;
+            return ScreenFrame.Current.Scale; // px por dp del lienzo (la columna puede ser más estrecha que la pantalla: añadido de D-059)
         }
 
         // Unidades del lienzo por dp de Android: la densidad del teléfono entre la escala del lienzo (1 si no se sabe: el Editor).
@@ -915,8 +916,7 @@ namespace AF.UI
                 return 1f;
             }
 
-            GameScreen.ReadScreen(out int sw, out _, out _);
-            float canvasScale = sw / art.Width;
+            float canvasScale = ScreenFrame.Current.Scale;
             return canvasScale > 0f ? density / canvasScale : 1f;
         }
 

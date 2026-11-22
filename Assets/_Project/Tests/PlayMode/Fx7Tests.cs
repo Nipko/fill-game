@@ -52,6 +52,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             _layout?.Dispose();
+            GameBootstrap.MapLiveConfigOverride = null;
             RiverMapScreen.PlateTestNoNearSpotWorld = 0;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
@@ -275,7 +276,8 @@ namespace AF.Tests.PlayMode
                 int plates = map.SilhouetteCount;
                 if (max == 58)
                 {
-                    Assert.That(plates, Is.GreaterThanOrEqualTo(2), "con 58, las placas de los mundos futuros (la del 5, Loreto)");
+                    // Con el Mapa v2, solo la del mundo siguiente (observación 5 de la prueba r2b de la 1.1).
+                    Assert.That(plates, Is.GreaterThanOrEqualTo(map.LiveActive ? RiverMapScreen.LiveFutureWorldPlates : 2), "con 58, las placas de los mundos futuros (la del 5, Loreto)");
                 }
 
                 AssertPlatesClear(map, plates, "max " + max + ", Cuenca");
@@ -296,8 +298,15 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator BasinPlates_CoverTheLeastFillTheyCan_NoneWhenThereIsRoom()
+        public IEnumerator BasinPlates_CoverTheLeastFillTheyCan_NoneWhenThereIsRoom([Values(false, true)] bool mapV2)
         {
+            // Con la 1.0, una placa por mundo futuro; con el Mapa v2, solo la del mundo siguiente (observación 5 de la prueba r2b de la
+            // 1.1, RiverMapScreen.LiveFutureWorldPlates). Lo demás (sitio, sin pisar nada, entera, texto) vale con las dos.
+            if (!mapV2)
+            {
+                GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
+            }
+
             yield return MapMarkersTests.OpenApp(201);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -349,7 +358,13 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                if (max == 200)
+                Assert.That(map.LiveActive, Is.EqualTo(mapV2), at);
+                if (max == 200 && mapV2)
+                {
+                    Assert.That(boxes.Count, Is.EqualTo(RiverMapScreen.LiveFutureWorldPlates), at + ": con el v2, solo la del mundo 7");
+                    Assert.That(map.SilhouetteWorld(0), Is.EqualTo(7), at + ": la del mundo siguiente");
+                }
+                else if (max == 200)
                 {
                     Assert.That(boxes.Count, Is.EqualTo(3), at + ": las placas de los mundos 7, 8 y 9");
                     bool ucayali = false;
@@ -382,6 +397,10 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator BasinPlates_NoRoomNextToTheStop_FindAGridSpot_WithinReach_ClearOfTheControls()
         {
+            // La geometría de la búsqueda forzada (PlateTestNoNearSpotWorld) es la de la Cuenca de la 1.0: con el pie del Mapa v2 (D-069,
+            // M2-3) la zona del mapa es más alta y, con max 300 y la placa del mundo 8 forzada a la rejilla, a la del mundo 9 no le queda
+            // sitio junto a su parada (cae en su respaldo, bajo el mástil). Ese caso del Mapa v2 queda anotado en el añadido de M2-3 [P].
+            GameBootstrap.MapLiveConfigOverride = new AF.GameFlow.MapLiveConfig { UiMapV2 = false };
             yield return MapMarkersTests.OpenApp(201);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;

@@ -1,0 +1,68 @@
+# Clases Java que el juego o sus SDK buscan por nombre en tiempo de ejecucion (JNI desde C#, AndroidJavaProxy, el
+# manifiesto o reflexion) y que R8 no puede renombrar ni quitar (D-059, anadido del 2026-11-06: R8 en el release).
+# La lee ci/check-r8-mapping.ps1: cada clase debe salir en el mapping.txt de R8 del AAB con su mismo nombre
+# ("x.y.Z -> x.y.Z:"). Una clase que falta o sale renombrada es una regla keep que falta o que no se aplico.
+#
+# Formato: una clase por linea, con puntos y '$' para las anidadas. '#' empieza un comentario. Un '?' delante marca
+# una clase opcional: si esta en el AAB debe conservar su nombre, pero su ausencia no falla (ramas de un SDK que el
+# juego no usa hoy y que R8 puede quitar si nada las retiene).
+#
+# Al anadir un AndroidJavaClass/AndroidJavaObject/AndroidJavaProxy nuevo en C#, anade aqui su clase.
+
+# --- Plugins propios (Assets/_Project/Plugins/Android/*.androidlib; reglas en su proguard-rules.pro) ---
+com.amazonfill.billing.AfBilling
+com.amazonfill.billing.AfBillingListener
+com.amazonfill.splash.AfSplashHold
+com.amazonfill.splash.AfSplashHoldProvider
+com.amazonfill.audiofocus.AfAudioFocus
+com.amazonfill.audiofocus.AfAudioFocus$Listener
+com.amazonfill.audiofocus.AfAudioFocusProvider
+com.amazonfill.agesignals.AfAgeSignals
+com.amazonfill.agesignals.AfAgeSignals$Listener
+com.amazonfill.lockguard.AfLockGuard
+com.amazonfill.lockguard.AfLockGuardProvider
+
+# --- Unity (proguard-unity.txt del reproductor) ---
+com.unity3d.player.UnityPlayer
+com.unity3d.player.ReflectionHelper
+
+# --- Firebase 13.17.0 (reglas de los firebase-*-unity.srcaar; el SDK de C++ llama por JNI) ---
+com.google.firebase.FirebaseApp
+com.google.firebase.analytics.FirebaseAnalytics
+com.google.firebase.auth.FirebaseAuth
+com.google.firebase.remoteconfig.FirebaseRemoteConfig
+com.google.firebase.appcheck.FirebaseAppCheck
+com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+# Ojo: Firebase.Installations (C#) no tiene regla keep y R8 renombra com.google.firebase.installations.*; el juego no la
+# usa. Si se usa algun dia, anadir su clase aqui y su regla en AfKeepRules.androidlib/proguard-rules.pro.
+# FirebaseAnalyticsSink.StopNative/DeleteUnsentNative la llaman desde C# (y su fallo se traga en silencio).
+com.google.firebase.crashlytics.FirebaseCrashlytics
+
+# --- Google Mobile Ads 11.5.0 + UMP 4.0.0 (googlemobileads-unity.aar y play-services-ads-api) ---
+com.google.android.gms.ads.MobileAds
+com.google.android.gms.ads.AdRequest$Builder
+com.google.unity.ads.UnityMobileAds
+com.google.unity.ads.UnityRewardedAd
+com.google.unity.ads.UnityRewardedAdCallback
+com.google.unity.ads.UnityPaidEventListener
+# Los extras npa/rdp de NativeGmaPort van con AdRequest.Builder.addNetworkExtrasBundle(AdMobAdapter.class, ...).
+com.google.ads.mediation.admob.AdMobAdapter
+com.google.android.ump.UserMessagingPlatform
+com.google.unity.ump.UnityConsentForm
+# Mediacion de Unity Ads: AdMob instancia el adaptador por su nombre (configuracion del servidor).
+com.google.ads.mediation.unity.UnityMediationAdapter
+# NativeGmaPort -> UnityAds.SetConsentMetaData (paquete de mediacion 3.21.1).
+com.unity3d.ads.metadata.MetaData
+
+# --- Play Games 2.3.0 (Proguard/games.txt del plugin, en AfKeepRules.androidlib) ---
+com.google.android.gms.games.PlayGames
+com.google.android.gms.games.PlayGamesSdk
+com.google.android.gms.games.snapshot.SnapshotMetadataChange$Builder
+com.google.android.gms.tasks.Tasks
+com.google.games.bridge.HelperFragment
+?com.google.android.gms.games.gamessignin.AuthScope
+
+# --- Mobile Notifications 2.4.3 (proguard-rules.pro de mobilenotifications.androidlib) ---
+com.unity.androidnotifications.UnityNotificationManager
+com.unity.androidnotifications.NotificationCallback
+com.unity.androidnotifications.NotificationChannelWrapper

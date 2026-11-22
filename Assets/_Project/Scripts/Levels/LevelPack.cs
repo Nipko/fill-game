@@ -29,7 +29,10 @@ namespace AF.Levels
         /// <summary>Identificador del paquete (p. ej. <c>tutorial_v0</c>).</summary>
         public string PackId { get; }
 
-        /// <summary><c>kind</c> del paquete: <c>campaign</c>, <c>daily</c>, <c>event</c> o <c>reserve</c> (<see cref="KindReserve"/>).</summary>
+        /// <summary>
+        /// <c>kind</c> del paquete: <c>campaign</c>, <c>daily</c>, <c>event</c>, <c>reserve</c> (<see cref="KindReserve"/>) o
+        /// <c>curve</c> (<see cref="KindCurve"/>).
+        /// </summary>
         public string Kind { get; }
 
         /// <summary>
@@ -40,6 +43,16 @@ namespace AF.Levels
 
         /// <summary>Es un paquete de reserva (<see cref="KindReserve"/>): <see cref="LevelCatalog"/> lo rechaza como campaña.</summary>
         public bool IsReserve => string.Equals(Kind, KindReserve, StringComparison.Ordinal);
+
+        /// <summary>
+        /// <c>kind</c> del paquete de la curva 2 de un mundo (<c>curva_{mm}_v{v}</c>, <c>pack_schema</c> 5; D-068 [P]; 08 §4.1 y
+        /// §4.4): sus tableros sustituyen a los de la curva 1 del mismo slot de 301-700 desde <c>progress.curve2_from_level</c> y con
+        /// <c>lvl_curve2_enabled</c> (<see cref="CurveSelection"/>); nunca son niveles de campaña por sí solos.
+        /// </summary>
+        public const string KindCurve = "curve";
+
+        /// <summary>Es un paquete de la curva 2 (<see cref="KindCurve"/>): <see cref="LevelCatalog"/> lo rechaza como campaña.</summary>
+        public bool IsCurve => string.Equals(Kind, KindCurve, StringComparison.Ordinal);
 
         /// <summary>Mundo del paquete.</summary>
         public int World { get; }

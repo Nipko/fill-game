@@ -64,7 +64,7 @@ namespace AF.Presentation
 
         private Sprite BuildSkinThumb(CuiaSkin skin)
         {
-            return MakeSprite(PaintSkinThumb(skin), SkinThumbPrefix + skin.Id, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(PaintSkinThumb(skin), SkinThumbPrefix + skin.Id, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         /// <summary>

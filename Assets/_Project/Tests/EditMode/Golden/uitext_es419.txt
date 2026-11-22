@@ -213,6 +213,8 @@ UiText.StuckTitle	No hay más vertidos
 UiText.StuckUndo	Deshacer · Marea
 UiText.StuckUndoGift	+1 Deshacer · gratis
 UiText.StuckUnsolvable	Ni una cuia más salva este tramo. Prueba la Marea o vuelve a la orilla.
+UiText.TutorialAguape	El aguapé sujeta estas cuias: puedes verter en ellas, pero no sacar. Sella una y se suelta.
+UiText.TutorialAguapeN2	Este aguapé es espeso: sella dos cuias del grupo para soltarlo.
 UiText.TutorialAlta	Esta agua tiene cinco dosis: solo cabe en la cuia alta
 UiText.TutorialBarro	El barro acepta cualquier fruta; el primer vertido lo lava… y entierra lo que hay debajo.
 UiText.TutorialBrote	El brote está cerrado: vierte más camu camu encima para que germine.

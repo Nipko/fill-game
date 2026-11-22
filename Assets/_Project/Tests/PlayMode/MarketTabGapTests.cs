@@ -51,7 +51,7 @@ namespace AF.Tests.PlayMode
             boot.TickMarket(16f);
             Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
             MarketScreen market = boot.Market!;
-            RectTransform panel = (RectTransform)market.Canvas.transform.Find("Panel");
+            RectTransform panel = (RectTransform)market.Canvas.transform.Find("Column/Panel");
             Assert.That(panel, Is.Not.Null);
 
             var problems = new List<string>();

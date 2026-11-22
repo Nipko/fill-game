@@ -25,8 +25,8 @@ namespace AF.Presentation
 
         // Respaldo de escena a 2,25 px/dp (el panorama, 810 × 1215 px) y follaje a 3 px/dp (revisión visual del 2026-10-07:
         // a 1,5 y 2 px/dp las orillas y las frondas salían en escalera al ampliarse en el teléfono, a 3 px/dp).
-        private const float ScenePxPerDp = 2.25f;
-        private const float FoliagePxPerDp = 3f;
+        private static float ScenePxPerDp => Capped(2.25f); // con el tope del teléfono (DensityCap)
+        private static float FoliagePxPerDp => Capped(3f);
 
         // Lado del follaje de las esquinas superiores (dp).
         private const float TopFoliageDp = 160f;
@@ -270,7 +270,7 @@ namespace AF.Presentation
 
         private static PixelCanvas BuildPanoramaCanvas()
         {
-            const float k = ScenePxPerDp;
+            float k = ScenePxPerDp;
             int w = Mathf.RoundToInt(360 * k);
             int h = Mathf.RoundToInt(PanoramaHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -869,7 +869,7 @@ namespace AF.Presentation
 
         private static PixelCanvas BuildDockCanvas()
         {
-            const float k = ScenePxPerDp;
+            float k = ScenePxPerDp;
             int w = Mathf.RoundToInt(360 * k);
             int h = Mathf.RoundToInt(DockHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -1054,7 +1054,7 @@ namespace AF.Presentation
         {
             int size = Mathf.RoundToInt((corner < 2 ? TopFoliageDp : BottomFoliageDp) * FoliagePxPerDp);
             var pc = new PixelCanvas(size, size);
-            const float k = FoliagePxPerDp;
+            float k = FoliagePxPerDp;
             float s = size / k; // dp
             bool right = corner == 1 || corner == 3;
             bool top = corner < 2;
@@ -1173,7 +1173,7 @@ namespace AF.Presentation
         // El manojo en su lienzo, aparte para exportarlo a revisión (ExportSceneFallbacks).
         internal static PixelCanvas BuildBranchEndFoliageCanvas()
         {
-            const float k = FoliagePxPerDp;
+            float k = FoliagePxPerDp;
             int w = Mathf.RoundToInt(BranchEndFoliageWidthDp * k);
             int h = Mathf.RoundToInt(BranchEndFoliageHeightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -1530,7 +1530,7 @@ namespace AF.Presentation
             // con borde de 32 dp. Radio exterior 24 e interior 12; bisel claro de 2 dp (marco_bisel) en los cantos que miran
             // arriba, canto oscuro de 3 dp (ranura) abajo, una ranura tallada a 5 dp del borde, hojas talladas de 22 dp en
             // las esquinas y un filo de luz interior de 1,5 dp (cielo_horizonte al 25 %) bajo el canto superior.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float sizeDp = 80f;
             int s = Mathf.RoundToInt(sizeDp * k);
             var pc = new PixelCanvas(s, s);
@@ -1717,7 +1717,7 @@ namespace AF.Presentation
         // ------------------------------------------------------------------------------------------------------------
         private Sprite BuildShelf()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 64f;
             const float hDp = 26f;
             int w = Mathf.RoundToInt(wDp * k);
@@ -1786,7 +1786,7 @@ namespace AF.Presentation
         // ------------------------------------------------------------------------------------------------------------
         private Sprite BuildHeron()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 24f;
             const float hDp = 34f;
             var pc = new PixelCanvas(Mathf.RoundToInt(wDp * k), Mathf.RoundToInt(hDp * k));
@@ -1843,7 +1843,7 @@ namespace AF.Presentation
         private Sprite BuildLilyPad()
         {
             // Vitória-régia en perspectiva: disco aplanado verde con nervios radiales y el borde levantado rojizo.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 48f;
             const float hDp = 16f;
             var pc = new PixelCanvas(Mathf.RoundToInt(wDp * k), Mathf.RoundToInt(hDp * k));
@@ -1987,7 +1987,7 @@ namespace AF.Presentation
         private Sprite BuildRopePost()
         {
             // Poste de amarre de 40 × 48 dp con cuerda enrollada (guía 3.8 y 4.7).
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 40f;
             const float hDp = 48f;
             int w = Mathf.RoundToInt(wDp * k);

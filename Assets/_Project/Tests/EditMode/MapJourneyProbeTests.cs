@@ -55,5 +55,39 @@ namespace AF.Tests.EditMode
             StringAssert.Contains("\"source\":\"victory\",\"phase\":\"start\",\"from\":10,\"to\":20", victory);
             StringAssert.Contains("\"source\":\"content_end\",\"phase\":\"end\",\"from\":690,\"to\":700", contentEnd);
         }
+
+        [Test]
+        public void MapJourney_Line_CarriesThePerBuoyPace_D069Addendum()
+        {
+            var probe = new DevProbe();
+            string? line = probe.FormatMapJourney(MapOpenSource.Victory, "start", 60, 70, 4500, 0f, string.Empty, null, 450);
+            string? none = probe.FormatMapJourney(MapOpenSource.Victory, "start", 60, 70, 4500, 0f, string.Empty);
+            if (!DevProbe.Enabled)
+            {
+                Assert.That(line, Is.Null);
+                return;
+            }
+
+            StringAssert.Contains("\"from\":60,\"to\":70,\"ms\":4500,\"per_buoy_ms\":450,\"elapsed_ms\":0", line);
+            Assert.That(none, Does.Not.Contain("per_buoy_ms"));
+        }
+
+        [Test]
+        public void MapJourney_End_CarriesCrewJoined_D069M24()
+        {
+            var probe = new DevProbe();
+            string? joined = probe.FormatMapJourney(MapOpenSource.Victory, "end", 50, 60, 1500, 1500f, "time", "tucuxi");
+            string? none = probe.FormatMapJourney(MapOpenSource.Victory, "end", 60, 70, 1500, 1500f, "time");
+            string? start = probe.FormatMapJourney(MapOpenSource.Victory, "start", 50, 60, 1500, 0f, string.Empty, "tucuxi");
+            if (!DevProbe.Enabled)
+            {
+                Assert.That(joined, Is.Null);
+                return;
+            }
+
+            StringAssert.EndsWith(",\"by\":\"time\",\"crew_joined\":\"tucuxi\"}", joined);
+            StringAssert.EndsWith(",\"crew_joined\":null}", none);
+            Assert.That(start, Does.Not.Contain("crew_joined"), "solo en la línea de end");
+        }
     }
 }

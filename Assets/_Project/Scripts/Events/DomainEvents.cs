@@ -15,8 +15,10 @@ namespace AF.Events
     public readonly struct LevelStarted
     {
         /// <summary>Crea el evento.</summary>
-        public LevelStarted(int level, string levelName, string variant, string band, int attempt, int world, string difficulty, bool murky)
+        public LevelStarted(int level, string levelName, string variant, string band, int attempt, int world, string difficulty, bool murky, int curve = 0, int pressure = -1)
         {
+            Curve = curve;
+            Pressure = pressure;
             Level = level;
             LevelName = levelName ?? throw new ArgumentNullException(nameof(levelName));
             Variant = variant ?? throw new ArgumentNullException(nameof(variant));
@@ -54,6 +56,18 @@ namespace AF.Events
 
         /// <summary>Nivel con Aguas turbias.</summary>
         public bool Murky { get; }
+
+        /// <summary>
+        /// <c>curve</c> de <c>level_start</c> y <c>level_end</c> (08 §8.2; D-068 [P]): la curva del tablero servido, 1 o 2; 0 fuera de
+        /// la campaña (no se envía).
+        /// </summary>
+        public int Curve { get; }
+
+        /// <summary>
+        /// <c>pressure</c> de <c>level_start</c> y <c>level_end</c> (08 §8.2; D-068 [P]): <c>difficulty.pressure</c> del tablero (03
+        /// §12), o −1 si el paquete no lo trae (no se envía).
+        /// </summary>
+        public int Pressure { get; }
     }
 
     /// <summary>Victoria de un nivel (08 §8.2, <c>af_level_win</c> y <c>level_end</c> con <c>success</c> = true).</summary>
@@ -62,8 +76,10 @@ namespace AF.Events
         /// <summary>Crea el evento.</summary>
         public LevelWon(
             int level, string levelName, int pours, int par, int undoUsed, string boostersJson, long timeMs, int rewardSeeds,
-            bool doubleHarvest, bool rescued)
+            bool doubleHarvest, bool rescued, int curve = 0, int pressure = -1)
         {
+            Curve = curve;
+            Pressure = pressure;
             Level = level;
             LevelName = levelName ?? throw new ArgumentNullException(nameof(levelName));
             Pours = pours;
@@ -105,6 +121,18 @@ namespace AF.Events
 
         /// <summary>El intento ganado llevaba la Cuia de rescate.</summary>
         public bool Rescued { get; }
+
+        /// <summary>
+        /// <c>curve</c> de <c>level_start</c> y <c>level_end</c> (08 §8.2; D-068 [P]): la curva del tablero servido, 1 o 2; 0 fuera de
+        /// la campaña (no se envía).
+        /// </summary>
+        public int Curve { get; }
+
+        /// <summary>
+        /// <c>pressure</c> de <c>level_start</c> y <c>level_end</c> (08 §8.2; D-068 [P]): <c>difficulty.pressure</c> del tablero (03
+        /// §12), o −1 si el paquete no lo trae (no se envía).
+        /// </summary>
+        public int Pressure { get; }
     }
 
     /// <summary>Fallo de un nivel (04 §5.2; 08 §8.2, <c>af_level_fail</c> y, si es duro, <c>level_end</c> con success = false).</summary>
@@ -113,8 +141,10 @@ namespace AF.Events
         /// <summary>Crea el evento.</summary>
         public LevelFailed(
             int level, string levelName, bool hard, bool canoeLost, bool streakBroken, bool shieldUsed, bool reliefServed,
-            int pours, long timeMs)
+            int pours, long timeMs, int curve = 0, int pressure = -1)
         {
+            Curve = curve;
+            Pressure = pressure;
             Level = level;
             LevelName = levelName ?? throw new ArgumentNullException(nameof(levelName));
             Hard = hard;
@@ -152,6 +182,18 @@ namespace AF.Events
 
         /// <summary>Milisegundos del intento.</summary>
         public long TimeMs { get; }
+
+        /// <summary>
+        /// <c>curve</c> de <c>level_start</c> y <c>level_end</c> (08 §8.2; D-068 [P]): la curva del tablero servido, 1 o 2; 0 fuera de
+        /// la campaña (no se envía).
+        /// </summary>
+        public int Curve { get; }
+
+        /// <summary>
+        /// <c>pressure</c> de <c>level_start</c> y <c>level_end</c> (08 §8.2; D-068 [P]): <c>difficulty.pressure</c> del tablero (03
+        /// §12), o −1 si el paquete no lo trae (no se envía).
+        /// </summary>
+        public int Pressure { get; }
     }
 
     /// <summary>Salida sin resolver que no es fallo (08 §8.2, <c>af_level_abandon</c>).</summary>

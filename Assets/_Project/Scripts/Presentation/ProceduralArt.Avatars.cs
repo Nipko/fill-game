@@ -141,7 +141,7 @@ namespace AF.Presentation
 
         private Sprite BuildAvatarGlyph(bool check)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int n = Mathf.RoundToInt(24f * k);
             var pc = new PixelCanvas(n, n);
             float r = 1.6f * k;

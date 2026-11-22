@@ -193,6 +193,61 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(report.CucharonReleased, Is.GreaterThan(0));
         }
 
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithAguape(PourMode mode, CapacityFamily family)
+        {
+            // D-068 (F2; 02 §9.1 M8 regla 5 y 02 R16): antes del estreno del Aguapé (303), con capacidades mixtas por la lección de
+            // C1-9 con la Liana; sin exención de futil como destino. Un grupo de 2-3.
+            AssertWith(mode, family, new AguapeInjector(), 0xF07E_3031UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithAguapeEspeso(PourMode mode, CapacityFamily family)
+        {
+            // P13 A: el espeso (n = 2, grupo de 4).
+            AssertCurve(mode, family, new AguapeInjector(thick: true), 0xF07E_3471UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithTwoAguapeGroups(PourMode mode, CapacityFamily family)
+        {
+            // Dos grupos: la suelta de uno no toca el otro, y la canonicalización los renumera (03 §3).
+            AssertCurve(mode, family, new AguapeInjector(groups: 2), 0xF07E_3032UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithLancha(PourMode mode, CapacityFamily family)
+        {
+            // D-068 (F2; 02 §9.1 M11 regla 3): antes del estreno de la Lancha (363). Antes de atracar no es origen ni destino.
+            AssertWith(mode, family, new LanchaInjector(), 0xF07E_3631UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform, false)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed, false)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform, false)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed, false)]
+        [TestCase(PourMode.Run, CapacityFamily.Uniform, true)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed, true)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform, true)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed, true)]
+        public void P1_P2_P3_HoldOnValidCurveBoards(PourMode mode, CapacityFamily family, bool lancha)
+        {
+            // Lo mismo sobre tableros de 7 cuias que pasan LevelValidation (con el Aguapé de 2-3 o con la Lancha).
+            AssertCurve(mode, family, lancha ? new LanchaInjector() : new AguapeInjector(), lancha ? 0xF07E_3632UL : 0xF07E_3033UL);
+        }
+
         [TestCase(PourMode.Run)]
         [TestCase(PourMode.Single)]
         public void P3_Tinaja_AfterTheRelease_AUsefulBackAndForthReturnsToTheSameState_R13IsNotComplete(PourMode mode)
@@ -612,6 +667,78 @@ namespace AF.Core.Tests.DotnetOnly
                 // todos esos tableros se rechazan (arriba).
                 Assert.That(matapiAndAtadaGaps, Is.GreaterThan(0));
             }
+        }
+
+        /// <summary>
+        /// Como <see cref="AssertWith"/> con tableros de 7 cuias que pasan <see cref="LevelValidation"/> (<see cref="CurveStart"/>):
+        /// el espeso (grupo de 4) y dos grupos no caben con sentido en los tableros de ≤ 6 cuias de <see cref="PropertyBoards"/>,
+        /// que casi siempre empiezan atascados.
+        /// </summary>
+        private static void AssertCurve(PourMode mode, CapacityFamily family, IMechanicInjector injector, ulong seed)
+        {
+            bool mixed = family == CapacityFamily.Mixed;
+            Report report = Run(mode, seed, rng => CurveStart(rng, mixed, injector));
+
+            TestContext.WriteLine(injector.Name + " (7 cuias, válidos): " + Describe(report));
+            Assert.That(report.Violations, Is.Empty);
+            Assert.That(report.States, Is.GreaterThanOrEqualTo(MinStates));
+        }
+
+        /// <summary>
+        /// Un tablero de 7 cuias con 3 frutas (con <paramref name="mixed"/>, una Cuia alta de 5 con su fruta abundante y una Cuia
+        /// chica de 2) y la mecánica del inyector, o null si no pasa <see cref="LevelValidation"/> (grupo que puede sellar, sin
+        /// empezar atascado…).
+        /// </summary>
+        internal static BoardState? CurveStart(Prng rng, bool mixed, IMechanicInjector injector)
+        {
+            int[] caps = mixed ? new[] { 4, 4, 4, 4, 4, 5, 2 } : new[] { 4, 4, 4, 4, 4, 4, 4 };
+            var pool = new List<int>();
+            for (int c = 1; c <= 3; c++)
+            {
+                int units = mixed && c == 3 ? 5 : 4;
+                for (int u = 0; u < units; u++)
+                {
+                    pool.Add(c);
+                }
+            }
+
+            for (int i = pool.Count - 1; i > 0; i--)
+            {
+                int j = rng.NextInt(i + 1);
+                (pool[i], pool[j]) = (pool[j], pool[i]);
+            }
+
+            var doses = new List<int>[caps.Length];
+            for (int i = 0; i < caps.Length; i++)
+            {
+                doses[i] = new List<int>();
+            }
+
+            for (int d = 0; d < pool.Count; d++)
+            {
+                int target = rng.NextInt(caps.Length);
+                while (doses[target].Count >= caps[target])
+                {
+                    target = (target + 1) % caps.Length;
+                }
+
+                doses[target].Add(pool[d]);
+            }
+
+            var attrs = new MechanicSpec[caps.Length];
+            if (!injector.Inject(rng, caps, doses, attrs))
+            {
+                return null;
+            }
+
+            var cuias = new int[caps.Length][];
+            for (int i = 0; i < caps.Length; i++)
+            {
+                cuias[i] = doses[i].ToArray();
+            }
+
+            BoardBuildResult built = BoardBuilder.Build(caps, cuias, attrs);
+            return built.IsValid && LevelValidation.Validate(built.State!) == null ? built.State : null;
         }
 
         private static void AssertWith(PourMode mode, CapacityFamily family, IMechanicInjector injector, ulong seed)

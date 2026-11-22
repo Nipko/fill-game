@@ -74,16 +74,43 @@ namespace AF.UI.Editor
             "Assets/_Project/Data/Levels/reserva_09_v1.json",
         };
 
+        /// <summary>
+        /// Carpeta de los paquetes de la curva 2 de la 1.1 (D-068; 08 §4.1 y §4.4): los <c>curva_{mm}_v{v}.json</c> (<c>kind</c> =
+        /// <c>curve</c>) y su reserva, <c>reserva_curva_{mm}_v{v}.json</c>, que generará la fase F5 (<c>tools/level-generator</c>).
+        /// La escena enlaza los que haya, en orden ordinal; sin ninguno, el catálogo se queda con la curva 1.
+        /// </summary>
+        public const string CurvePackFolder = "Assets/_Project/Data/Levels";
+
+        /// <summary>Paquetes de la curva 2 (o de su reserva, con <paramref name="reserve"/>) que hay en <see cref="CurvePackFolder"/>.</summary>
+        public static string[] CurvePackPaths(bool reserve)
+        {
+            string prefix = reserve ? "reserva_curva_" : "curva_";
+            var found = new System.Collections.Generic.List<string>();
+            string[] guids = AssetDatabase.FindAssets("t:TextAsset", new[] { CurvePackFolder });
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                string name = System.IO.Path.GetFileName(path);
+                if (name.StartsWith(prefix, System.StringComparison.Ordinal) && name.EndsWith(".json", System.StringComparison.Ordinal))
+                {
+                    found.Add(path);
+                }
+            }
+
+            found.Sort(System.StringComparer.Ordinal);
+            return found.ToArray();
+        }
+
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
         public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";
 
-        /// <summary>Paradas del Mapa del río (<c>af-river-stops/1</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
+        /// <summary>Paradas del Mapa del río (<c>af-river-stops/2</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
         public const string RiverStopsPath = "Assets/_Project/Data/Map/river_stops_v1.json";
 
         /// <summary>Pool del Reto del río (<c>kind: daily</c>, af-level/1; 06 §4.1; 08 §6.2; lo genera <c>tools/level-generator --daily</c>; enganche E3).</summary>
         public const string DailyPoolPath = "Assets/_Project/Data/Daily/daily_pool_v1.json";
 
-        /// <summary>Geometría del Mapa del río (<c>af-river-map/1</c>; D-013; 08 §4.5; la genera <c>tools/river-map/geometry.py</c>; tarea M3.3).</summary>
+        /// <summary>Geometría del Mapa del río (<c>af-river-map/2</c>; D-013; 08 §4.5; la genera <c>tools/river-map/geometry.py</c>; tarea M3.3).</summary>
         public const string RiverMapPath = "Assets/_Project/Data/Map/river_map_v1.json";
 
         /// <summary>Calendario de Frutas del río (<c>af-facts/1</c>; D-017; 08 §4.6; contrato 31).</summary>
@@ -181,6 +208,7 @@ namespace AF.UI.Editor
             GameBootstrap bootstrap = bootstrapGo.AddComponent<GameBootstrap>();
             bootstrap.Configure(packs);
             bootstrap.ConfigureReservePacks(reserve);
+            bootstrap.ConfigureCurvePacks(LoadTextAssets(CurvePackPaths(false)), LoadTextAssets(CurvePackPaths(true))); // D-068
             TextAsset? fauna = AssetDatabase.LoadAssetAtPath<TextAsset>(FaunaCatalogPath);
             if (fauna == null)
             {
@@ -253,6 +281,17 @@ namespace AF.UI.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             return 0;
+        }
+
+        private static TextAsset[] LoadTextAssets(string[] paths)
+        {
+            var assets = new TextAsset[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                assets[i] = AssetDatabase.LoadAssetAtPath<TextAsset>(paths[i]);
+            }
+
+            return assets;
         }
     }
 }

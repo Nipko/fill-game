@@ -36,9 +36,9 @@ WORLDTABLE_PATH = ROOT / "Assets" / "_Project" / "Scripts" / "Levels" / "WorldTa
 OVERRIDES_PATH = HERE / "overrides.json"
 MAP_DATA_DIR = ROOT / "Assets" / "_Project" / "Data" / "Map"
 STOPS_PATH = MAP_DATA_DIR / "river_stops_v1.json"
-STOPS_SCHEMA_PATH = ROOT / "schemas" / "af-river-stops-1.schema.json"
+STOPS_SCHEMA_PATH = ROOT / "schemas" / "af-river-stops-2.schema.json"
 MAP_PATH = MAP_DATA_DIR / "river_map_v1.json"
-MAP_SCHEMA_PATH = ROOT / "schemas" / "af-river-map-1.schema.json"
+MAP_SCHEMA_PATH = ROOT / "schemas" / "af-river-map-2.schema.json"
 # La muestra de la investigacion: proyeccion de referencia (test_geometry.py) y candidatos de la propuesta §5.1 bis
 # (CANDIDATOS_5_1_BIS, la copia unica de esa lista; stops.py --check).
 GENERAR_MAPA_PATH = ROOT / "docs" / "research" / "mapa-del-rio" / "generar_mapa.py"

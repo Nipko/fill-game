@@ -224,7 +224,7 @@ namespace AF.Tests.PlayMode
             DailyStampCalendar calendar = daily.Calendar;
             string where = "el calendario a 1080 × " + heightPx + " px con " + (low ? 250 : 220) + " px de barra";
             SafeAreaOverlayTests.Margins(calendar.Canvas, screen, out float safeTop, out float safeBottom, out float canvasH);
-            Rect panel = StopCardTests.CanvasRect((RectTransform)calendar.Canvas.transform.Find("CalendarPanel"), calendar.Canvas);
+            Rect panel = StopCardTests.CanvasRect((RectTransform)calendar.Canvas.transform.Find("Column/CalendarPanel"), calendar.Canvas);
             Rect home = StopCardTests.CanvasRect((RectTransform)calendar.HomeButton.transform, calendar.Canvas);
             Debug.Log("AF_SAFE_CALENDAR " + where + ": zona segura " + safeTop.ToString("0.0") + " / " + safeBottom.ToString("0.0") + " dp; panel " + panel + ", Volver " + home);
             Assert.That(panel.yMin, Is.GreaterThanOrEqualTo(safeTop + 8f - 0.05f), where + ": el panel, bajo la zona segura de arriba");
@@ -389,6 +389,7 @@ namespace AF.Tests.PlayMode
             ctx.UndoStock = 0;
             ctx.UndoAdReady = false;
             ctx.Seeds = 0;
+            ctx.UndoUseless = false; // la variante es de un bloqueo con historial (sin vertidos, Marea no se ofrecería: D-014, añadido del 2026-11-17)
             GameScreen view = daily.View!;
             view.ShowStuckVariant(StuckModalModel.Build(ctx, flow.Boosters));
             view.Stuck.Panel.parent.gameObject.SetActive(true); // el panel a la vista, como con un bloqueo de verdad

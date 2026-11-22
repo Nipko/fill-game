@@ -142,6 +142,16 @@ namespace AF.Presentation
                     }
 
                     break;
+                case MechanicStepKind.Loosen:
+                    // La suelta del Aguapé (02 §9.1 M8, regla 9: «agua que se abre»; D-068), con su sonido de la 1.1
+                    // (docs/audio/encargo-audios-1-1.md). Sin clip, suena con la receta del Remolino, la que tomaba prestada.
+                    AudioCues.Play(SfxId.MechAguape);
+                    break;
+                case MechanicStepKind.Dock:
+                    // El atraque de la Lancha (02 §9.1 M11; D-068), con su sonido de la 1.1 (docs/audio/encargo-audios-1-1.md).
+                    // Sin clip, suena con la receta del remo de Capi, la que tomaba prestada.
+                    AudioCues.Play(SfxId.MechLancha);
+                    break;
                 case MechanicStepKind.Unhook:
                     // La suelta (02 §4.1): roce de fibra y «toc» hueco con su háptico ligero, una vez; el vuelco de la tinaja (Upend),
                     // que va a la vez, no suena aparte.

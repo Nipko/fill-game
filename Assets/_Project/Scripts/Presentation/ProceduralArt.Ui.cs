@@ -82,7 +82,7 @@ namespace AF.Presentation
         private readonly Dictionary<int, ModalSurfaceOrigin> _surfaceOrigin = new Dictionary<int, ModalSurfaceOrigin>();
 
         // Resolución de la superficie de los modales (px por dp).
-        private const float ModalSurfacePxPerDp = 1.5f;
+        private static float ModalSurfacePxPerDp => Capped(1.5f); // con el tope del teléfono (DensityCap)
 
         /// <summary>CTA de la familia Hoja (Siguiente): cara de 50 dp + canto de 6 (56, 02 §3.3), 9-slice horizontal.</summary>
         public ReliefSprites CtaLeaf { get; private set; } = null!;
@@ -293,7 +293,7 @@ namespace AF.Presentation
         // abajo: cara en [0, faceH], canto en [6, faceH + 6], sombra en [10, faceH + 10] con 6 dp de desenfoque.
         private Sprite BuildRelief(string name, float wDp, float faceHDp, float radiusDp, bool circle, ButtonFamily family, int part, bool sliced)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             float hDp = faceHDp + 14f;
             int w = Mathf.RoundToInt(wDp * k);
             int h = Mathf.RoundToInt(hDp * k);
@@ -387,7 +387,7 @@ namespace AF.Presentation
         // 8 dp que asoman por los extremos si leaves (insignia de nivel, guía 3.5). sliceDp > 0: 9-slice con ese borde.
         private Sprite BuildPlate(string name, float wDp, float hDp, float radiusDp, bool leaves, float marginDp, float sliceDp = 0f)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int w = Mathf.RoundToInt(wDp * k);
             int h = Mathf.RoundToInt(hDp * k);
             var pc = new PixelCanvas(w, h);
@@ -462,7 +462,7 @@ namespace AF.Presentation
         {
             // Bandeja «cumbuca» (guía 3.6): madera_oscura con veta, radio 24, rebaje interior, ribete de cuerda de 4 dp en
             // el canto superior y sombra proyectada (y + 4, desenfoque 8, 0,35). El sprite añade 8 dp a cada lado y 12 abajo.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             float bodyW = widthDp;
             float wDp = bodyW + 16f;
             float hDp = 80f + 14f;
@@ -529,7 +529,7 @@ namespace AF.Presentation
         {
             // 9-slice de 96 × 96 dp, borde de 32: marco de 8 dp en madera_oscura tallada y radio 24 (guía 5.3), con el
             // centro transparente: la superficie va aparte (ModalSurfaceFor), al tamaño exacto del panel.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float sizeDp = 96f;
             int s = Mathf.RoundToInt(sizeDp * k);
             var pc = new PixelCanvas(s, s);
@@ -615,7 +615,7 @@ namespace AF.Presentation
         // propio, así que también se pinta en otro hilo (el arte del banner de mundo, ProceduralArt.Mascots.cs).
         private static PixelCanvas PaintModalSurface(int widthDp, int heightDp)
         {
-            const float k = ModalSurfacePxPerDp;
+            float k = ModalSurfacePxPerDp;
             int w = Mathf.RoundToInt(widthDp * k);
             int h = Mathf.RoundToInt(heightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -690,7 +690,7 @@ namespace AF.Presentation
             // Cinta-hoja (guía 5.5; revisión visual del 2026-10-07: 344 × 72 dp para Baloo 2 de 30): hoja verde horizontal
             // con extremos en punta; franja de texto de 256 × 42 dp en hoja_base → hoja_fondo (crema da 4,83-6,26:1); nervio
             // en el tercio superior, fuera del texto; luz de borde solo en el canto superior.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 344f;
             const float hDp = 72f;
             int w = Mathf.RoundToInt(wDp * k);
@@ -767,7 +767,7 @@ namespace AF.Presentation
         private Sprite BuildStillWater()
         {
             // Agua quieta (guía 5.3): degradado rio_base → rio_profundo, 3 reflejos horizontales y 1 hoja flotando.
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float wDp = 296f;
             const float hDp = 20f;
             int w = Mathf.RoundToInt(wDp * k);
@@ -827,7 +827,7 @@ namespace AF.Presentation
                 DrawArrowArc(pc, new Vector2(48f, 44f + oy), 24f, 9f, 15f, 168f, c);
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         private Sprite BuildIconRestart(Color glyph, Color shadow)
@@ -844,7 +844,7 @@ namespace AF.Presentation
                 DrawWave(pc, 11f, 67f, 12f + oy, 3f, 19f, 3.3f, c);
             }
 
-            return MakeSprite(pc, "icon_restart", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_restart", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
     }
 }

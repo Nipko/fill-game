@@ -21,7 +21,7 @@ internal static class BaseChecks
         ("QA-SEALED", "ninguna cuia sellada al inicio (03 sec. 17 #5)"),
         ("QA-STUCK", "atascado(S0) = false (02 sec. 9.2 regla 1)"),
         ("QA-VALID", "resto de LevelValidation de AF.Core (mecanicas, Barro, Aguas turbias)"),
-        ("QA-PAR", "par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2), salvo los tableros de estreno de la Tinaja (K <= 6; D-027)"),
+        ("QA-PAR", "par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2), salvo los tableros de estreno de la Tinaja (K <= 6; D-027) y la curva 2, que solo pide par >= 2K (03 sec. 11; D-068)"),
         ("QA-TINT-DEBUT", "cada tinte con debut anterior o igual al nivel (03 sec. 17 #4)"),
         ("QA-KMAX", "K <= k_max y >= k_min de la cabecera (03 sec. 17 #4)"),
         ("QA-RISK", "risk_pairs recalculado igual al publicado y <= max_risk_pairs (03 sec. 4.5)"),
@@ -30,7 +30,7 @@ internal static class BaseChecks
         ("QA-BOT", "bot_fail recalculado con la semilla del nivel identico al publicado (03 sec. 6)"),
         ("QA-LABEL", "etiqueta coherente: >= 0,75 hard y >= 0,90 very_hard, desde el 40 y el 60 (03 sec. 7, 11)"),
         ("QA-LABEL-EARLY", "ningun nivel mide >= 0,90 antes del 60 ni >= 0,75 antes del 40, aunque se publique con la etiqueta inferior (contrato 6; 03 sec. 11-12)"),
-        ("QA-CUIAS", "aviso: cuias del nivel dentro de las cuias totales del rango (03 sec. 11)"),
+        ("QA-CUIAS", "aviso: cuias del nivel dentro de las cuias totales del rango (03 sec. 11); en la curva 2, QA-T-ROLE"),
         ("QA-FIELDS", "sin solution, safe_path ni qa (08 sec. 4.1)"),
         ("QA-SIZE", "pack <= 100 KB por 100 niveles sin relief (03 sec. 17 #11)"),
         ("QA-EARLY-TRAPS", "trampas tempranas dentro del tope de la etiqueta (Q16 B)"),
@@ -113,7 +113,8 @@ internal static class BaseChecks
             yield return Fail("QA-PAR", string.Create(CultureInfo.InvariantCulture, $"par {lv.Par} < 2K = {2 * lv.K}"));
         }
 
-        if (e.Plan is LevelPlan plan && !TinajaDebutParExempt(plan, b, lv.K))
+        // En la curva 2 el par por rango no vale (03 §11 y §17 #2; D-068): solo par >= 2K, hasta que se fije el par por papel.
+        if (e.Plan is LevelPlan plan && plan.Curve == 0 && !TinajaDebutParExempt(plan, b, lv.K))
         {
             RangeInfo r = plan.Range;
             double lo = r.ParMin * 0.7;
@@ -213,7 +214,8 @@ internal static class BaseChecks
 
         // Cuias por rango (03 §11). Aviso: con 1 vacío y el K que permiten los pares de riesgo (03 §4.5) algunos rangos no
         // llegan al mínimo de la tabla; se revisa en la integración (k_plan, vacíos o la tabla).
-        if (e.Plan is LevelPlan rp && (b.Cuias.Length < rp.Range.CuiasMin || b.Cuias.Length > rp.Range.CuiasMax))
+        // En la curva 2 mandan los topes por papel (QA-T-ROLE), no las cuias del rango.
+        if (e.Plan is LevelPlan rp && rp.Curve == 0 && (b.Cuias.Length < rp.Range.CuiasMin || b.Cuias.Length > rp.Range.CuiasMax))
         {
             yield return new QaIssue("QA-CUIAS", pack, n, string.Create(CultureInfo.InvariantCulture,
                 $"{b.Cuias.Length} cuias (K = {lv.K}); el rango {rp.Range.Name} pide {rp.Range.CuiasMin}-{rp.Range.CuiasMax} (03 sec. 11)"), Warning: true);

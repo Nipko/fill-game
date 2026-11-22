@@ -91,6 +91,19 @@ namespace AF.Tests.EditMode
             Assert.That(problems, Does.Not.Contain("android.useDefaultGraphicsAPIs").And.Not.Contain("android.graphicsAPIs"));
         }
 
+        /// <summary>
+        /// Memoria de clase A (2026-11-17; <c>docs/dev/memoria.md</c> §11): IL2CPP con «Faster (smaller) builds» en Android, para
+        /// que <c>libil2cpp.so</c> (el <c>Code</c> del PSS) sea más pequeño.
+        /// </summary>
+        [Test]
+        public void Il2CppCodeGeneration_OptimizeSize_OnAndroid()
+        {
+            Assert.That(ProjectSetup.AndroidIl2CppCodeGeneration, Is.EqualTo(UnityEditor.Build.Il2CppCodeGeneration.OptimizeSize));
+            Assert.That(UnityEditor.PlayerSettings.GetIl2CppCodeGeneration(UnityEditor.Build.NamedBuildTarget.Android), Is.EqualTo(ProjectSetup.AndroidIl2CppCodeGeneration),
+                "ejecuta AF.EditorTools.ProjectSetup.ApplyAndroidDefaults");
+            Assert.That(string.Join("; ", ProjectSetup.Validate()), Does.Not.Contain("il2cppCodeGeneration"));
+        }
+
         [Test]
         public void FontAtlases_NotReadableOnTheCpu()
         {
@@ -200,6 +213,160 @@ namespace AF.Tests.EditMode
             PixelBuffers.BeginPooling();
             new PixelCanvas(400, 400).Release();
             Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(400L * 400L * 16L));
+        }
+
+        // ---- La reserva del Mapa (docs/dev/memoria.md §10; observación 2 de la prueba r2b de la 1.1) ----
+
+        private const long Px400 = 400L * 400L * 16L;
+        private const long Px600 = 600L * 600L * 16L;
+
+        // Una apertura del Mapa con un lienzo de side × side px: BeginPooling, el lienzo y EndPooling(true).
+        private static void MapOpening(int side)
+        {
+            PixelBuffers.BeginPooling();
+            new PixelCanvas(side, side).Release();
+            PixelBuffers.EndPooling(true);
+        }
+
+        [Test]
+        public void Reserve_EndPoolingKeepLargest_KeepsTheLargestFreeBuffer_AndNothingElse()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            PixelBuffers.BeginPooling();
+            var a = new PixelCanvas(400, 400);
+            var b = new PixelCanvas(300, 300); // a la vez: búferes distintos
+            var c = new PixelCanvas(200, 200);
+            a.Release();
+            b.Release();
+            c.Release();
+            PixelBuffers.EndPooling(true);
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px400), "el más grande se queda de reserva");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L), "los demás se sueltan");
+            Assert.That(PixelBuffers.Pooling, Is.False);
+        }
+
+        [Test]
+        public void Reserve_BeginPooling_LendsIt_AndARentThatFitsReusesIt_Cleared()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            PixelBuffers.BeginPooling();
+            var first = new PixelCanvas(400, 400);
+            first.Fill(Color.white);
+            first.Release();
+            PixelBuffers.EndPooling(true);
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px400));
+
+            int reused = PixelBuffers.Reused;
+            long fresh = PixelBuffers.NewBytes;
+            PixelBuffers.BeginPooling();
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(0L), "prestada");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(Px400), "entre los libres");
+            var next = new PixelCanvas(300, 300);
+            Assert.That(PixelBuffers.Reused, Is.EqualTo(reused + 1), "la reutiliza");
+            Assert.That(PixelBuffers.NewBytes, Is.EqualTo(fresh), "sin búfer nuevo");
+            Assert.That(next.Get(0, 0), Is.EqualTo(new Color(0f, 0f, 0f, 0f)));
+            Assert.That(next.Get(299, 299), Is.EqualTo(new Color(0f, 0f, 0f, 0f)), "a cero en los count primeros, aunque venía pintada");
+            next.Release();
+            PixelBuffers.EndPooling(true);
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px400), "vuelve");
+        }
+
+        [Test]
+        public void Reserve_LentToAnotherPooling_ComesBackWithoutGrowing()
+        {
+            // El camino de RestoreHomeScene (LobbyScreen): BeginPooling + EndPooling() con la reserva guardada.
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            MapOpening(400);
+            PixelBuffers.BeginPooling();
+            var small = new PixelCanvas(300, 300); // usa la reserva
+            var bigger = new PixelCanvas(600, 600); // nuevo, mayor que la reserva
+            small.Release();
+            bigger.Release();
+            PixelBuffers.EndPooling();
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px400), "vuelve la de su medida, no el búfer mayor");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L));
+        }
+
+        [Test]
+        public void Reserve_ANextCanvasBiggerThanIt_GetsANewBuffer_AndTheReserveGrows()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            MapOpening(400);
+            long fresh = PixelBuffers.NewBytes;
+            MapOpening(600);
+            Assert.That(PixelBuffers.NewBytes - fresh, Is.EqualTo(Px600), "no cabe en la reserva: búfer nuevo");
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px600), "EndPooling(true) guarda el mayor");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L));
+        }
+
+        [Test]
+        public void Reserve_ReleasedWhileLent_ThenEndPooling_LeavesNothing()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            MapOpening(400);
+            PixelBuffers.BeginPooling();
+            PixelBuffers.ReleaseReserve();
+            PixelBuffers.EndPooling();
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(0L), "no queda reserva");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L));
+        }
+
+        [Test]
+        public void Reserve_TwoBeginPoolingInARow_DoNotAddItTwice()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            MapOpening(400);
+            PixelBuffers.BeginPooling();
+            PixelBuffers.BeginPooling();
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(Px400), "una sola vez entre los libres");
+            var a = new PixelCanvas(400, 400);
+            int reused = PixelBuffers.Reused;
+            var b = new PixelCanvas(400, 400);
+            Assert.That(PixelBuffers.Reused, Is.EqualTo(reused), "el segundo lienzo no recibe el mismo búfer");
+            a.Release();
+            b.Release();
+            PixelBuffers.EndPooling();
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px400));
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L));
+        }
+
+        [Test]
+        public void Reserve_AfterLowMemory_TheNextOpeningDoesNotKeepIt_TheOneAfterDoes()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            MapOpening(400);
+            PixelBuffers.ReleaseReserveForLowMemory();
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(0L));
+            Assert.That(PixelBuffers.ReserveDroppedForLowMemory, Is.True);
+
+            MapOpening(400);
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(0L), "la apertura que sigue al aviso no la guarda");
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L));
+            Assert.That(PixelBuffers.ReserveDroppedForLowMemory, Is.False);
+
+            MapOpening(400);
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(Px400), "la siguiente apertura normal, sí");
+        }
+
+        [Test]
+        public void Reserve_LowMemoryWhileLent_TheOpeningInCourseDoesNotKeepIt()
+        {
+            PixelBuffers.ResetForTests();
+            PixelBuffers.EndPooling();
+            MapOpening(400);
+            PixelBuffers.BeginPooling();
+            new PixelCanvas(400, 400).Release();
+            PixelBuffers.ReleaseReserveForLowMemory();
+            PixelBuffers.EndPooling(true);
+            Assert.That(PixelBuffers.ReserveBytes, Is.EqualTo(0L));
+            Assert.That(PixelBuffers.FreeBytes, Is.EqualTo(0L));
         }
 
         private static void Paint(PixelCanvas pc)

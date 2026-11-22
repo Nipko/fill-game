@@ -144,17 +144,21 @@ namespace AF.UI
         }
 
         /// <summary>Línea <c>AF_STATE map_open</c> (<c>af_map_open</c> de 08 §8.2).</summary>
-        public void MapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom)
+        public void MapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom, float worldZoom = -1f)
         {
-            string? line = FormatMapOpen(source, level, stop, world, view, zoom);
+            string? line = FormatMapOpen(source, level, stop, world, view, zoom, worldZoom);
             if (line != null)
             {
                 Write(line);
             }
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE map_open</c>; null si la sonda no escribe.</summary>
-        public string? FormatMapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom)
+        /// <summary>
+        /// Texto de la línea <c>AF_STATE map_open</c>; null si la sonda no escribe. Con <paramref name="worldZoom"/> &gt; 0 (observación 1
+        /// de la segunda ronda de la 1.1: el viaje con menos zoom), suma <c>world_zoom</c>, el zoom del mundo que el viaje rebajó a
+        /// <paramref name="zoom"/>.
+        /// </summary>
+        public string? FormatMapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom, float worldZoom = -1f)
         {
             if (!Enabled)
             {
@@ -173,6 +177,11 @@ namespace AF.UI
             sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"view\":\"").Append(view == MapView.Basin ? "basin" : "world").Append('"');
             sb.Append(",\"zoom\":").Append(zoom.ToString("0.00", CultureInfo.InvariantCulture));
+            if (worldZoom > 0f)
+            {
+                sb.Append(",\"world_zoom\":").Append(worldZoom.ToString("0.00", CultureInfo.InvariantCulture));
+            }
+
             sb.Append('}');
             return sb.ToString();
         }
@@ -192,10 +201,14 @@ namespace AF.UI
             MapJourney(MapOpenSource.ContentEnd, phase, from, to, ms, elapsedMs, by);
         }
 
-        /// <summary><see cref="MapJourney(string, int, int, int, float, string)"/> con el <c>source</c> del Mapa (D-053).</summary>
-        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by)
+        /// <summary>
+        /// <see cref="MapJourney(string, int, int, int, float, string)"/> con el <c>source</c> del Mapa (D-053) y, en la línea de
+        /// <c>end</c>, <c>crew_joined</c> (D-069, M2-4; propuesta del Mapa v2 §9.3): el compañero que se presentó en ese Mapa
+        /// (<c>toucan</c> o <c>tucuxi</c>) o null.
+        /// </summary>
+        public void MapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null, int perBuoyMs = 0)
         {
-            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by);
+            string? line = FormatMapJourney(source, phase, from, to, ms, elapsedMs, by, crewJoined, perBuoyMs);
             if (line != null)
             {
                 Write(line);
@@ -208,8 +221,12 @@ namespace AF.UI
             return FormatMapJourney(MapOpenSource.ContentEnd, phase, from, to, ms, elapsedMs, by);
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE map_journey</c> con su <c>source</c>; null si la sonda no escribe.</summary>
-        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by)
+        /// <summary>
+        /// Texto de la línea <c>AF_STATE map_journey</c> con su <c>source</c>; null si la sonda no escribe. Con
+        /// <paramref name="perBuoyMs"/> &gt; 0, tras <c>ms</c>, <c>per_buoy_ms</c>: lo que tarda la canoa en cada boya (añadido de D-069
+        /// del 2026-11-08: 450 en un Mapa con viaje, 150 al ponerse al día).
+        /// </summary>
+        public string? FormatMapJourney(MapOpenSource source, string phase, int from, int to, int ms, float elapsedMs, string by, string? crewJoined = null, int perBuoyMs = 0)
         {
             if (!Enabled)
             {
@@ -225,6 +242,11 @@ namespace AF.UI
             sb.Append(",\"from\":").Append(from.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"to\":").Append(to.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            if (perBuoyMs > 0)
+            {
+                sb.Append(",\"per_buoy_ms\":").Append(perBuoyMs.ToString(CultureInfo.InvariantCulture));
+            }
+
             sb.Append(",\"elapsed_ms\":").Append(Mathf.RoundToInt(Mathf.Max(0f, elapsedMs)).ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"by\":");
             if (by.Length == 0)
@@ -234,6 +256,19 @@ namespace AF.UI
             else
             {
                 sb.Append('"').Append(by).Append('"');
+            }
+
+            if (phase == "end")
+            {
+                sb.Append(",\"crew_joined\":");
+                if (string.IsNullOrEmpty(crewJoined))
+                {
+                    sb.Append("null");
+                }
+                else
+                {
+                    sb.Append('"').Append(crewJoined).Append('"');
+                }
             }
 
             sb.Append('}');

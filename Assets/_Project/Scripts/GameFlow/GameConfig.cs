@@ -208,6 +208,12 @@ namespace AF.GameFlow
         /// <summary><c>mech_enabled_tinaja</c> (08 §9; D-019): kill switch de la Tinaja y su cucharón.</summary>
         public const bool MechEnabledTinaja = true;
 
+        /// <summary><c>mech_enabled_aguape</c> (08 §9; D-068): kill switch del Aguapé y del Aguapé espeso.</summary>
+        public const bool MechEnabledAguape = true;
+
+        /// <summary><c>mech_enabled_lancha</c> (08 §9; D-068): kill switch de la Lancha.</summary>
+        public const bool MechEnabledLancha = true;
+
         /// <summary>
         /// Los kill switches <c>mech_enabled_*</c> de 08 §9 con los defaults compilados de arriba (todos true hasta que exista
         /// <c>AF.RemoteConfig</c>; tarea KS1). En la 1.0, con false, los niveles que usan la mecánica se sustituyen con
@@ -222,7 +228,9 @@ namespace AF.GameFlow
             .With(MechanicSwitch.Lluvia, MechEnabledLluvia)
             .With(MechanicSwitch.Brote, MechEnabledBrote)
             .With(MechanicSwitch.Pirana, MechEnabledPirana)
-            .With(MechanicSwitch.Tinaja, MechEnabledTinaja);
+            .With(MechanicSwitch.Tinaja, MechEnabledTinaja)
+            .With(MechanicSwitch.Aguape, MechEnabledAguape)
+            .With(MechanicSwitch.Lancha, MechEnabledLancha);
 
         /// <summary>Duración de Sumergir y teñir para el nivel <paramref name="level"/> (02 §4.2).</summary>
         public static int TintDurationMs(int level)

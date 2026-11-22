@@ -13,8 +13,8 @@ namespace AF.Core.Mechanics
     /// <para>Los códigos 8 y 9 son la Tinaja (M13) y su cuia chica (D-019; propuesta
     /// <c>docs/research/cultura-ribera/propuesta-tinaja.md</c>, c.1). El 10 [P] es la Hoja atada y el 11 [P], la Flor de
     /// vitória-régia, variantes de la 1.0 (D-007, propuesta de D-007 b.3; firma de <c>pack_schema</c> 3, D-023, punto 5). El
-    /// Brote de dos hojas no es un tipo: es el Brote con <c>n</c> = 2 (<see cref="Board.Cuia.MechanicN"/>). Los códigos 12-15
-    /// quedan libres para la 1.1 (Aguapé, Palizada, Lancha y Cocha; Q7 y Q8 b′ de D-007) y las demás variantes. Nadie persiste el
+    /// Brote de dos hojas no es un tipo: es el Brote con <c>n</c> = 2 (<see cref="Board.Cuia.MechanicN"/>). Con D-068 (la curva de la
+    /// 1.1) el 12 es el Aguapé y el 13, la Lancha; el 14 y el 15 quedan libres para la 1.2 (Palizada y Cocha). Nadie persiste el
     /// valor numérico fuera de la cuia: el JSON usa las claves de <see cref="MechanicTypes.ToKey"/>.</para>
     /// </remarks>
     public enum MechanicType
@@ -75,15 +75,31 @@ namespace AF.Core.Mechanics
         /// Y). Se deduce del estado, sin bandera. Código 11 [P]; clave <c>"flor"</c>.
         /// </summary>
         Flor = 11,
+
+        /// <summary>
+        /// M8 Aguapé (1.1, D-068 [P]; 02 §9.1 M8; debut 303): una mata sujeta un grupo de 2-5 cuias contiguas. Las del grupo
+        /// reciben con la regla normal pero no son origen hasta que <c>n</c> cuias del grupo quedan selladas (<c>n</c> = 1; 2 en
+        /// el Aguapé espeso, desde el ciclo 341-360); entonces se suelta todo el grupo en la etapa (d) de R10. El id de grupo va
+        /// en los bits del id de pareja (47-49) y <c>n</c> en los de <c>n</c> (50-52). Código 12 [P]; clave <c>"aguape"</c>.
+        /// </summary>
+        Aguape = 12,
+
+        /// <summary>
+        /// M11 Lancha (1.1, D-068 [P]; 02 §9.1 M11; debut 363): la cuia de carga, con 1-3 dosis visibles, no es origen ni destino
+        /// hasta que el tablero tiene <c>k</c> o más cuias vacías; entonces atraca (etapa (f) de R10) y queda como una cuia
+        /// normal. «Atracada» es la ausencia de la mecánica (1 bit de estado: el código). <c>k</c> va en los bits 53-55. Código
+        /// 13 [P]; clave <c>"lancha"</c>.
+        /// </summary>
+        Lancha = 13,
     }
 
     /// <summary>Claves de <c>attrs[i].type</c> en <c>af-level/1</c> (08 §4.1) y su conversión con <see cref="MechanicType"/>.</summary>
     public static class MechanicTypes
     {
         /// <summary>Último código de mecánica definido.</summary>
-        public const MechanicType Last = MechanicType.Flor;
+        public const MechanicType Last = MechanicType.Lancha;
 
-        private static readonly string[] Keys = { "none", "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon", "hoja_atada", "flor" };
+        private static readonly string[] Keys = { "none", "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon", "hoja_atada", "flor", "aguape", "lancha" };
 
         /// <summary><paramref name="type"/> es un valor definido.</summary>
         public static bool IsDefined(MechanicType type)
@@ -93,7 +109,8 @@ namespace AF.Core.Mechanics
 
         /// <summary>
         /// Clave del JSON: <c>"hoja"</c>, <c>"brote"</c>, <c>"liana"</c>, <c>"matapi"</c>, <c>"remolino"</c>, <c>"lluvia"</c>,
-        /// <c>"pirana"</c>, <c>"tinaja"</c>, <c>"cucharon"</c>, <c>"hoja_atada"</c> o <c>"flor"</c>.
+        /// <c>"pirana"</c>, <c>"tinaja"</c>, <c>"cucharon"</c>, <c>"hoja_atada"</c>, <c>"flor"</c> y, con <c>pack_schema</c> 5 (D-068),
+        /// <c>"aguape"</c> o <c>"lancha"</c>.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="type"/> no es una mecánica definida (ni <see cref="MechanicType.None"/>).</exception>
         public static string ToKey(MechanicType type)

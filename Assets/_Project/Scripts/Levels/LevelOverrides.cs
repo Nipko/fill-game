@@ -9,8 +9,8 @@ using AF.Levels.Json;
 namespace AF.Levels
 {
     /// <summary>
-    /// Mecánica con kill switch: las claves <c>mech_enabled_{hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}</c>
-    /// de GDD 08 §9, en el orden de la tabla (02 §9.2, regla 3; D-007; D-019).
+    /// Mecánica con kill switch: las claves <c>mech_enabled_{hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja,aguape,lancha}</c>
+    /// de GDD 08 §9, en el orden de la tabla (02 §9.2, regla 3; D-007; D-019; D-068).
     /// </summary>
     public enum MechanicSwitch
     {
@@ -40,6 +40,12 @@ namespace AF.Levels
 
         /// <summary><c>mech_enabled_tinaja</c>: M13 Tinaja y su cuia chica (<c>cucharon</c>).</summary>
         Tinaja = 8,
+
+        /// <summary><c>mech_enabled_aguape</c>: M8 Aguapé, con el Aguapé espeso (D-068, 1.1).</summary>
+        Aguape = 9,
+
+        /// <summary><c>mech_enabled_lancha</c>: M11 Lancha (D-068, 1.1).</summary>
+        Lancha = 10,
     }
 
     /// <summary>
@@ -54,19 +60,20 @@ namespace AF.Levels
     public readonly struct MechanicSwitches : IEquatable<MechanicSwitches>
     {
         /// <summary>Número de kill switches de 08 §9.</summary>
-        public const int Count = 9;
+        public const int Count = 11;
 
         /// <summary>Prefijo de las claves de Remote Config (08 §9).</summary>
         public const string KeyPrefix = "mech_enabled_";
 
         private const int AllBits = (1 << Count) - 1;
 
-        private static readonly string[] Ids = { "hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja" };
+        private static readonly string[] Ids = { "hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja", "aguape", "lancha" };
 
         private static readonly string[] Keys =
         {
             KeyPrefix + "hoja", KeyPrefix + "matapi", KeyPrefix + "liana", KeyPrefix + "remolino", KeyPrefix + "barro",
-            KeyPrefix + "lluvia", KeyPrefix + "brote", KeyPrefix + "pirana", KeyPrefix + "tinaja",
+            KeyPrefix + "lluvia", KeyPrefix + "brote", KeyPrefix + "pirana", KeyPrefix + "tinaja", KeyPrefix + "aguape",
+            KeyPrefix + "lancha",
         };
 
         // Bit i = la mecánica i está apagada: el default (0) es «todas encendidas».
@@ -272,6 +279,10 @@ namespace AF.Levels
                 case MechanicType.Tinaja:
                 case MechanicType.Cucharon:
                     return 1 << (int)MechanicSwitch.Tinaja;
+                case MechanicType.Aguape:
+                    return 1 << (int)MechanicSwitch.Aguape; // con el Aguapé espeso (n = 2), sin clave propia (08 §9)
+                case MechanicType.Lancha:
+                    return 1 << (int)MechanicSwitch.Lancha;
                 default:
                     return 0;
             }
@@ -299,9 +310,10 @@ namespace AF.Levels
     /// mecánica apagada (<c>mech_enabled_&lt;id&gt;</c> = false). El formato de respaldo por slot es de la 1.1 (D-020).</para>
     /// <para>Fuente: el valor de Remote Config de <c>level_overrides</c> (<c>RcLevelBinder</c>, en el arranque, antes de crear el
     /// catálogo) o, sin él, <see cref="LocalSource"/>; los tests pasan la suya. Cada <c>level_id</c> se busca en los paquetes
-    /// dados, en su orden: los de campaña (<c>m{mm}_v{v}_n{nnnn}</c>, glosario §11) y los de reserva
-    /// (<c>m{mm}_v{v}_n{nnnn}_r{k}</c>; D-033, añadido «la reserva del 20 %», Q-B11-7 a; <see cref="LevelPack.IsReserve"/>). Un
-    /// tablero de reserva solo vale para su slot (<see cref="LevelDefinition.Level"/>, el del <c>replaces</c>): en otro se
+    /// dados, en su orden: los de campaña (<c>m{mm}_v{v}_n{nnnn}</c>, glosario §11), los de reserva
+    /// (<c>m{mm}_v{v}_n{nnnn}_r{k}</c>; D-033, añadido «la reserva del 20 %», Q-B11-7 a; <see cref="LevelPack.IsReserve"/>) y, con
+    /// la 1.1, los de la curva 2 y su reserva (<c>_c{c}</c> y <c>_c{c}_r{k}</c>; D-068; 08 §9). Un tablero de reserva o de la
+    /// curva 2 solo vale para su slot (<see cref="LevelDefinition.Level"/>, el del <c>replaces</c>): en otro se
     /// descarta, porque su ventana de dificultad es la de ese slot. Una entrada inválida (slot que no es un entero positivo, id
     /// que no es una cadena o que no está en ningún paquete, reserva en otro slot, slot repetido) no rompe el arranque: se
     /// descarta y se anota en <see cref="Problems"/>.</para>
@@ -408,10 +420,10 @@ namespace AF.Levels
                     continue;
                 }
 
-                if (level.IsReserve && level.Level != slot)
+                if (level.Replaces != null && level.Level != slot)
                 {
-                    problems.Add(Key + ": el slot " + slotText + " pide " + id + ", que es la reserva del slot "
-                        + level.Level.ToString(CultureInfo.InvariantCulture) + " (" + level.Replaces + "); se ignora.");
+                    problems.Add(Key + ": el slot " + slotText + " pide " + id + ", que es " + (level.IsReserve ? "la reserva" : "la curva 2")
+                        + " del slot " + level.Level.ToString(CultureInfo.InvariantCulture) + " (" + level.Replaces + "); se ignora.");
                     continue;
                 }
 

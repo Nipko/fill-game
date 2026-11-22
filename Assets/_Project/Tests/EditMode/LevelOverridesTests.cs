@@ -32,9 +32,9 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Switches_HaveTheNineKeysOf08Section9_InOrder_AndAllAreOnByDefault()
+        public void Switches_HaveTheElevenKeysOf08Section9_InOrder_AndAllAreOnByDefault()
         {
-            string[] expected = { "hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja" };
+            string[] expected = { "hoja", "matapi", "liana", "remolino", "barro", "lluvia", "brote", "pirana", "tinaja", "aguape", "lancha" };
             Assert.That(MechanicSwitches.Count, Is.EqualTo(expected.Length));
             for (int i = 0; i < expected.Length; i++)
             {
@@ -117,8 +117,10 @@ namespace AF.Tests.EditMode
                 Assert.That(MechanicSwitches.AllOn.BlockedMask(def), Is.EqualTo(0));
             }
 
-            // Los estrenos de 1-200 (02 §9.1): hoja, matapi, liana, remolino, barro, lluvia, brote y piraña; la tinaja es del 323.
-            int expected = ((1 << MechanicSwitches.Count) - 1) & ~(1 << (int)MechanicSwitch.Tinaja);
+            // Los estrenos de 1-200 (02 §9.1): hoja, matapi, liana, remolino, barro, lluvia, brote y piraña; la tinaja es del 323 y
+            // el Aguapé y la Lancha, de la curva 2 de la 1.1 (D-068).
+            int expected = ((1 << MechanicSwitches.Count) - 1) & ~(1 << (int)MechanicSwitch.Tinaja) & ~(1 << (int)MechanicSwitch.Aguape)
+                & ~(1 << (int)MechanicSwitch.Lancha);
             Assert.That(seen, Is.EqualTo(expected), MechanicSwitches.Describe(seen));
         }
 

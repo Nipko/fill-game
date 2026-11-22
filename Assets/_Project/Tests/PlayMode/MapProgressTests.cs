@@ -47,6 +47,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null; // observación 5 de la prueba r2b: algunos tests miran las placas de la 1.0
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -76,7 +77,10 @@ namespace AF.Tests.PlayMode
             Assert.That(map.FillFrom(amazonas), Is.GreaterThan(routes.At(7)!.At.S), "Tefé, todavía no");
             Assert.That(map.FillRibbon(negro).gameObject.activeSelf, Is.True);
             Assert.That(map.FillRibbon(negro).Look, Is.EqualTo(RibbonLook.Water));
-            Assert.That(map.FillRibbon(negro).FillStart, Is.EqualTo(map.FillFrom(negro)).Within(1e-6f));
+            // Con el Mapa v2 (observación 3 de la segunda ronda de la 1.1), el lleno se alarga FrontLiveFadeDp por debajo del tramo en
+            // curso, que sale de ahí río arriba, para fundirse con él.
+            float cross = map.LiveActive ? RiverMapScreen.FrontLiveFadeDp / (map.Space.DpPerUnit * data.Lines[negro].Length) : 0f;
+            Assert.That(map.FillRibbon(negro).FillStart, Is.EqualTo(Mathf.Max(0f, map.FillFrom(negro) - cross)).Within(1e-5f));
             Assert.That(map.FillRibbon(negro).FillEnd, Is.EqualTo(1f), "hasta la boca");
 
             // El frente: una cinta de agua sobre el Negro, de Manaos a 8/10 del tramo.
@@ -102,9 +106,10 @@ namespace AF.Tests.PlayMode
             Assert.That(lit, Is.EqualTo(8));
             Assert.That(Vector2.Distance(map.BuoyMapPoint(7), map.CanoeMapPoint), Is.LessThan(1e-5f), "la canoa va en la punta del agua");
             Canvas.ForceUpdateCanvases();
-            Assert.That(map.BuoysDrawn, Is.EqualTo(10));
-            Assert.That(map.Buoys!.DrawnCount, Is.EqualTo(8), "las encendidas, detrás de la canoa");
-            Assert.That(map.BuoysAhead!.DrawnCount, Is.EqualTo(2), "las del 59 y el 60, encima");
+            // Observación 2 de la segunda ronda de la 1.1: con el Mapa v2, las que caen en el claro de la canoa no se dibujan.
+            Assert.That(map.BuoysDrawn + map.BuoysCleared, Is.EqualTo(10));
+            Assert.That(map.Buoys!.DrawnCount + map.Buoys.HiddenCount, Is.EqualTo(8), "las encendidas, detrás de la canoa");
+            Assert.That(map.BuoysAhead!.DrawnCount + map.BuoysAhead.HiddenCount, Is.EqualTo(2), "las del 59 y el 60, encima");
             // El frente de una sola pieza (el Negro) cabe en la cifra de referencia de §11.4 (FrontMaxVertices), aunque desde la
             // revisión de FX11 el Mapa no la aplica (sin saltar puntos); el tramo del 300 la supera y lo acota Fx11Tests.
             Assert.That(front.LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "el frente de una pieza, dentro de la cifra de §11.4");
@@ -132,15 +137,21 @@ namespace AF.Tests.PlayMode
                     continue;
                 }
 
-                // Propuesta §3.4 y §4.1: las que faltan son el «solo me falta uno»; se ven, aunque caigan bajo la canoa.
+                // Propuesta §3.4 y §4.1: las que faltan son el «solo me falta uno»; se ven, aunque caigan bajo la canoa. Con el Mapa
+                // v2 (observación 2 de la segunda ronda de la 1.1: «los puntos tapan al tucán»), las que caen en el claro de la canoa
+                // con su tripulación no se dibujan: la cuenta la da «Faltan N».
                 Vector2 p = map.BuoyLocalPoint(i);
                 bool clear = !canoe.Contains(p);
                 under += clear ? 0 : 1;
                 Assert.That(clear || ahead.GetSiblingIndex() > map.Canoe.transform.GetSiblingIndex(), Is.True, "boya del " + map.BuoyLevel(i));
+                if (!clear && map.LiveActive)
+                {
+                    Assert.That(map.BuoysAhead!.IsHidden(i), Is.True, "con el Mapa v2, la boya del " + map.BuoyLevel(i) + " no se pinta sobre la canoa");
+                }
             }
 
             Debug.Log("AF_MAP boyas por ganar bajo la caja de la canoa con max 58 en Mundo: " + under);
-            Assert.That(map.BuoysAhead.DrawnCount, Is.EqualTo(2), "el 59 y el 60, dibujadas por la malla de encima");
+            Assert.That(map.BuoysAhead.DrawnCount + map.BuoysAhead.HiddenCount, Is.EqualTo(2), "el 59 y el 60, de la malla de encima");
             yield return null;
         }
 
@@ -198,7 +209,10 @@ namespace AF.Tests.PlayMode
 
                 // Un tramo sin largo a la escala de la vista: las 10 boyas en la fila corta bajo la parada, con el radio de la
                 // vista, separadas y fuera de la caja de la canoa (que va en la parada).
-                bool shortLeg = c.Max == 85 || c.Max == 145 || c.Max == 185;
+                // D-069, M2-2: con ui_map_towns (encendida por defecto), los tramos de 0 km (85 y 185) llevan la excursión local y,
+                // en la vista Mundo, sus boyas van por su lazo; el de Itaya (145), de unos metros, sigue en la fila corta.
+                bool shortLeg = c.Max == 145;
+                bool excursion = c.Max == 85 || c.Max == 185;
                 foreach (MapView v in new[] { MapView.World, MapView.Basin })
                 {
                     map.SetView(v);
@@ -207,6 +221,11 @@ namespace AF.Tests.PlayMode
                     if (shortLeg)
                     {
                         Assert.That(map.BuoysCompact, Is.True, at);
+                    }
+
+                    if (excursion && v == MapView.World)
+                    {
+                        Assert.That(map.BuoysCompact, Is.False, at + ": las boyas por el lazo de la excursión (M2-2)");
                     }
 
                     if (!map.BuoysCompact)
@@ -520,7 +539,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(map.FrontFraction, Is.EqualTo(0.8f).Within(1e-6f), "el agua no se corta");
             Canvas.ForceUpdateCanvases();
-            Assert.That(map.BuoysDrawn, Is.EqualTo(9), "la saltada no lleva disco: lleva a Rosa");
+            Assert.That(map.BuoysDrawn + map.BuoysCleared, Is.EqualTo(9), "la saltada no lleva disco: lleva a Rosa");
             Assert.That(map.PastRosaCount, Is.EqualTo(0), "el 55 está en el frente");
 
             // Rosa se reconoce: entre 12 y 18 dp, como mucho 1,6 veces la distancia entre boyas (si no, tapa la vecina), con el halo
@@ -615,6 +634,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator FutureWorlds_HaveTheirSilhouette_WithMapNextWorld()
         {
+            // Observación 5 de la prueba r2b de la 1.1: con el Mapa v2 sale solo la placa del mundo siguiente
+            // (RiverMapScreen.LiveFutureWorldPlates; MapRound2bTests); esta regla de una placa por mundo futuro es la de la 1.0.
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false };
             yield return OpenApp(59);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -886,7 +908,7 @@ namespace AF.Tests.PlayMode
             Assert.That(front.GetSiblingIndex(), Is.LessThan(map.Canoe.transform.GetSiblingIndex()), "detrás de la canoa");
             Assert.That(map.BuoysAheadLayer!.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "las boyas por ganar, encima de la canoa");
             Assert.That(map.RosaLayer!.GetSiblingIndex(), Is.GreaterThan(map.BuoysAheadLayer.GetSiblingIndex()), "Rosa, encima de todo");
-            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(3), "sin lienzos nuevos");
+            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(map.LiveActive ? 6 : 3), "sin lienzos nuevos (los 3 del Mapa v2, D-069)");
 
             // Las orlas (del lleno y del frente) en el lienzo estático, debajo del agua de todas las líneas: en una confluencia, el
             // afluente entra en el cauce sin costura.

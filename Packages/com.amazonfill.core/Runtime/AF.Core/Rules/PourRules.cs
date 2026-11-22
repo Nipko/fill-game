@@ -255,6 +255,33 @@ namespace AF.Core.Rules
             return BoardRules.IsStuck(state.CuiasArray, 0, state.Count, state.UnitsTable, futileRuleEnabled);
         }
 
+        /// <summary>
+        /// Asienta un tablero que cambió sin un vertido (la Cuia extra o de rescate que se añade, el tablero de la Pororoca):
+        /// aplica las etapas (d) y (f) de R10 hasta que nada cambie, como el punto fijo (f′) tras un vertido, sin contadores (no hay
+        /// vertido que los avance). Con la 1.1 (D-068 [P]; 02 §9.1 M11: «en cuanto el tablero tiene k o más cuias vacías,
+        /// atraca»), es lo que hace atracar a la Lancha cuando una cuia vacía nueva completa sus <c>k</c>. Devuelve el mismo objeto
+        /// si no cambia nada (en cualquier tablero inicial válido: ninguno empieza con sellos, 03 §17 #5, ni con <c>k</c> vacías).
+        /// </summary>
+        /// <param name="state">Tablero.</param>
+        /// <param name="events">Lo que se soltó o atracó (<see cref="PourEvents.ReleasedMask"/> y sus máscaras por mecánica).</param>
+        public static BoardState Settle(BoardState state, out PourEvents events)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            events = default;
+            Cuia[] cuias = state.CuiasArray;
+            var probe = (Cuia[])cuias.Clone();
+            if (!BoardRules.SettleInPlace(probe, 0, probe.Length, state.UnitsTable, ref events))
+            {
+                return state;
+            }
+
+            return BoardState.FromValidated(probe, state.UnitsTable);
+        }
+
         private static void CheckArguments(BoardState state, int source, int target)
         {
             if (state == null)

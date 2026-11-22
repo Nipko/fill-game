@@ -147,7 +147,7 @@ namespace AF.Presentation
             {
                 StrokeIconJar(pc, Palette.DisabledGlyph);
                 DrawIconFirefly(pc, true);
-                return MakeSprite(pc, "icon_firefly_disabled", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+                return MakeSprite(pc, "icon_firefly_disabled", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
             }
 
             // Sombra interior de 1 dp del canto de la familia (guía 5.7), como los demás glifos de la bandeja.
@@ -175,7 +175,7 @@ namespace AF.Presentation
             }
 
             DrawIconFirefly(pc, false);
-            return MakeSprite(pc, "icon_firefly", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_firefly", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         // La cuia del glifo (cuerpo de 24 × 19 dp, cuello y boca) desplazada oy px: el contorno de IconJarOutlinePx en edge y el

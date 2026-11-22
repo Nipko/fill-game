@@ -260,7 +260,7 @@ namespace AF.Presentation
             // la de abajo, así que la madera son las filas desde 6 dp. El centro (fuera de los bordes 9-slice de 16 dp) solo
             // depende de la altura.
             Texture2D tex = Shelf.texture;
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             float wood = 20f * k;
             float x = Mathf.Round((0.5f * tex.width) - k);
             var rect = new Rect(x, tex.height - wood, 2f * k, wood);

@@ -16,7 +16,7 @@ namespace AF.Save.Tests
         private static readonly string NewProfileJson = string.Join("\n", new[]
         {
             "{",
-            "  \"profile_schema\": 2,",
+            "  \"profile_schema\": 3,",
             "  \"created_at\": \"2026-10-05T13:10:00Z\",",
             "  \"economy_ts\": null,",
             "  \"wallet\": {",
@@ -57,7 +57,8 @@ namespace AF.Save.Tests
             "    \"skipped_levels\": [],",
             "    \"content_version\": null,",
             "    \"map_seen_level\": 0,",
-            "    \"undo_tip_seen\": false",
+            "    \"undo_tip_seen\": false,",
+            "    \"curve2_from_level\": 1",
             "  },",
             "  \"level_state\": null,",
             "  \"entitlements\": {",
@@ -103,12 +104,12 @@ namespace AF.Save.Tests
             Profile p = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
 
             Assert.That(ProfileJson.Serialize(p), Is.EqualTo(NewProfileJson));
-            Assert.That(p.ProfileSchema, Is.EqualTo(2));
+            Assert.That(p.ProfileSchema, Is.EqualTo(3));
             Assert.That(p.Wallet.Seeds, Is.EqualTo(0), "el GDD no fija otro saldo inicial");
             Assert.That(p.Progress.NextLevel, Is.EqualTo(1), "08 §2.3: la primera vez se entra al nivel 1");
             Assert.That(p.LevelState, Is.Null);
             Assert.That(p.CreatedAt.Kind, Is.EqualTo(DateTimeKind.Utc));
-            Assert.That(Profile.CurrentSchema, Is.EqualTo(2), "esquema 2 desde DC15: fauna.sighted, con su paso 1 → 2");
+            Assert.That(Profile.CurrentSchema, Is.EqualTo(3), "esquema 3 desde la 1.1 (D-068): progress.curve2_from_level, con su paso 2 → 3");
         }
 
         [Test]
@@ -194,7 +195,7 @@ namespace AF.Save.Tests
         [Test]
         public void MissingKeys_TakeDefaults_AndUnknownKeysAreIgnored()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"consent\": {\"analytics\": true}, \"wallet\": {\"seeds\": 30, \"gems\": 9}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"consent\": {\"analytics\": true}, \"wallet\": {\"seeds\": 30, \"gems\": 9}}");
 
             Assert.That(p.Wallet.Seeds, Is.EqualTo(30));
             Assert.That(p.Wallet.Canoes.Count, Is.EqualTo(0));
@@ -217,24 +218,24 @@ namespace AF.Save.Tests
         [TestCase("{\"wallet\": {\"seeds\": 1}}")]
         [TestCase("{\"profile_schema\": \"1\"}")]
         [TestCase("{\"profile_schema\": -1}")]
-        [TestCase("{\"profile_schema\": 3}")]
-        [TestCase("{\"profile_schema\": 2, \"wallet\": {\"seeds\": \"12\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"wallet\": {\"seeds\": 1.5}}")]
-        [TestCase("{\"profile_schema\": 2, \"wallet\": {\"seeds\": 3000000000}}")]
-        [TestCase("{\"profile_schema\": 2, \"wallet\": []}")]
-        [TestCase("{\"profile_schema\": 2, \"economy_ts\": \"2026-10-05 14:03:11\"}")]
-        [TestCase("{\"profile_schema\": 2, \"economy_ts\": \"2026-02-30T00:00:00Z\"}")]
-        [TestCase("{\"profile_schema\": 2, \"progress\": {\"skipped_levels\": [1, \"2\"]}}")]
-        [TestCase("{\"profile_schema\": 2, \"level_state\": {\"seed\": null}}")]
-        [TestCase("{\"profile_schema\": 2, \"entitlements\": {\"no_ads\": 1}}")]
-        [TestCase("{\"profile_schema\": 2, \"entitlements\": {\"skins\": [\"af_skin_m02\", 3]}}")]
-        [TestCase("{\"profile_schema\": 2, \"entitlements\": {\"skins\": \"af_skin_m02\"}}")]
-        [TestCase("{\"profile_schema\": 2, \"ads\": {\"last_iap\": 5}}")]
-        [TestCase("{\"profile_schema\": 2, \"ads\": []}")]
-        [TestCase("{\"profile_schema\": 2, \"daily\": {\"af_rescue_hidden_until\": \"ayer\"}}")]
-        [TestCase("{\"profile_schema\": 2} x")]
-        [TestCase("{\"profile_schema\": 2, \"profile_schema\": 2}")]
-        [TestCase("{\"profile_schema\": 2, \"wallet\": {\"seeds\": 1}")]
+        [TestCase("{\"profile_schema\": 4}")]
+        [TestCase("{\"profile_schema\": 3, \"wallet\": {\"seeds\": \"12\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"wallet\": {\"seeds\": 1.5}}")]
+        [TestCase("{\"profile_schema\": 3, \"wallet\": {\"seeds\": 3000000000}}")]
+        [TestCase("{\"profile_schema\": 3, \"wallet\": []}")]
+        [TestCase("{\"profile_schema\": 3, \"economy_ts\": \"2026-10-05 14:03:11\"}")]
+        [TestCase("{\"profile_schema\": 3, \"economy_ts\": \"2026-02-30T00:00:00Z\"}")]
+        [TestCase("{\"profile_schema\": 3, \"progress\": {\"skipped_levels\": [1, \"2\"]}}")]
+        [TestCase("{\"profile_schema\": 3, \"level_state\": {\"seed\": null}}")]
+        [TestCase("{\"profile_schema\": 3, \"entitlements\": {\"no_ads\": 1}}")]
+        [TestCase("{\"profile_schema\": 3, \"entitlements\": {\"skins\": [\"af_skin_m02\", 3]}}")]
+        [TestCase("{\"profile_schema\": 3, \"entitlements\": {\"skins\": \"af_skin_m02\"}}")]
+        [TestCase("{\"profile_schema\": 3, \"ads\": {\"last_iap\": 5}}")]
+        [TestCase("{\"profile_schema\": 3, \"ads\": []}")]
+        [TestCase("{\"profile_schema\": 3, \"daily\": {\"af_rescue_hidden_until\": \"ayer\"}}")]
+        [TestCase("{\"profile_schema\": 3} x")]
+        [TestCase("{\"profile_schema\": 3, \"profile_schema\": 3}")]
+        [TestCase("{\"profile_schema\": 3, \"wallet\": {\"seeds\": 1}")]
         public void WrongShapesOrTypes_AreFormatErrors(string json)
         {
             Assert.Throws<FormatException>(() => ProfileJson.Deserialize(json));

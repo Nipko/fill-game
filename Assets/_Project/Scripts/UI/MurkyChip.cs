@@ -56,10 +56,11 @@ namespace AF.UI
         public const float GlyphBackLighten = 0.05f;
 
         // Sprite de la píldora a 3 px/dp: 40 × (26 + 2) dp con 13 dp de 9-slice a cada lado (el radio).
-        private const float PxPerDp = ProceduralArt.UiPxPerDp;
+        private static float PxPerDp => ProceduralArt.UiPxPerDp;
         private const float SpriteWidthDp = 40f;
 
         private static Sprite? s_pill;
+        private static float s_pillK; // la densidad con la que se pintó (el tope del arte puede cambiar de escena a escena)
 
         private readonly RectTransform _root;
         private readonly Image _pill;
@@ -187,7 +188,7 @@ namespace AF.UI
         // Una sola textura para toda la app (se rehace si Unity la destruyó).
         private static Sprite PillSprite()
         {
-            if (s_pill != null)
+            if (s_pill != null && s_pillK == PxPerDp)
             {
                 return s_pill;
             }
@@ -265,6 +266,7 @@ namespace AF.UI
             sprite.name = "label_pill_murky";
             sprite.hideFlags = HideFlags.DontSave;
             s_pill = sprite;
+            s_pillK = PxPerDp;
             return sprite;
         }
 

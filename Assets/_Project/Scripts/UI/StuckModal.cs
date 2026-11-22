@@ -500,12 +500,19 @@ namespace AF.UI
             y += compact ? 4f : 6f;
 
             // Regla 0: Marea (o la recarga gratis de la rama F) a lo ancho; si no, la recarga por video y por semillas en una fila.
+            // Si deshacer no saca del atasco (añadido de D-014 del 2026-11-17), ninguna de las dos [P]: no sale, ni en gris, porque
+            // nada la haría servir; el rescate y el pie suben, y TalkBack no la lee (está inactiva).
+            bool offered = view.UndoOffered;
             bool refill = view.Undo == StuckUndoKind.Refill;
-            _undo.Button.gameObject.SetActive(!refill);
+            _undo.Button.gameObject.SetActive(offered && !refill);
             _refillVideo.Button.gameObject.SetActive(refill && view.UndoVideo);
             _refillSeeds.Button.gameObject.SetActive(refill);
             int amount = services?.Wallet.Config.UndoRefillAmount ?? 3;
-            if (!refill)
+            if (!offered)
+            {
+                _undoBadge.gameObject.SetActive(false);
+            }
+            else if (!refill)
             {
                 _undoLabel.text = view.Undo == StuckUndoKind.Gift ? UiText.StuckUndoGift : UiText.StuckUndo;
                 bool badge = view.Undo == StuckUndoKind.Undo && !view.UndoUnlimited && view.UndoBadge > 0;

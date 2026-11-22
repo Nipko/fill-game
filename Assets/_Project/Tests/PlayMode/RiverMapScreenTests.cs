@@ -46,6 +46,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -107,8 +108,18 @@ namespace AF.Tests.PlayMode
             Assert.That(map.Title, Is.EqualTo("Manaos · ¿Por qué el río Negro es negro?"), "map_world_question (glosario §10)");
             Assert.That(map.QuestionAnswered, Is.False, "se responde al llegar a Anavilhanas (el 60)");
             Assert.That(map.CheckShown, Is.False);
-            Assert.That(map.StopRemainingShown, Is.True);
             Assert.That(map.StopRemainingText, Is.EqualTo("Faltan 3 niveles para Anavilhanas"));
+            if (map.LiveActive)
+            {
+                // Con el Mapa v2 (D-069, pregunta 2 de M2-3, hecha en M2-4), «Faltan N» va en el rótulo de la parada siguiente.
+                Assert.That(map.StopRemainingInLabel, Is.True);
+                Assert.That(map.StopLabelText(6), Is.EqualTo("Anavilhanas\nfaltan 3 niveles"));
+            }
+            else
+            {
+                Assert.That(map.StopRemainingShown, Is.True);
+            }
+
             Assert.That(map.PlayLabel, Is.EqualTo(UiText.PlayLevel(58)));
             Assert.That(map.ViewWorldLabel, Is.EqualTo("Mundo"));
             Assert.That(map.ViewBasinLabel, Is.EqualTo("Cuenca"));
@@ -162,7 +173,7 @@ namespace AF.Tests.PlayMode
             {
                 RiverRibbonGraphic ribbon = map.Glass(i);
                 classes.Add(ribbon.Line!.Class);
-                Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, ribbon.Line.Class)), ribbon.name + " en Mundo");
+                Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, ribbon.Line.Class, map.LiveActive)), ribbon.name + " en Mundo (D-069: 26/14/6 dp con el Mapa v2)");
             }
 
             Assert.That(classes, Is.SupersetOf(new[] { 1, 2 }), "el cauce y los afluentes");
@@ -177,12 +188,13 @@ namespace AF.Tests.PlayMode
 
             map.ViewWorldButton.onClick.Invoke();
             yield return null;
-            Assert.That(map.Glass(0).WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, map.Glass(0).Line!.Class)), "de vuelta a Mundo");
+            Assert.That(map.Glass(0).WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, map.Glass(0).Line!.Class, map.LiveActive)), "de vuelta a Mundo");
         }
 
         [UnityTest]
         public IEnumerator StopRemaining_KeepsItsAirFromTheFillet_InTwoLines()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             yield return OpenAt(58);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Canvas.ForceUpdateCanvases();
@@ -260,7 +272,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.View, Is.EqualTo(MapView.Basin));
             Assert.That(map.Zoom, Is.EqualTo(1f));
             Assert.That(map.Space.DpPerUnit, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.01f), "1×: 328 dp, el ancho útil (360 − 2 × 16)");
-            Assert.That(map.ViewportSize.x, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.5f));
+            Assert.That(map.ViewportSize.x, Is.EqualTo(map.LiveActive ? map.CanvasWidth : MapSpace.BasinWidthDp).Within(0.5f), "D-069: el Mapa v2, de borde a borde");
             Assert.That(map.ContentSize.y, Is.LessThanOrEqualTo(map.ViewportSize.y + 0.5f), "a 360 × 780 la cuenca entera cabe");
             Assert.That(map.CanoeInView, Is.True);
             Assert.That(map.BackToCanoeShown, Is.False, "con la cuenca entera a la vista no hace falta (a 360 × 640, sí: Basin_At360x640_…)");
@@ -279,6 +291,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Basin_At360x640_DoesNotFit_AndOffersBackToCanoe()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             // A 360 × 640 la cuenca a 1× (≈ 431 dp de alto) no cabe en la zona del mapa (≈ 354 dp): se arrastra en vertical y la
             // canoa puede quedar fuera, así que «Volver a la canoa» sale también en la Cuenca (M3.3, punto 2; propuesta §3.2).
             GameScreen.SimulatedScreen = new Vector4(1080f, 1920f, 96f, 48f); // un teléfono de 360 × 640 dp
@@ -625,6 +638,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ViewSwitch_IsOneWoodCapsule_WithTheChosenTabInCream_AndNoGreen()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             yield return OpenAt(58);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.ViewSwitch.color, Is.EqualTo(RiverMapScreen.SegmentSwitchColor));
@@ -668,7 +682,9 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = boot.RiverMapView!;
             Assert.That(map.Canvas.isRootCanvas, Is.True);
             Assert.That(map.Canvas.sortingOrder, Is.GreaterThan(40).And.LessThan(50), "sobre Ajustes y bajo la hoja de compra (50), el anuncio (60) y el aviso (70)");
-            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(3), "3 lienzos (propuesta del Mapa §11.4)");
+            // 3 lienzos (propuesta del Mapa §11.4) y, con el Mapa v2 (D-069, M2-1), 3 más que solo cambian transformaciones y
+            // opacidades: la atmósfera (luz, nubes y niebla), la corriente y el primer plano.
+            Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(map.LiveActive ? 6 : 3), "3 lienzos (propuesta del Mapa §11.4), 6 con el Mapa v2");
             foreach (Canvas nested in new[] { map.StaticCanvas, map.DynamicCanvas })
             {
                 Assert.That(nested.isRootCanvas, Is.False);
@@ -699,7 +715,7 @@ namespace AF.Tests.PlayMode
             yield return OpenAt(58);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
-            yield return SnapshotKit.Wait(0.5f);
+            yield return SnapshotKit.Wait(0.5f + (CapiDirector.DurationMs(CapiGesture.Wave) / 1000f)); // y el saludo de Capi de la sesión (D-069, M2-3)
             Assert.That(map.Dragging, Is.False);
             Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(RiverMapScreen.RestRenderInterval));
             if (Application.targetFrameRate == 60)
@@ -820,6 +836,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Layout_HasNoOverlaps_At360x640And360x780_AlsoAt130Percent()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             foreach (float scale in new[] { 1f, 1.3f })
             {
                 foreach (Vector2Int size in new[] { new Vector2Int(1080, 1920), new Vector2Int(1080, 2340) })

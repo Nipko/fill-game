@@ -4,9 +4,10 @@ using System;
 namespace AF.Audio
 {
     /// <summary>
-    /// Los 61 efectos de sonido de <c>docs/audio/lista-de-sonidos.md</c> (GDD 07 §9.2), en el orden del catálogo del laboratorio
+    /// Los 63 efectos de sonido de <c>docs/audio/lista-de-sonidos.md</c> (GDD 07 §9.2), en el orden del catálogo del laboratorio
     /// (<c>docs/audio/laboratorio-sonidos.html</c>, <c>SFX_CATALOG</c>): §1 tablero y vertido (13), §2 comodines, economía e
-    /// interfaz (17), §3 mecánicas y personajes (21) y §4 Mapa, llegadas y pantallas especiales (10). El ID de texto de cada uno
+    /// interfaz (17), §3 mecánicas y personajes (21) y §4 Mapa, llegadas y pantallas especiales (10); al final, los 2 de la 1.1
+    /// (el Aguapé y la Lancha, <c>docs/audio/encargo-audios-1-1.md</c>), que el laboratorio no tiene. El ID de texto de cada uno
     /// (<see cref="SfxCatalog.Name"/>) es el de la lista; los de §3 y §4 son [P] hasta encargarlos (07 §9.5). Todos son
     /// **provisionales por código** (tarea AU1; D-026): las grabaciones con licencia los sustituyen sin tocar los ganchos.
     /// </summary>
@@ -194,6 +195,14 @@ namespace AF.Audio
 
         /// <summary><c>sfx_store_open</c>: se abre la tienda.</summary>
         StoreOpen,
+
+        // §5. La 1.1 (2): al final, para no mover los valores de la entrega 1 (encargo de audios de la 1.1; D-068).
+
+        /// <summary><c>sfx_mech_aguape</c>: se suelta el Aguapé (02 §9.1 M8, regla 9: agua que se abre).</summary>
+        MechAguape,
+
+        /// <summary><c>sfx_mech_lancha</c>: atraca la Lancha con su fruta (02 §9.1 M11).</summary>
+        MechLancha,
     }
 
     /// <summary>Una fila del catálogo: ID de la lista, nivel objetivo y cómo se masteriza.</summary>
@@ -230,15 +239,15 @@ namespace AF.Audio
     }
 
     /// <summary>
-    /// Catálogo de los 61 efectos con su nivel objetivo (la columna dBFS del catálogo del laboratorio, que copia la jerarquía de
+    /// Catálogo de los 63 efectos con su nivel objetivo (la columna dBFS del catálogo del laboratorio, que copia la jerarquía de
     /// Magic Sort de la lista: gestos a −24/−22 desde la observación 23 de la jornada 6 (antes −36/−27, tapados por la música),
     /// mecánicas y avisos a −24/−18, premios a −17/−12; 07 §9.4: picos ≤ −6 dBTP) y la escala de las 14 frutas (07 §3; tabla de
     /// la lista). Sin asignaciones tras el arranque.
     /// </summary>
     public static class SfxCatalog
     {
-        /// <summary>Número de efectos (61).</summary>
-        public const int Count = 61;
+        /// <summary>Número de efectos (63: los 61 de la entrega 1 y los 2 de la 1.1).</summary>
+        public const int Count = 63;
 
         /// <summary>Duración máxima de un gesto repetido (s), con su cola.</summary>
         public const float GestureMaxSeconds = 0.2f;
@@ -334,6 +343,11 @@ namespace AF.Audio
             new SfxEntry(SfxId.MechCard, "sfx_mech_card", -20f, false, false, false),
             new SfxEntry(SfxId.MorphoIdle, "sfx_morpho_idle", -28f, false, false, false),
             new SfxEntry(SfxId.StoreOpen, "sfx_store_open", -19f, false, false, false),
+
+            // §5. La 1.1 (2): el nivel de su ficha en la especificación; sin clip, suenan con la receta que tomaban prestada
+            // (SfxSynth: el Aguapé, la del Remolino; la Lancha, la del remo de Capi).
+            new SfxEntry(SfxId.MechAguape, "sfx_mech_aguape", -20f, false, false, false),
+            new SfxEntry(SfxId.MechLancha, "sfx_mech_lancha", -19f, false, false, false),
         };
 
         /// <summary>Número de frutas del motor (14).</summary>

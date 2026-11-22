@@ -33,6 +33,9 @@ namespace AF.Tests.PlayMode
     {
         private const float Near = 1e-4f;
 
+        // Lo que la canoa puede alejarse de la naciente en un recodo del cauce entre dos fotogramas (unidades del marco; 10 veces Near).
+        private const float BendSlack = 1e-3f;
+
         private static readonly DateTime T0 = new DateTime(2026, 10, 19, 15, 0, 0, DateTimeKind.Utc);
 
         [TearDown]
@@ -214,9 +217,11 @@ namespace AF.Tests.PlayMode
                 Assert.That(changed || blocks == 0, Is.True, at + ", sin cambio del llenado: " + blocks + " bloques de GC.Alloc");
                 Fx10Tests.AssertPlatesFit(map, at);
 
-                // Río arriba hasta la naciente: la canoa nunca se aleja de ella.
+                // Río arriba hasta la naciente: la canoa nunca se aleja de ella (más que un recodo del cauce: con el viaje de
+                // 4,5 s del añadido de D-069 del 2026-11-08, los pasos de 16 ms son tres veces más cortos y ven un meandro del cauce
+                // de 1,7e-4 unidades que con 1,5 s se saltaban).
                 float now = Vector2.Distance(map.CanoeShownMapPoint, source);
-                Assert.That(now, Is.LessThanOrEqualTo(distance + Near), at + ": la canoa sube hacia la naciente");
+                Assert.That(now, Is.LessThanOrEqualTo(distance + BendSlack), at + ": la canoa sube hacia la naciente (" + now + " > " + distance + ")");
                 distance = now;
                 if (map.FrontStop == 70)
                 {
@@ -262,7 +267,16 @@ namespace AF.Tests.PlayMode
 
             // Sin nada que jugar, el conmutador Mundo/Cuenca va centrado en la fila (revisión de FX13, ronda 2; solo en este caso).
             Rect capsule = StopCardTests.CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
-            Assert.That(capsule.center.x, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "el conmutador, centrado");
+            if (map.LiveActive && map.SamplesTabShown)
+            {
+                // Con el Mapa v2 (D-069, M2-3), el conmutador y el Muestrario comparten la fila: va centrada la pareja.
+                Rect tab = StopCardTests.CanvasRect((RectTransform)map.SamplesTabButton!.transform, map.Canvas);
+                Assert.That((capsule.xMin + tab.xMax) * 0.5f, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "la fila del pie, centrada");
+            }
+            else
+            {
+                Assert.That(capsule.center.x, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "el conmutador, centrado");
+            }
 
             // FX12 en el tramo de la meta: al acabar el viaje, en Mundo, las 10 boyas, la canoa y el hito, sobre la curva dibujada.
             AssertOnTheDrawnRiver(map, data, routes, "Mundo, fin de contenido del 700 al acabar");

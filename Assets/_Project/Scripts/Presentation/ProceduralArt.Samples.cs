@@ -93,7 +93,7 @@ namespace AF.Presentation
         // vidrio, brillo y el «?» (arco de 220° en sentido antihorario de −60° a 160°, el trazo que baja y el punto).
         private Sprite BuildMapViewpoint()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float size = MapViewpointDp;
             int pw = Mathf.RoundToInt(size * k);
             var pc = new PixelCanvas(pw, pw);
@@ -119,7 +119,7 @@ namespace AF.Presentation
         // EmptyGlassFill, con su contorno de 0,9 dp en EmptyGlassEdge; sin brillo, sin cavidad y sin fibra.
         private Sprite BuildMiniCuiaEmpty()
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             const float u = MiniCuiaUnitDp;
             const float axis = MiniCuiaWidthDp * 0.5f;
             const float baseY = 0.5f;

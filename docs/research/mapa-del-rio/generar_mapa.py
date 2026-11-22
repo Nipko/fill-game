@@ -241,7 +241,7 @@ def ids_citados(texto):
 # «otros_datos», forma de la clave (glosario §10: map.stop.<lugar>.dato_NN o map.country.<iso2>.dato_NN), fecha en que
 # se reabrieron sus fuentes (R5) y los candidatos de §(e) que tienen que estar.
 CAMPOS_OTRO_DATO = ("clave", "texto", "etiqueta", "fuente", "releida", "origen", "nota")
-# La misma forma que esas dos ramas de fact_key en schemas/af-river-stops-1.schema.json (contrato 30): [0-9] y no \d,
+# La misma forma que esas dos ramas de fact_key en schemas/af-river-stops-2.schema.json (contrato 30): [0-9] y no \d,
 # que también acepta dígitos Unicode, y se aplica con fullmatch, porque «$» de Python admite un salto de línea final.
 CLAVE_DATO = re.compile(r"^map\.(stop\.[a-z0-9_]+|country\.[a-z]{2})\.dato_[0-9]{2}$")
 FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -417,7 +417,7 @@ def autoprueba_otros_datos():
 # 1-200, más «sitio» (el del resumen de paradas_201_1000 que la contiene) y «wikidata» (el elemento de su coordenada).
 # Sin héroe (D-013, punto 2): el fondo es el kit del mundo con una pieza, kit:<pieza>. Sus ríos locales nuevos van en
 # rios_locales_201_700, con «boca_en» (su río anfitrión), hasta que tools/river-map/geometry.py los dé de alta (M4.5a).
-# Las mismas formas que fact_key en schemas/af-river-stops-1.schema.json (contrato 30; glosario §10; 08 §4.5), con el
+# Las mismas formas que fact_key en schemas/af-river-stops-2.schema.json (contrato 30; glosario §10; 08 §4.5), con el
 # país en iso2 de dos letras y [0-9] en lugar de \d (que acepta dígitos Unicode), y sin «belen» (el «not» del esquema):
 # también map.general.*, como el dato del agua negra de Anavilhanas (parada 6). Se aplica con fullmatch, como CLAVE_DATO.
 # La unicidad de las claves, también frente a las de 1-200, la vigila revisar_otros_datos.

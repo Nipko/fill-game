@@ -39,6 +39,18 @@ namespace AF.GameFlow
         /// <summary><c>intro_mechanic</c> del estreno de la Flor de vitória-régia (403; firma de <c>pack_schema</c> 3; VA1b).</summary>
         public const string FlorIntro = "flor";
 
+        /// <summary><c>intro_mechanic</c> del estreno del Aguapé (303 de la curva 2; <c>pack_schema</c> 5; D-068).</summary>
+        public const string AguapeIntro = "aguape";
+
+        /// <summary><c>intro_mechanic</c> del estreno del Aguapé espeso (ciclo 341-360; <c>pack_schema</c> 5; D-068) [P].</summary>
+        public const string AguapeThickIntro = "aguape_n2";
+
+        /// <summary><c>intro_mechanic</c> del estreno de la Lancha (363 de la curva 2; <c>pack_schema</c> 5; D-068).</summary>
+        public const string LanchaIntro = "lancha";
+
+        /// <summary><c>k</c> de la Lancha en su estreno (02 §9.1 M11: «cuando tengas 3 cuias vacías») [P], si la tarjeta no lo sabe.</summary>
+        public const int LanchaDebutK = 3;
+
         /// <summary>
         /// Estreno de la tarjeta de la Crecida (04 §4: «Tarjeta de la Crecida al cargar el 25»; tarea B1b) [P]: no es un
         /// <c>intro_mechanic</c> del paquete, sino el ID del sistema (<c>win_streak</c>, glosario §6.3) con el que el flujo arma
@@ -79,6 +91,9 @@ namespace AF.GameFlow
                 case "tinaja": return MechanicType.Tinaja;
                 case HojaAtadaIntro: return MechanicType.HojaAtada;
                 case FlorIntro: return MechanicType.Flor;
+                case AguapeIntro:
+                case AguapeThickIntro: return MechanicType.Aguape;
+                case LanchaIntro: return MechanicType.Lancha;
                 default: return MechanicType.None;
             }
         }
@@ -163,6 +178,12 @@ namespace AF.GameFlow
         /// <summary>Alguna cuia lleva Barro (02 §9.1 M5).</summary>
         public bool HasMud { get; }
 
+        /// <summary>
+        /// <c>k</c> de la Lancha del nivel (las cuias vacías con que atraca; 02 §9.1 M11), para el texto de su estreno; sin Lancha,
+        /// <see cref="LanchaDebutK"/>.
+        /// </summary>
+        public int LanchaK { get; private set; } = LanchaDebutK;
+
         /// <summary>Alguna cuia es una Cuia chica (capacidad menor que 4, 02 §8).</summary>
         public bool HasSmallCuia { get; }
 
@@ -226,7 +247,7 @@ namespace AF.GameFlow
                 }
             }
 
-            return new LevelCardInfo(
+            var card = new LevelCardInfo(
                 levelNumber,
                 level.DifficultyLabel,
                 economy.WinReward(tier),
@@ -238,6 +259,16 @@ namespace AF.GameFlow
                 level.HasTallCuia,
                 level.IsMurky,
                 revealGifted);
+            for (int i = 0; i < level.Attrs.Count; i++)
+            {
+                if (level.Attrs[i].Type == MechanicType.Lancha && level.Attrs[i].K > 0)
+                {
+                    card.LanchaK = level.Attrs[i].K; // D-068: el texto del estreno dice el k del nivel
+                    break;
+                }
+            }
+
+            return card;
         }
 
         /// <summary>

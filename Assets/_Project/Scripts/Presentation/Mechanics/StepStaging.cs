@@ -21,6 +21,8 @@ namespace AF.Presentation.Mechanics
     /// contador.</description></item>
     /// <item><description>Open (b) y Release (d o d′): el contenido de <c>After[i]</c> con la mecánica de
     /// <c>Before[i]</c> (también la hoja del Brote de dos hojas y la Flor de vitória-régia, VA1b).</description></item>
+    /// <item><description>Loosen (d o d′; el Aguapé, D-068) y Dock (f; la Lancha, D-068): el contenido de <c>After[i]</c> con
+    /// la mecánica de <c>Before[i]</c> hasta su paso.</description></item>
     /// <item><description>Unhook y Upend (f; la Tinaja, TJ3): su cuia vuelve a la mecánica de <c>Before[i]</c> (colgada) con el
     /// contenido de <c>After[i]</c>; la tinaja, vacía, no cambia (la espera boca arriba la pinta su overlay).</description></item>
     /// <item><description>Seal (c o c′): el contenido no cambia; <see cref="PreSealed"/> da false hasta su etapa.</description></item>
@@ -170,12 +172,25 @@ namespace AF.Presentation.Mechanics
                         cur = WithMechanicOf(before, cur);
                     }
 
+                    // El Aguapé (D-068): hasta su paso Loosen, la cuia sigue bajo la mata (con el contenido de After).
+                    if (MechanicStepPlan.Has(ev.AguapeReleasedMask, index) && before.Mechanic == MechanicType.Aguape
+                        && MechanicStepPlan.AguapeReleaseStage(in v, index) == stage)
+                    {
+                        cur = WithMechanicOf(before, cur);
+                    }
+
                     return cur;
 
                 case StepStage.F:
                     // La suelta de la cuia de la Tinaja (TJ3): hasta su paso, sigue colgada (con el contenido de After). La tinaja
                     // no cambia en (f): ya está vacía (la deja así el trabajo de sacar).
                     if (MechanicStepPlan.Has(ev.CucharonReleasedMask, index))
+                    {
+                        cur = WithMechanicOf(before, cur);
+                    }
+
+                    // La Lancha (D-068): hasta su paso Dock, sin atracar (con el contenido de After).
+                    if (MechanicStepPlan.Has(ev.LanchaDockedMask, index) && before.Mechanic == MechanicType.Lancha)
                     {
                         cur = WithMechanicOf(before, cur);
                     }

@@ -1,0 +1,6 @@
+{
+  "extends": "../experimental/campaign_v3_f1.json",
+  "description": "Fixture negativo de murky_normal (D-068 P7 A, fase F1): con from_level = 305, la comodidad turbia del 304 queda antes de su nivel y falla MURKY-SLOT en las dos variantes; el ciclo 301-320 empieza antes del 305, así que también falla MURKY-2 (4 turbios con el tope de 2).",
+  "expect_rule": "MURKY-SLOT",
+  "murky_normal": { "from_level": 305, "max_per_cycle": 5 }
+}

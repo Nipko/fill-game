@@ -1,0 +1,613 @@
+{
+ "kit": "Tintalú · kit de redes (S3 de D-066)",
+ "generado_por": "fill-game-marketing/kit/generar_kit.py",
+ "licencias": "Fondos de IA: Z-Image Turbo (Apache 2.0), los de la ficha (D-065). Logotipos e icono: identidad v2 (D-045). Fuente: Baloo 2 ExtraBold (OFL). Capturas: el juego, sin retocar sus píxeles.",
+ "piezas": [
+  {
+   "file": "perfil/perfil-1080.png",
+   "size": [
+    1080,
+    1080
+   ],
+   "uso": "Foto de perfil de todas las redes (recorte circular seguro: la cuia y el río quedan dentro de la zona segura del icono adaptativo)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/app-store-1024.png (identidad v2, D-045)"
+   },
+   "sha256": "ef51c372a9ac6ea3492e37634cf1f68ebab713699bc12047eb103bf44a1519f9"
+  },
+  {
+   "file": "banners/youtube-2560x1440.png",
+   "size": [
+    2560,
+    1440
+   ],
+   "uso": "Banner del canal de YouTube; el logotipo cabe en la zona visible en todos los dispositivos (1546 × 423 en el centro)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    }
+   },
+   "sha256": "268b94e811a98ae14af9119476c70c55b7dfef552a2a0675716c2e253344e040"
+  },
+  {
+   "file": "banners/facebook-1640x624.png",
+   "size": [
+    1640,
+    624
+   ],
+   "uso": "Portada de la página de Facebook; el logotipo queda en el centro, que se ve en móvil y escritorio",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    }
+   },
+   "sha256": "2b4aa127d62787f6c93d034d408b91e4c1dbb5a41d41ca2174943fddd0d8e17f"
+  },
+  {
+   "file": "banners/x-1500x500.png",
+   "size": [
+    1500,
+    500
+   ],
+   "uso": "Cabecera de X, para cuando se abra (más adelante, encargo §2)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    }
+   },
+   "sha256": "163dca4ddf284cfaa87acc6dc9ee6f40dd2845d83cc03f51dc495d183831a7d5"
+  },
+  {
+   "file": "tarjeta-final/es-419-9x16.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 707,
+     "size": [
+      1088,
+      1920
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 15.5,
+     "file": "muelle_1088x1920_707.png"
+    },
+    "texto": [
+     "Disponible en Google Play",
+     "Búscalo como «Tintalu»"
+    ]
+   },
+   "sha256": "b4a3cd0b791b48f11db20fd6b61baa01a2b37bb08e6b03fca8f1143cbe889ae4"
+  },
+  {
+   "file": "tarjeta-final/es-419-1x1.png",
+   "size": [
+    1080,
+    1080
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    },
+    "texto": [
+     "Disponible en Google Play",
+     "Búscalo como «Tintalu»"
+    ]
+   },
+   "sha256": "e70fc04b781ae45e44e99a906ae4713bcde6931f480b327eb30cbfba7d1d3bce"
+  },
+  {
+   "file": "tarjeta-final/es-419-16x9.png",
+   "size": [
+    1920,
+    1080
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    },
+    "texto": [
+     "Disponible en Google Play",
+     "Búscalo como «Tintalu»"
+    ]
+   },
+   "sha256": "b4036bc29760268f10027339a68c1269fff8559eda4fed7a464d4dca6a934ac6"
+  },
+  {
+   "file": "tarjeta-final/pt-BR-9x16.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 707,
+     "size": [
+      1088,
+      1920
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 15.5,
+     "file": "muelle_1088x1920_707.png"
+    },
+    "texto": [
+     "Disponível no Google Play",
+     "Procure por «Tintalu»"
+    ]
+   },
+   "sha256": "61b5eef1add65ee998e66ce154d6cf210fca058dee2d5e21249c51f3f488be1d"
+  },
+  {
+   "file": "tarjeta-final/pt-BR-1x1.png",
+   "size": [
+    1080,
+    1080
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    },
+    "texto": [
+     "Disponível no Google Play",
+     "Procure por «Tintalu»"
+    ]
+   },
+   "sha256": "b2265978e7b5fb610e1fb120e0aa35902214798e5fdab4cb665babd47b187221"
+  },
+  {
+   "file": "tarjeta-final/pt-BR-16x9.png",
+   "size": [
+    1920,
+    1080
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    },
+    "texto": [
+     "Disponível no Google Play",
+     "Procure por «Tintalu»"
+    ]
+   },
+   "sha256": "c59a290c4f632e6d2421df75a0b5162e3e44fe47c4cf9e863bb754c94bc6b0fb"
+  },
+  {
+   "file": "tarjeta-final/en-9x16.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 707,
+     "size": [
+      1088,
+      1920
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 15.5,
+     "file": "muelle_1088x1920_707.png"
+    },
+    "texto": [
+     "Available on Google Play",
+     "Search for «Tintalu»"
+    ]
+   },
+   "sha256": "aada6aebc3972a3818de46f81717854a53228bb1bc0d21faef582384e0190772"
+  },
+  {
+   "file": "tarjeta-final/en-1x1.png",
+   "size": [
+    1080,
+    1080
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    },
+    "texto": [
+     "Available on Google Play",
+     "Search for «Tintalu»"
+    ]
+   },
+   "sha256": "a5ccbbb6571f24b9c65e29fc3b11f8400f64702ac64e177c58ce649ecf9f4d37"
+  },
+  {
+   "file": "tarjeta-final/en-16x9.png",
+   "size": [
+    1920,
+    1080
+   ],
+   "uso": "Tarjeta final de los vídeos (los 1,5-2 últimos segundos)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-vertical-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Golden sunrise over a calm wide Amazon river, palm tree silhouettes on both banks, light rays through clouds, glittering water. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 808,
+     "size": [
+      1536,
+      768
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 6.7,
+     "file": "amanecer_1536x768_808.png"
+    },
+    "texto": [
+     "Available on Google Play",
+     "Search for «Tintalu»"
+    ]
+   },
+   "sha256": "7806ad798b17dac8a535179db1fd36a378e45796bb27b2b21b06ef564e0e8d34"
+  },
+  {
+   "file": "plantillas/zona-segura-9x16.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Guía de revisión (no se publica): en rojo, lo que tapan las interfaces de las redes",
+   "origen": {
+    "codigo": "fabrica/plantillas.py"
+   },
+   "sha256": "e1a91c7e1d43c00b6da1a2b4b9e8e10a561b802dce2edc314c82a5e458b2f46c"
+  },
+  {
+   "file": "plantillas/zona-segura-1x1.png",
+   "size": [
+    1080,
+    1080
+   ],
+   "uso": "Guía de revisión (no se publica): en rojo, lo que tapan las interfaces de las redes",
+   "origen": {
+    "codigo": "fabrica/plantillas.py"
+   },
+   "sha256": "3a98de4fc7c992c8f195311d1ea59334c1c11b7a01222460c3f1217c6a803440"
+  },
+  {
+   "file": "plantillas/zona-segura-16x9.png",
+   "size": [
+    1920,
+    1080
+   ],
+   "uso": "Guía de revisión (no se publica): en rojo, lo que tapan las interfaces de las redes",
+   "origen": {
+    "codigo": "fabrica/plantillas.py"
+   },
+   "sha256": "bf527df5e87485f7a558c2e240bb7ccff0e0ebd5ebf7399036c0b410e5d9d584"
+  },
+  {
+   "file": "plantillas/muestra-9x16-es-419.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Muestra de rótulo de gancho y subtítulo sobre una toma real",
+   "origen": {
+    "game_capture": {
+     "what": "Nivel 42, fotograma a 12 s de la toma del vídeo de la ficha",
+     "file": "v_full42_es.mp4",
+     "device": "Samsung SM-S938B",
+     "build": "com.amazonfill.dev",
+     "date": "2026-10-30"
+    }
+   },
+   "sha256": "4a6fa88a1037e67985047b43bcc48d397cdb6b84dda20a254c6d8375efdb884d"
+  },
+  {
+   "file": "plantillas/muestra-9x16-guia.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "La misma muestra con la guía de zona segura encima (revisión)",
+   "origen": {
+    "game_capture": {
+     "what": "Nivel 42, fotograma a 12 s de la toma del vídeo de la ficha",
+     "file": "v_full42_es.mp4",
+     "device": "Samsung SM-S938B",
+     "build": "com.amazonfill.dev",
+     "date": "2026-10-30"
+    }
+   },
+   "sha256": "0e62c906387ddc49132fc4da6b06d1da98209064680699e321135327cd34c5d9"
+  },
+  {
+   "file": "carrusel/portada-es-419.png",
+   "size": [
+    1080,
+    1350
+   ],
+   "uso": "Portada de carrusel 4:5 (la plantilla; cada carrusel cambia el título y el fondo)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 707,
+     "size": [
+      1088,
+      1920
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 15.5,
+     "file": "muelle_1088x1920_707.png"
+    }
+   },
+   "sha256": "b121537b9d5673222bf2afb0fca0cc34c3da78fc39b7dcb47f80cab3b53221bd"
+  },
+  {
+   "file": "plantillas/muestra-9x16-pt-BR.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Muestra de rótulo de gancho y subtítulo sobre una toma real",
+   "origen": {
+    "game_capture": {
+     "what": "Nivel 42, fotograma a 12 s de la toma del vídeo de la ficha",
+     "file": "v_full42_pt.mp4",
+     "device": "Samsung SM-S938B",
+     "build": "com.amazonfill.dev",
+     "date": "2026-10-30"
+    }
+   },
+   "sha256": "9efd937c706c848be531f2067e4f400cf1971bb19d6c65e96c06d96d2d908db0"
+  },
+  {
+   "file": "carrusel/portada-pt-BR.png",
+   "size": [
+    1080,
+    1350
+   ],
+   "uso": "Portada de carrusel 4:5 (la plantilla; cada carrusel cambia el título y el fondo)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 707,
+     "size": [
+      1088,
+      1920
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 15.5,
+     "file": "muelle_1088x1920_707.png"
+    }
+   },
+   "sha256": "f5510e67c87a3eb0f4add6c06e8d728c697f613ee541d267ed5f5973107d8482"
+  },
+  {
+   "file": "plantillas/muestra-9x16-en.png",
+   "size": [
+    1080,
+    1920
+   ],
+   "uso": "Muestra de rótulo de gancho y subtítulo sobre una toma real",
+   "origen": {
+    "game_capture": {
+     "what": "Nivel 42, fotograma a 12 s de la toma del vídeo de la ficha",
+     "file": "v_full42_en.mp4",
+     "device": "Samsung SM-S938B",
+     "build": "com.amazonfill.dev",
+     "date": "2026-10-30"
+    }
+   },
+   "sha256": "7d7469db7b124fecc677b4a499b5e5ce83f486e40696cf227d202d25cb561969"
+  },
+  {
+   "file": "carrusel/portada-en.png",
+   "size": [
+    1080,
+    1350
+   ],
+   "uso": "Portada de carrusel 4:5 (la plantilla; cada carrusel cambia el título y el fondo)",
+   "origen": {
+    "logo": "docs/art/marca-oficial/v2/out/png/logo-horizontal-oscuro.png",
+    "ai_background": {
+     "tool": "ComfyUI 0.43.0 (portable nvidia, RTX 5080)",
+     "model": "Z-Image Turbo bf16 (Comfy-Org/z_image_turbo, z_image_turbo_bf16.safetensors)",
+     "text_encoder": "qwen_3_4b",
+     "vae": "ae",
+     "sampler": "res_multistep/simple, 8 pasos, cfg 1, shift 3",
+     "prompt": "Sunrise over a calm Amazon river framed by giant tropical leaves in the foreground, gentle mist on the water, tall palm trees and dense jungle on the far bank, warm golden rays. Pristine primary rainforest wilderness, pure untouched nature. Premium glossy stylized 3D casual mobile game environment art, vibrant saturated colors, soft volumetric light, clean shapes, high detail.",
+     "negative_prompt": "(ninguno: cfg 1 con ConditioningZeroOut)",
+     "seed": 707,
+     "size": [
+      1088,
+      1920
+     ],
+     "reference_images": [],
+     "date": "2026-10-30",
+     "seconds": 15.5,
+     "file": "muelle_1088x1920_707.png"
+    }
+   },
+   "sha256": "d61d31e70c35a2befc4bd2a813308cd8aba7be7df0bffad88462c8b0dec72d6c"
+  }
+ ]
+}

@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace AF.Audio
 {
     /// <summary>
-    /// Todo el PCM de los efectos (tarea AU1), generado de una vez al arrancar en un hilo de trabajo (<see cref="Build"/>): los 61
+    /// Todo el PCM de los efectos (tarea AU1), generado de una vez al arrancar en un hilo de trabajo (<see cref="Build"/>): los 63
     /// efectos de <see cref="SfxCatalog"/> (con <c>sfx_pour_loop</c> como bucle continuo, <see cref="PourLoopSynth"/>) y las 14
     /// frutas de <c>sfx_select</c> y <c>sfx_tint</c>. Bajar la selección no suena (02 §4.1). Cada clip tiene su índice fijo
     /// (<see cref="Index"/>), así que el juego lo busca sin asignar. Se guarda en una caché estática: la generación se paga una
@@ -19,7 +19,7 @@ namespace AF.Audio
         /// <summary>Primer índice de <c>sfx_tint</c> por fruta (1-14).</summary>
         public const int TintFruitBase = SelectFruitBase + SfxCatalog.FruitCount;
 
-        /// <summary>Clips en total (89).</summary>
+        /// <summary>Clips en total (91).</summary>
         public const int ClipCount = TintFruitBase + SfxCatalog.FruitCount;
 
         private static readonly object s_lock = new object();

@@ -253,7 +253,7 @@ namespace AF.Tests.PlayMode
         // El CanvasGroup del elemento i de la cabecera o el follaje (0 = el HUD); lo crea si no lo tiene.
         private static CanvasGroup ChromeGroup(GameScreen view, int i)
         {
-            Transform? t = i == 0 ? view.Hud : view.Canvas.transform.Find(ChromePaths[i - 1]);
+            Transform? t = i == 0 ? view.Hud : view.Canvas.transform.Find("Column/" + ChromePaths[i - 1]);
             Assert.That(t, Is.Not.Null, i == 0 ? "Hud" : ChromePaths[i - 1]);
             return t!.TryGetComponent(out CanvasGroup group) ? group : t.gameObject.AddComponent<CanvasGroup>();
         }

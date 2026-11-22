@@ -602,6 +602,7 @@ namespace AF.UI
             _samplesSlot.gameObject.SetActive(_samplesTab != null && _samplesTotal > 0);
             BuildViewpoints(max);
             BuildPassing(max); // B14: los puntos de paso ya recorridos (RiverMapScreen.Meta.cs)
+            TownsBuild(max); // D-069, M2-2: los pueblos de paso (RiverMapScreen.Towns.cs)
         }
 
         partial void SamplesSpace(MapSpace space)
@@ -619,6 +620,7 @@ namespace AF.UI
             }
 
             PlacePassing(space); // B14
+            TownsSpace(space); // D-069, M2-2
         }
 
         partial void SamplesFrame(ref float zoom, ref Vector2 center)
@@ -799,6 +801,7 @@ namespace AF.UI
             }
 
             PassingLayoutIds(ids, rects); // B14: los puntos de paso a la vista
+            TownsLayoutIds(ids, rects); // D-069, M2-2: los pueblos a la vista
 
             if (SamplesSheetOpen)
             {
@@ -896,7 +899,7 @@ namespace AF.UI
 
             _samplesSheet = UiBuilder.Rect("SamplesSheet", _root);
             Image back = UiBuilder.Image("Background", _samplesSheet, null, BackgroundColor, true); // tapa el Mapa y sus toques
-            UiBuilder.Stretch(back.rectTransform);
+            ScreenColumn.Bleed(back.rectTransform);
 
             _samplesHeader = UiBuilder.Sliced("HeaderPlate", _samplesSheet, _art.WoodPlate, Color.white);
             _samplesBack = UiBuilder.Relief("BackButton", _samplesHeader.transform, _art.DiscWood, CloseSamples);

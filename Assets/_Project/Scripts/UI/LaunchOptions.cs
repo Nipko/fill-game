@@ -153,6 +153,44 @@ namespace AF.UI
         /// </summary>
         public const string IntentExtraLeagueFake = "af_league_fake";
 
+        /// <summary>
+        /// Extra de intent (booleano) de los builds de desarrollo (observación 5 de la prueba de la 1.1; añadido de D-069 del
+        /// 2026-11-08): con <c>--ez af_map_v1 true</c>, el Mapa del río se abre como el de la 1.0, como con <c>ui_map_v2</c> apagada en
+        /// Remote Config, para medir la memoria de referencia en el teléfono. Nunca se lee en release (<see cref="ResolveMapV1"/>).
+        /// </summary>
+        public const string IntentExtraMapV1 = "af_map_v1";
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo (F13; añadido de D-029 del 2026-11-08): con <c>--ei af_troop_gesture 2</c>
+        /// la tropa hace el segundo gesto de su especie en todos los niveles que lo admiten, y con 1 el primero; sin él (o con 0), la
+        /// regla de <see cref="FaunaGestureRule"/>. Nunca se lee en release (<see cref="ResolveTroopGesture"/>).
+        /// </summary>
+        public const string IntentExtraTroopGesture = "af_troop_gesture";
+
+        /// <summary><c>af_troop_gesture</c> forzado por un test (0, 1 o 2); null = el extra. Fuera de desarrollo no cuenta.</summary>
+        public static int? TroopGestureOverride { get; set; }
+
+        /// <summary>El gesto de la tropa forzado por la sonda (<c>af_troop_gesture</c>: 1 o 2; 0 la regla): solo en desarrollo.</summary>
+        public static int ResolveTroopGesture(bool development)
+        {
+            if (!development)
+            {
+                return 0;
+            }
+
+            int v = TroopGestureOverride ?? ReadIntentInt(IntentExtraTroopGesture);
+            return v == 1 || v == 2 ? v : 0;
+        }
+
+        /// <summary><c>af_map_v1</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
+        public static bool? MapV1Override { get; set; }
+
+        /// <summary>El Mapa de la 1.0 por la sonda (<c>af_map_v1</c>): solo en desarrollo.</summary>
+        public static bool ResolveMapV1(bool development)
+        {
+            return development && (MapV1Override ?? ReadIntentBool(IntentExtraMapV1));
+        }
+
         /// <summary><c>af_league</c> forzado por un test; null = el extra. Fuera de desarrollo no cuenta.</summary>
         public static bool? LeagueEnabledOverride { get; set; }
 
@@ -216,6 +254,21 @@ namespace AF.UI
         /// escena; null = los de la escena. Solo tests.
         /// </summary>
         public static string[]? ReservePackJsonOverride { get; set; }
+
+        /// <summary>
+        /// Paquetes de la curva 2 (JSON, <c>kind</c> = <c>curve</c>; D-068) forzados por un test en lugar de los de la escena; null =
+        /// los de la escena. Solo tests.
+        /// </summary>
+        public static string[]? CurvePackJsonOverride { get; set; }
+
+        /// <summary>
+        /// Paquetes de reserva de la curva 2 (JSON, <c>reserva_curva_</c>; D-068) forzados por un test en lugar de los de la escena;
+        /// null = los de la escena. Solo tests.
+        /// </summary>
+        public static string[]? CurveReservePackJsonOverride { get; set; }
+
+        /// <summary><c>lvl_curve2_enabled</c> (08 §9; D-068) forzado por un test; null = el de Remote Config. Solo tests.</summary>
+        public static bool? Curve2EnabledOverride { get; set; }
 
         /// <summary>Nivel de arranque forzado por un test (0 = ninguno).</summary>
         public static int StartLevelOverride { get; set; }
@@ -387,12 +440,17 @@ namespace AF.UI
             MechOffOverride = null;
             LevelOverridesJsonOverride = null;
             ReservePackJsonOverride = null;
+            CurvePackJsonOverride = null;
+            CurveReservePackJsonOverride = null;
+            Curve2EnabledOverride = null;
             BenchMorphoOverride = null;
             DevMaxLevelOverride = null;
             DevRejectOverride = null;
             FakeStoreOverride = null;
             LeagueEnabledOverride = null;
             LeagueFakeOverride = null;
+            MapV1Override = null;
+            TroopGestureOverride = null;
             CaptureOverride = null;
         }
 

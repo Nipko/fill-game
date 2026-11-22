@@ -158,6 +158,7 @@ namespace AF.UI
             _art = art ?? throw new ArgumentNullException(nameof(art));
             _deps = deps ?? throw new ArgumentNullException(nameof(deps));
             _canvas = new OverlayCanvas("MarketCanvas", host, SortingOrder);
+            _canvas.Changed += Layout; // giro o ventana redimensionada con el Mercado abierto (añadido de D-059 del 2026-11-06)
             ModalKit.Dim("Dim", _canvas.Root, 0.6f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             // Observación 24 de la jornada 6: la cabecera con la banda ámbar (luz cálida) y el título en tinta, en vez de la madera oscura.
@@ -227,7 +228,7 @@ namespace AF.UI
             Image previewDim = ModalKit.Dim("Dim", _preview, 0.55f);
             previewDim.raycastTarget = false;
             _previewOutside = UiBuilder.BareButton("Outside", _preview, () => ClosePreview());
-            UiBuilder.Stretch((RectTransform)_previewOutside.transform);
+            ScreenColumn.Bleed((RectTransform)_previewOutside.transform); // también en los lados de la columna (añadido de D-059)
             A11yLabels.Set(_previewOutside, () => A11yText.Close);
             _previewPanel = ModalKit.Card("PreviewPanel", _preview, art, out _previewSurface);
             _previewPanel.gameObject.AddComponent<HitArea>().raycastTarget = true; // tocar la tarjeta no la cierra

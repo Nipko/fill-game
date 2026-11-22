@@ -30,7 +30,7 @@ namespace AF.Save.Tests
         [Test]
         public void V2ProfileWithoutTheKeys_ReadsTheDefaults()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"entitlements\": {\"no_ads\": false, \"starter_bought\": false, \"skins\": [\"af_skin_m02\"]}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 3, \"entitlements\": {\"no_ads\": false, \"starter_bought\": false, \"skins\": [\"af_skin_m02\"]}}");
 
             Assert.That(p.Album.Fruits, Is.Empty);
             Assert.That(p.Entitlements.SkinEquipped, Is.Null);
@@ -80,14 +80,14 @@ namespace AF.Save.Tests
         public void BadValues_AreDropped_WithoutCorruptingTheProfile()
         {
             Profile p = ProfileJson.Deserialize(
-                "{\"profile_schema\": 2, \"entitlements\": {\"skins\": [], \"skin_equipped\": 7, \"frames\": [\"a\", 3, \"a\"]},"
+                "{\"profile_schema\": 3, \"entitlements\": {\"skins\": [], \"skin_equipped\": 7, \"frames\": [\"a\", 3, \"a\"]},"
                 + " \"album\": {\"fruits\": [8, 0, 15, \"x\", 8, 1]}}");
 
             Assert.That(p.Entitlements.SkinEquipped, Is.Null);
             Assert.That(p.Entitlements.Frames, Is.EqualTo(new[] { "a" }));
             Assert.That(p.Album.Fruits, Is.EqualTo(new[] { 1, 8 }));
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"album\": 3}").Album.Fruits, Is.Empty);
-            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"album\": {\"fruits\": {}}}").Album.Fruits, Is.Empty);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3, \"album\": 3}").Album.Fruits, Is.Empty);
+            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 3, \"album\": {\"fruits\": {}}}").Album.Fruits, Is.Empty);
         }
 
         [Test]

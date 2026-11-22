@@ -45,6 +45,88 @@ namespace AF.Tests.EditMode
             Assert.That(() => v.Items[0].AsInt(), Throws.TypeOf<FormatException>());
         }
 
+        /// <summary>
+        /// Memoria (2026-11-17; <c>docs/dev/memoria.md</c> §11): los enteros pequeños en su forma canónica y los booleanos son
+        /// valores compartidos, con el mismo valor; lo demás (con signo, decimales, exponente o más allá del tope) se lee como antes.
+        /// </summary>
+        [Test]
+        public void Json_SmallCanonicalIntsAndBools_AreShared_TheRestKeepsItsText()
+        {
+            JsonValue a = JsonParser.Parse("[0, 7, 1023, 1024, -0, -5, 12.0, 1e2, 99999, true, false]");
+            JsonValue b = JsonParser.Parse("[0, 7, 1023, 1024, -0, -5, 12.0, 1e2, 99999, true, false]");
+            Assert.That(a.Items[0].AsInt(), Is.EqualTo(0));
+            Assert.That(a.Items[1].AsInt(), Is.EqualTo(7));
+            Assert.That(a.Items[2].AsInt(), Is.EqualTo(1023));
+            Assert.That(a.Items[3].AsInt(), Is.EqualTo(1024));
+            Assert.That(a.Items[4].AsInt(), Is.EqualTo(0));
+            Assert.That(a.Items[5].AsInt(), Is.EqualTo(-5));
+            Assert.That(() => a.Items[6].AsInt(), Throws.TypeOf<FormatException>(), "12.0 no es un entero, como antes");
+            Assert.That(a.Items[6].AsDouble(), Is.EqualTo(12.0));
+            Assert.That(() => a.Items[7].AsInt(), Throws.TypeOf<FormatException>(), "1e2 tampoco");
+            Assert.That(a.Items[7].AsDouble(), Is.EqualTo(100.0));
+            Assert.That(a.Items[8].AsInt(), Is.EqualTo(99999));
+            Assert.That(a.Items[9].AsBool(), Is.True);
+            Assert.That(a.Items[10].AsBool(), Is.False);
+            Assert.That(ReferenceEquals(a.Items[1], b.Items[1]) && ReferenceEquals(a.Items[2], b.Items[2]), Is.True, "0-1023, compartidos");
+            Assert.That(ReferenceEquals(a.Items[9], b.Items[9]) && ReferenceEquals(a.Items[10], b.Items[10]), Is.True, "booleanos compartidos");
+            Assert.That(ReferenceEquals(a.Items[3], b.Items[3]), Is.False, "1024, fuera del tope");
+            Assert.That(ReferenceEquals(a.Items[4], b.Items[0]), Is.False, "-0 no es la forma canónica de 0");
+        }
+
+        /// <summary>
+        /// Memoria (2026-11-17): las cadenas sin escapes salen tal cual y las cortas repetidas son la misma cadena en el documento;
+        /// las que llevan escapes se leen como antes, también con el escape en mitad o al final.
+        /// </summary>
+        [Test]
+        public void Json_Strings_WithAndWithoutEscapes_RepeatedShortOnesShareTheInstance()
+        {
+            JsonValue v = JsonParser.Parse("[{\"band\":\"comfort\"},{\"band\":\"comfort\"},\"a\\\\b\",\"\",\"x\\u0041y\",\"fin\\n\",\"" + new string('z', 40) + "\"]");
+            KeyValuePairCheck(v.Items[0], "band", "comfort");
+            KeyValuePairCheck(v.Items[1], "band", "comfort");
+            Assert.That(ReferenceEquals(v.Items[0].Members[0].Key, v.Items[1].Members[0].Key), Is.True, "la clave, una sola cadena");
+            Assert.That(ReferenceEquals(v.Items[0].Get("band")!.AsString(), v.Items[1].Get("band")!.AsString()), Is.True, "el valor corto también");
+            Assert.That(v.Items[2].AsString(), Is.EqualTo("a\\b"));
+            Assert.That(v.Items[3].AsString(), Is.EqualTo(string.Empty));
+            Assert.That(v.Items[4].AsString(), Is.EqualTo("xAy"));
+            Assert.That(v.Items[5].AsString(), Is.EqualTo("fin\n"));
+            Assert.That(v.Items[6].AsString(), Is.EqualTo(new string('z', 40)));
+            Assert.That(() => JsonParser.Parse("[\"a\u0001b\"]"), Throws.TypeOf<FormatException>(), "carácter de control sin escapar");
+            Assert.That(() => JsonParser.Parse("[\"abc"), Throws.TypeOf<FormatException>(), "cadena sin cerrar");
+        }
+
+        /// <summary>
+        /// Memoria (2026-11-17): las listas y los objetos anidados se leen en las pilas del lector y cada uno se queda con lo suyo;
+        /// la misma clave en un objeto hijo y en el padre no es una clave duplicada.
+        /// </summary>
+        [Test]
+        public void Json_NestedArraysAndObjects_KeepTheirOwnItems()
+        {
+            JsonValue v = JsonParser.Parse("{\"a\":[[1,[2,3]],{\"a\":[4],\"c\":{}}],\"d\":[],\"x\":{\"a\":1}}");
+            JsonValue a = v.Get("a")!;
+            Assert.That(v.Members.Count, Is.EqualTo(3));
+            Assert.That(a.Items.Count, Is.EqualTo(2));
+            Assert.That(a.Items[0].Items.Count, Is.EqualTo(2));
+            Assert.That(a.Items[0].Items[1].Items.Count, Is.EqualTo(2));
+            Assert.That(a.Items[0].Items[1].Items[1].AsInt(), Is.EqualTo(3));
+            Assert.That(a.Items[1].Get("a")!.Items[0].AsInt(), Is.EqualTo(4));
+            Assert.That(a.Items[1].Get("c")!.Kind, Is.EqualTo(JsonKind.Object));
+            Assert.That(a.Items[1].Get("c")!.Members.Count, Is.EqualTo(0));
+            Assert.That(v.Get("d")!.Kind, Is.EqualTo(JsonKind.Array));
+            Assert.That(v.Get("d")!.Items.Count, Is.EqualTo(0));
+            Assert.That(v.Get("x")!.Get("a")!.AsInt(), Is.EqualTo(1));
+            Assert.That(v.Get("x")!.Items.Count, Is.EqualTo(0), "un objeto no tiene elementos");
+            Assert.That(a.Members.Count, Is.EqualTo(0), "una lista no tiene miembros");
+            Assert.That(a.Get("a"), Is.Null);
+            Assert.That(() => JsonParser.Parse("{\"x\":{\"a\":1},\"a\":2,\"a\":3}"), Throws.TypeOf<FormatException>(), "duplicada en el mismo objeto");
+        }
+
+        private static void KeyValuePairCheck(JsonValue o, string key, string value)
+        {
+            Assert.That(o.Members.Count, Is.EqualTo(1));
+            Assert.That(o.Members[0].Key, Is.EqualTo(key));
+            Assert.That(o.Get(key)!.AsString(), Is.EqualTo(value));
+        }
+
         [Test]
         public void Tutorial_HasLevels1To10InOrder()
         {
@@ -88,12 +170,12 @@ namespace AF.Tests.EditMode
         }
 
         [TestCase("\"pack_schema\": 0", "t: pack_schema 0 no admitido")]
-        [TestCase("\"pack_schema\": 5", "t: pack_schema 5 no admitido")]
+        [TestCase("\"pack_schema\": 6", "t: pack_schema 6 no admitido")]
         [TestCase("\"subset_of\": \"af-level/2\"", "t: el paquete no declara pack_schema")]
         [TestCase("\"note\": \"sin esquema\"", "t: el paquete no declara pack_schema")]
         public void Reader_RejectsUnknownSchema(string header, string expected)
         {
-            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee del 1 al 4, contrato 21). El mensaje
+            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee del 1 al 5, contrato 21). El mensaje
             // empieza por el id del paquete ("t") y dice por qué: la versión que no admite o que no declara ninguna.
             Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)),
                 Throws.TypeOf<LevelFormatException>().With.Message.Contains("pack_schema").And.Message.Contains(expected));
@@ -170,7 +252,9 @@ namespace AF.Tests.EditMode
         // solo no basta para saber que el caso falla por lo que dice su nombre. El nombre del test es el motivo, no el JSON.
         private static readonly TestCaseData[] InvalidSchema2Levels =
         {
-            Invalid("tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\"}, null]"), "desconocido 'aguape'"),
+            Invalid("tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"palizada\"}, null]"), "desconocido 'palizada'"),
+            Invalid("aguape con pack_schema 2", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\", \"group\": 0}, null]"), "el tipo aguape necesita pack_schema 5"),
+            Invalid("lancha con pack_schema 2", TestPacks.Schema2Pack("[null, null, {\"type\": \"lancha\", \"k\": 2}, null]"), "el tipo lancha necesita pack_schema 5"),
             Invalid("barro no es un type", TestPacks.Schema2Pack("[null, null, {\"type\": \"barro\"}, null]"), "desconocido 'barro'"),
             Invalid("hoja sin key", TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\"}, null]"), "(hoja): lleva solo key"),
             Invalid("partner incoherente", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": 3}, null]"), "la pareja tiene que ser un Remolino"),
@@ -186,7 +270,8 @@ namespace AF.Tests.EditMode
             Invalid("units objeto vacío", TestPacks.Schema2Pack(units: "{}"), "'units_per_color' debe ser un entero de 1 a 6 o un objeto"),
             Invalid("units que no cuadra", TestPacks.Schema2Pack(units: "{\"8\": 5}"), "units_per_color: el color 8 tiene 4 dosis y se declararon 5"),
             Invalid("color 16", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 4], [4, 4, 4, 8], [16], []]"), "color 16 fuera de 1..15"),
-            Invalid("intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\""), "'intro_mechanic' debe ser null o"),
+            Invalid("intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"palizada\""), "'intro_mechanic' debe ser null o"),
+            Invalid("intro aguape con pack_schema 2", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\""), "'intro_mechanic' aguape necesita pack_schema 5"),
             Invalid("banda desconocida", TestPacks.Schema2Pack().Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"band\": \"easy\" }"), "'difficulty.band' debe ser"),
             Invalid("matapi con pack_schema 1", TestPacks.Schema2Pack("[null, null, null, {\"type\": \"matapi\"}]", schema: 1), "el tipo matapi necesita pack_schema 2"),
             Invalid("intro chica con pack_schema 1", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\"", schema: 1), "'intro_mechanic' chica necesita pack_schema 2"),

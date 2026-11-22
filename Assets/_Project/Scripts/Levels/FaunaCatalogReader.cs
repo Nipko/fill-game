@@ -207,7 +207,35 @@ namespace AF.Levels
             var species = new FaunaSpecies(id, scientific, showScientific, names, skeleton, model, locomotion, size, troop, traits, palette,
                 lighting, worlds, from, to, card, iucn, threatened, fact, parts, portrait, review, avoid);
             species.PairPalette = node.Get("paleta_pareja") == null ? null : ReadPalette(node, where, "paleta_pareja");
+            ReadSecondGesture(node, species, where);
             return species;
+        }
+
+        // segundo_gesto (F13; añadido de D-029 del 2026-11-08): opcional (sin él, la especie hace siempre su primer gesto) y solo en
+        // las especies que viven en algún mundo largo (6-11); su primer nivel sale de los mundos (la mitad del primer mundo largo),
+        // nunca del catálogo. Que las cinco especies de 201-920 lo lleven lo comprueban los tests del catálogo real.
+        private static void ReadSecondGesture(JsonValue node, FaunaSpecies species, string where)
+        {
+            int from = FaunaGestureRule.FromLevel(species.Worlds);
+            JsonValue? g = node.Get("segundo_gesto");
+            if (g == null)
+            {
+                return;
+            }
+
+            if (from == 0)
+            {
+                throw new FaunaFormatException(where + ": 'segundo_gesto' solo vale en las especies de los mundos largos (6-11).");
+            }
+
+            string name = g.Kind == JsonKind.String ? g.AsString() : string.Empty;
+            if (!FaunaGestureRule.TryParse(name, out FaunaSecondGesture gesture))
+            {
+                throw new FaunaFormatException(where + ": 'segundo_gesto' '" + name + "' no es duo, brincos, colgado_de_la_cola, desperezo ni vuelo.");
+            }
+
+            species.SecondGesture = gesture;
+            species.SecondGestureFrom = from;
         }
 
         private static FaunaPalette ReadPalette(JsonValue node, string where, string key = "paleta")

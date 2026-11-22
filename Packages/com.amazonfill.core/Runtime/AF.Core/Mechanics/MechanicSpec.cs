@@ -6,18 +6,20 @@ namespace AF.Core.Mechanics
 {
     /// <summary>
     /// Espejo de un <c>attrs[i]</c> de <c>af-level/1</c> (08 §4.1): <c>{type, key, partner, n, k}</c> y, con la firma de
-    /// <c>pack_schema</c> 3 (D-023, punto 5), <c>key2</c> de la Flor de vitória-régia; con los campos que usa cada mecánica según
+    /// <c>pack_schema</c> 3 (D-023, punto 5), <c>key2</c> de la Flor de vitória-régia y, con <c>pack_schema</c> 5 (D-068 [P]),
+    /// <c>group</c> del Aguapé; con los campos que usa cada mecánica según
     /// 02 §9.1, D-007 y la propuesta de D-007 b.3. Es la entrada de <see cref="Board.BoardBuilder"/>; dentro de la cuia los
     /// atributos viven empaquetados en <see cref="Board.Cuia.Packed"/>.
     /// </summary>
     /// <remarks>
     /// Un campo ausente vale 0 (<see cref="Key"/>, <see cref="N"/>, <see cref="K"/>, <see cref="Key2"/>) o −1
-    /// (<see cref="Partner"/>, porque 0 es un índice válido). <c>default(MechanicSpec)</c> es <see cref="None"/>: el <c>null</c>
+    /// (<see cref="Partner"/> y <see cref="Group"/>, porque 0 es un valor válido). <c>default(MechanicSpec)</c> es <see cref="None"/>: el <c>null</c>
     /// del JSON.
     /// </remarks>
     public readonly struct MechanicSpec : IEquatable<MechanicSpec>
     {
         private readonly int _partnerPlusOne;
+        private readonly int _groupPlusOne;
 
         /// <summary>Crea la especificación de una mecánica.</summary>
         /// <param name="type">Tipo (<c>type</c>).</param>
@@ -26,7 +28,8 @@ namespace AF.Core.Mechanics
         /// <param name="n">Sellos de la Liana de cuenta o gotas de la Lluvia (<c>n</c>) o 0 si falta.</param>
         /// <param name="k">Ritmo en vertidos de Lluvia o Piraña (<c>k</c>) o 0 si falta.</param>
         /// <param name="key2">Segunda llave de la Flor de vitória-régia (<c>key2</c>, 1-16) o 0 si falta.</param>
-        public MechanicSpec(MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0, int key2 = 0)
+        /// <param name="group">Grupo del Aguapé (<c>group</c>, 0-7; <c>pack_schema</c> 5, D-068) o −1 si falta.</param>
+        public MechanicSpec(MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0, int key2 = 0, int group = -1)
         {
             if (!MechanicTypes.IsDefined(type))
             {
@@ -38,7 +41,13 @@ namespace AF.Core.Mechanics
                 throw new ArgumentOutOfRangeException(nameof(partner), partner, "partner es un índice 0-based, o −1 si falta.");
             }
 
+            if (group < -1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(group), group, "group es un id de 0 a 7, o −1 si falta.");
+            }
+
             Type = type;
+            _groupPlusOne = group + 1;
             Key = key;
             _partnerPlusOne = partner + 1;
             N = n;
@@ -58,6 +67,9 @@ namespace AF.Core.Mechanics
         /// <summary>Índice de la pareja del Remolino o −1 si falta.</summary>
         public int Partner => _partnerPlusOne - 1;
 
+        /// <summary>Grupo del Aguapé (<c>group</c>, 0-7) o −1 si falta (1.1, D-068).</summary>
+        public int Group => _groupPlusOne - 1;
+
         /// <summary><c>n</c> o 0 si falta.</summary>
         public int N { get; }
 
@@ -74,7 +86,7 @@ namespace AF.Core.Mechanics
         public bool Equals(MechanicSpec other)
         {
             return Type == other.Type && Key == other.Key && _partnerPlusOne == other._partnerPlusOne && N == other.N && K == other.K
-                && Key2 == other.Key2;
+                && Key2 == other.Key2 && _groupPlusOne == other._groupPlusOne;
         }
 
         /// <inheritdoc />
@@ -87,7 +99,7 @@ namespace AF.Core.Mechanics
         public override int GetHashCode()
         {
             // key2 = 0 deja el valor de siempre en las mecánicas que no la usan.
-            return ((int)Type << 24) ^ (Key2 << 20) ^ (Key << 16) ^ (_partnerPlusOne << 8) ^ (N << 4) ^ K;
+            return ((int)Type << 24) ^ (Key2 << 20) ^ (Key << 16) ^ (_groupPlusOne << 12) ^ (_partnerPlusOne << 8) ^ (N << 4) ^ K;
         }
 
         /// <summary>Forma legible del JSON: <c>{type:hoja, key:4}</c> o <c>{type:flor, key:3, key2:7}</c>; <c>null</c> sin mecánica.</summary>
@@ -112,6 +124,11 @@ namespace AF.Core.Mechanics
             if (Partner >= 0)
             {
                 text += ", partner:" + Partner.ToString(CultureInfo.InvariantCulture);
+            }
+
+            if (Group >= 0)
+            {
+                text += ", group:" + Group.ToString(CultureInfo.InvariantCulture);
             }
 
             if (N != 0)

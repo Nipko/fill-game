@@ -38,8 +38,25 @@ namespace AF.EditorTools
         /// </summary>
         public const string ProductName = "Tintalú (dev)";
 
-        /// <summary>Orientación vertical bloqueada, sin autorrotación (GDD 02 §5: "Orientación: vertical bloqueada").</summary>
-        public const UIOrientation Orientation = UIOrientation.Portrait;
+        /// <summary>
+        /// Autorrotación con las cuatro orientaciones (añadido de D-059 del 2026-11-06, Q-BB-1 (b), decidida por el dueño): el
+        /// manifiesto ya no restringe la orientación, como pide Play para las pantallas grandes. El juego sigue vertical en los
+        /// teléfonos por código (<c>AF.UI.OrientationPolicy</c> y el plugin <c>AfSplashHold</c>); tabletas, plegables y Chromebooks
+        /// giran con la columna de 02 §5. Antes, <c>Portrait</c> («Orientación: vertical bloqueada»). Es común con iOS (solo iPhone:
+        /// allí <c>OrientationPolicy</c> pide siempre vertical).
+        /// </summary>
+        public const UIOrientation Orientation = UIOrientation.AutoRotation;
+
+        /// <summary>Las cuatro orientaciones de la autorrotación (vertical, vertical invertida y las dos apaisadas).</summary>
+        public const bool AutorotateAll = true;
+
+        /// <summary>
+        /// «Render outside safe area» (añadido de D-059 del 2026-11-06, borde a borde): el juego pinta de borde a borde, también bajo
+        /// los recortes, y Unity pone <c>LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS</c> (el modo vigente desde Android 15; con <c>false</c>
+        /// pondría <c>DEFAULT</c>). La interfaz se queda dentro de <c>Screen.safeArea</c> (<c>AF.UI.ScreenFrame</c>). Ya estaba así en
+        /// ProjectSettings; aquí queda fijado y comprobado.
+        /// </summary>
+        public const bool RenderOutsideSafeArea = true;
 
         /// <summary>minSdk 26 (CLAUDE.md, stack fijado).</summary>
         public const AndroidSdkVersions MinSdk = AndroidSdkVersions.AndroidApiLevel26;
@@ -134,6 +151,38 @@ namespace AF.EditorTools
         /// <summary>false: la lista de <see cref="AndroidGraphicsApis"/>, no la automática de Unity (añadido de D-060 del 2026-10-29).</summary>
         public const bool UseDefaultGraphicsApis = false;
 
+        /// <summary>
+        /// R8 (Minify) en la variante <c>release</c> de Gradle (D-059, añadido del 2026-11-06: la «optimización con R8» que recomendó
+        /// Play Console; <c>docs/dev/release.md</c>, «R8», y <c>docs/dev/memoria.md</c> §6). Unity usa esa variante en todo build sin
+        /// Development Build: el release, el ensayo (<c>BuildRelease -afRehearsal</c>) y el de humo, así que el ensayo mide y prueba lo
+        /// mismo que se publica. Quita y renombra el Java que nadie usa y deja el <c>mapping.txt</c> dentro del AAB
+        /// (<c>BUNDLE-METADATA</c>), del que Play saca la desofuscación. Lo que C# o el manifiesto buscan por nombre lo guardan las
+        /// reglas keep: las de cada plugin propio (<c>proguard-rules.pro</c>), las de los AAR de los SDK y las de
+        /// <c>AfKeepRules.androidlib</c> (Play Games). Compuerta: <c>ci/check-r8-mapping.ps1</c> con <c>ci/r8-jni-keep.txt</c>.
+        /// <para><b>Cómo revertir</b> (si algo falla en el teléfono y no hay tiempo de buscar la regla): esta constante a false,
+        /// <c>pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup</c> y commitear <c>ProjectSettings/ProjectSettings.asset</c>
+        /// con <c>R8ReleaseTests</c>; la compuerta del mapping deja de aplicar (un AAB sin R8 no lleva mapping).</para>
+        /// </summary>
+        public const bool MinifyRelease = true;
+
+        /// <summary>Sin R8 en los Development Build (<c>dev.apk</c>): se depuran con los nombres de verdad.</summary>
+        public const bool MinifyDebug = false;
+
+        /// <summary>
+        /// IL2CPP Code Generation «Faster (smaller) builds» (<c>OptimizeSize</c>) en Android (memoria de clase A, 2026-11-17;
+        /// D-060, punto 3, y <c>docs/dev/memoria.md</c> §6 y §11). El Moto G23 pasa de los 450 MB de PSS de D-060 casi solo por
+        /// <c>Code</c> (98-102 MB, sobre todo <c>libil2cpp.so</c> mapeado). Con <c>OptimizeSize</c> IL2CPP comparte el código de los
+        /// genéricos también con tipos de valor («full generic sharing»: un cuerpo para todas las instancias de <c>List&lt;int&gt;</c>,
+        /// <c>List&lt;long&gt;</c>, <c>Dictionary&lt;K, V&gt;</c>…) en lugar de generar uno por cada combinación de tipos, así que
+        /// <c>libil2cpp.so</c> sale casi a la mitad (62 → 32 MB en el ensayo); a cambio, esas llamadas genéricas pasan por una
+        /// indirección en tiempo de ejecución y cuestan algo más de CPU (el Morpho y el vertido los mide el teléfono). Vale para todo
+        /// build Android (el <c>dev.apk</c>, el de humo, el ensayo y el release), para que el teléfono mida lo que se publica.
+        /// <para><b>Cómo revertir</b> (si los fotogramas empeoran en el teléfono): <c>Il2CppCodeGeneration.OptimizeSpeed</c>,
+        /// <c>pwsh -NoProfile -File scripts/unity-build.ps1 -Method Setup</c> y commitear <c>ProjectSettings/ProjectSettings.asset</c>
+        /// con el test de <c>MemorySettingsTests</c>.</para>
+        /// </summary>
+        public const Il2CppCodeGeneration AndroidIl2CppCodeGeneration = Il2CppCodeGeneration.OptimizeSize;
+
         /// <summary>Propiedad serializada de los datos de posproceso del 2D Renderer (<c>Renderer2DData.postProcessData</c>).</summary>
         internal const string PostProcessDataProperty = "m_PostProcessData";
 
@@ -163,10 +212,11 @@ namespace AF.EditorTools
             PlayerSettings.productName = ProductName;
             PlayerSettings.defaultInterfaceOrientation = Orientation;
             PlayerSettings.allowedAutorotateToPortrait = true;
-            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
-            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
-            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = AutorotateAll;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = AutorotateAll;
+            PlayerSettings.allowedAutorotateToLandscapeRight = AutorotateAll;
             PlayerSettings.useAnimatedAutorotation = false;
+            PlayerSettings.Android.renderOutsideSafeArea = RenderOutsideSafeArea;
             PlayerSettings.SetApplicationIdentifier(android, ApplicationId);
             PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.minSdkVersion = MinSdk;
@@ -193,6 +243,9 @@ namespace AF.EditorTools
                 PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, AndroidGraphicsApis);
             }
             FontSetup.SetAtlasReadability(false); // memoria (2026-10-26): los atlas de las fuentes, sin copia en CPU
+            PlayerSettings.Android.minifyRelease = MinifyRelease; // añadido de D-059 del 2026-11-06: R8 en la variante release
+            PlayerSettings.Android.minifyDebug = MinifyDebug;
+            PlayerSettings.SetIl2CppCodeGeneration(android, AndroidIl2CppCodeGeneration); // memoria de clase A (2026-11-17): libil2cpp.so más pequeño
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
             PlayerSettings.Android.useCustomKeystore = false;
@@ -222,6 +275,11 @@ namespace AF.EditorTools
             var problems = new List<string>();
             Check(problems, "productName", PlayerSettings.productName, ProductName);
             Check(problems, "defaultInterfaceOrientation", PlayerSettings.defaultInterfaceOrientation, Orientation);
+            Check(problems, "allowedAutorotateToPortrait", PlayerSettings.allowedAutorotateToPortrait, true);
+            Check(problems, "allowedAutorotateToPortraitUpsideDown", PlayerSettings.allowedAutorotateToPortraitUpsideDown, AutorotateAll);
+            Check(problems, "allowedAutorotateToLandscapeLeft", PlayerSettings.allowedAutorotateToLandscapeLeft, AutorotateAll);
+            Check(problems, "allowedAutorotateToLandscapeRight", PlayerSettings.allowedAutorotateToLandscapeRight, AutorotateAll);
+            Check(problems, "renderOutsideSafeArea", PlayerSettings.Android.renderOutsideSafeArea, RenderOutsideSafeArea);
             Check(problems, "applicationId", PlayerSettings.GetApplicationIdentifier(android), ApplicationId);
             Check(problems, "scriptingBackend", PlayerSettings.GetScriptingBackend(android), ScriptingImplementation.IL2CPP);
             Check(problems, "minSdk", PlayerSettings.Android.minSdkVersion, MinSdk);
@@ -240,6 +298,9 @@ namespace AF.EditorTools
             Check(problems, "splashScreen.showUnityLogo", PlayerSettings.SplashScreen.showUnityLogo, ShowUnitySplash);
             Check(problems, "splashScreen.backgroundColor", (Color32)PlayerSettings.SplashScreen.backgroundColor, BrandPetroleum);
             Check(problems, "android.blitType", PlayerSettings.Android.blitType, BlitType);
+            Check(problems, "android.minifyRelease", PlayerSettings.Android.minifyRelease, MinifyRelease);
+            Check(problems, "android.minifyDebug", PlayerSettings.Android.minifyDebug, MinifyDebug);
+            Check(problems, "il2cppCodeGeneration", PlayerSettings.GetIl2CppCodeGeneration(android), AndroidIl2CppCodeGeneration);
             foreach (RenderPipelineAsset asset in PipelineAssets())
             {
                 bool? hdr = PipelineHdrOf(asset);
@@ -301,6 +362,9 @@ namespace AF.EditorTools
                 + ", logoUnity=" + PlayerSettings.SplashScreen.showUnityLogo
                 + ", hdr=" + DescribeHdr()
                 + ", blit=" + PlayerSettings.Android.blitType
+                + ", r8Release=" + PlayerSettings.Android.minifyRelease
+                + ", r8Debug=" + PlayerSettings.Android.minifyDebug
+                + ", il2cppCodegen=" + PlayerSettings.GetIl2CppCodeGeneration(android)
                 + ", posproceso=" + DescribeRendererPostProcess()
                 + ", graficos=" + (PlayerSettings.GetUseDefaultGraphicsAPIs(BuildTarget.Android) ? "auto" : DescribeGraphicsApis());
         }

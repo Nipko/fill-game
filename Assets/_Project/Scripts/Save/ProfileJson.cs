@@ -146,6 +146,16 @@ namespace AF.Save
             progress.Set("content_version", JsonNode.FromString(p.Progress.ContentVersion));
             progress.Set("map_seen_level", JsonNode.FromInt(p.Progress.ClampedMapSeenLevel));
             progress.Set("undo_tip_seen", JsonNode.FromBool(p.Progress.UndoTipSeen));
+            progress.Set("curve2_from_level", JsonNode.FromInt(Math.Max(1, p.Progress.Curve2FromLevel))); // esquema 3 (D-068)
+            if (p.Progress.LeagueDebutSeen)
+            {
+                progress.Set("league_debut_seen", JsonNode.FromBool(true)); // añadido de D-046 del 2026-11-06 [P]: solo si es cierta
+            }
+
+            if (p.Progress.LeagueOpened)
+            {
+                progress.Set("league_opened", JsonNode.FromBool(true));
+            }
             root.Set("progress", progress);
 
             if (p.Streak != null)
@@ -414,6 +424,12 @@ namespace AF.Save
                 g.MapSeenLevel = TolerantInt(progress, "map_seen_level", g.MapSeenLevel);
                 g.MapSeenLevel = g.ClampedMapSeenLevel;
                 g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
+                g.LeagueDebutSeen = TolerantBool(progress, "league_debut_seen", g.LeagueDebutSeen);
+                g.LeagueOpened = TolerantBool(progress, "league_opened", g.LeagueOpened);
+
+                // curve2_from_level (esquema 3; D-068): sin la clave o con otro tipo, el siguiente nivel sin jugar [P], nunca el 1
+                // (que cambiaría tableros ya jugados); y nunca menor que 1.
+                g.Curve2FromLevel = Math.Max(1, TolerantInt(progress, "curve2_from_level", g.MaxLevel + 1));
             }
 
             // streak (Crecida; Q-M9 (a)): es economía (sus hitos pagan), así que un tipo equivocado es corrupción, como en wallet.
@@ -778,6 +794,29 @@ namespace AF.Save
 
             node.Set("unlocked", unlocked);
             node.Set("seen", seen);
+
+            // Q-M6 (añadido del 2026-11-08) [P]: el marco de país, solo si hay algo (un perfil de la 1.0 se escribe igual).
+            if (a.Frame != null)
+            {
+                node.Set("frame", JsonNode.FromString(a.Frame));
+            }
+
+            if (a.FrameAt.HasValue)
+            {
+                node.Set("frame_at", Timestamp(a.FrameAt));
+            }
+
+            if (a.FramesSeen.Count > 0)
+            {
+                JsonNode framesSeen = JsonNode.NewArray();
+                for (int i = 0; i < a.FramesSeen.Count; i++)
+                {
+                    framesSeen.Add(JsonNode.FromString(a.FramesSeen[i]));
+                }
+
+                node.Set("frames_seen", framesSeen);
+            }
+
             return node;
         }
 
@@ -806,6 +845,19 @@ namespace AF.Save
                 if (AvatarData.IsId(list[i]))
                 {
                     a.AddSeen(list[i]);
+                }
+            }
+
+            // Q-M6 [P]: el marco, tolerante como el resto (un id con otra forma queda sin marco; una hora mal escrita, sin decidir).
+            string? frame = TolerantString(node, "frame");
+            a.Frame = AvatarData.IsId(frame) ? frame : null;
+            a.FrameAt = TolerantTimestamp(node, "frame_at");
+            TolerantStringList(node, "frames_seen", list);
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (AvatarData.IsId(list[i]))
+                {
+                    a.AddFrameSeen(list[i]);
                 }
             }
         }

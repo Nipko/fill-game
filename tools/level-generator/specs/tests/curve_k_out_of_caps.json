@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F3): el reto 306 con K 11 (k_cells) queda fuera del tope de K del reto (9-10) y falla ROLE-CAPS.",
+  "expect_rule": "ROLE-CAPS",
+  "k_cells": {
+    "306": 11
+  }
+}

@@ -85,7 +85,7 @@ Cada retrato se dibuja con `PixelCanvas`, como la fauna y las banderas, en un ar
    - **proporciones de adulto:** ojos ≤ 12 % del ancho de la cara, sin cabezas gigantes ni rubor de peluche (08 §13.1 #11: «no atractivo para niños»; sección 2.4);
    - sin ropa ni accesorios (07 §8.1; guía v2 §7, «Cultura»);
    - comportamiento real: el caimán con la boca cerrada, el jaguar sin rasgos humanos (07 §8.1), la rana sin nada que diga «veneno» (glosario §3.3).
-4. **Aro de madera** del 7 % del diámetro: canto #2E2018, luz #BF8F62, con un filete `crema` #FFF8E6 por dentro. Es el sitio que ocupará el **marco** de la 1.2 (`entitlements.frames`, 06 §6): el retrato no cambia cuando lleguen los marcos.
+4. **Aro de madera** del 7 % del diámetro: canto #2E2018, luz #BF8F62, con un filete `crema` #FFF8E6 por dentro. Es el sitio que ocupará el **marco** de la 1.2 (`entitlements.frames`, 06 §6): el retrato no cambia cuando lleguen los marcos. **Desde la 1.1** lo ocupan los marcos de país de la Bitácora (Q-M6 de D-033, añadido del 2026-11-08, `ProceduralArt.AvatarFrames.cs`); los de la Liga siguen en la 1.2.
 
 **Bloqueado:**
 - el fondo se desatura al 40 %;
@@ -310,9 +310,10 @@ La elección es una preferencia, así que gana la más reciente y no la del blob
 
 | Evento | Parámetros | Cuándo |
 |---|---|---|
-| `af_avatar_open` | `source ∈ {home, settings, league}` | Se abre el perfil |
+| `af_avatar_open` | `source ∈ {home, settings, league, logbook}` (`logbook`: «Ver tu avatar» de la libreta de la Bitácora; añadido de Q-M6 de D-033 del 2026-11-08) | Se abre el perfil |
 | `af_avatar_select` | `avatar` (id), `free` (bool), `first` (bool: la primera elección del jugador) | Elige un avatar distinto del que tenía |
 | `af_avatar_unlock` | `avatar` (id), `milestone ∈ {hard_win, very_hard_win, world_3, world_4, world_5, world_6, streak_10, daily_streak_7, daily_stamps_20, league_50}`, `retro` (bool: desbloqueado al cargar un perfil anterior) | Se desbloquea un avatar |
+| `af_avatar_frame_select` | `frame` (`frame_wNN`, o `none` con «Sin marco» [P]), `auto` (bool: true si se pone solo al ganarlo en la Bitácora; false si se elige en «Tu avatar») | Se pone un marco de país: al ganarlo en la Bitácora o al elegir en «Tu avatar» uno distinto del que llevaba (1.1; Q-M6 de D-033, añadido del 2026-11-08, «Medir ya») |
 
 - Llevan los 15 comunes y ≤ 3 propios (08 §8.1).
 - El id del avatar no es dato personal: es uno de 16 dibujos del juego.
@@ -437,5 +438,5 @@ Cada una con la recomendada primero. Si el dueño responde «las recomendadas»,
 | Q-AV-8 | ¿Y el avatar de la Liga con la Liga apagada? | **(a) Oculto en el selector** hasta que la Liga esté activa | (b) Visible y bloqueado con «Llega con la Liga». |
 | Q-AV-9 | ¿El avatar se ve en la Liga para 13-17? | **(a) Sí**, como el seudónimo y la bandera | (b) Solo para 18+. |
 | Q-AV-10 | ¿Qué lleva el perfil? | **(a) Solo cabecera (avatar, seudónimo de la Liga y país) y rejilla** | (b) Además 3 cifras: niveles ganados, paradas del Mapa y Retos sellados (`stats` y el Mapa ya las tienen). |
-| Q-AV-11 | ¿Marcos alrededor del avatar? | **(a) En la 1.2, con la Liga completa** (`entitlements.frames`); el aro de madera les guarda el sitio | (b) Ya en la 1.0, el de 20 sellos del Reto como marco en lugar de la garza. |
+| Q-AV-11 | ¿Marcos alrededor del avatar? | **(a) En la 1.2, con la Liga completa** (`entitlements.frames`); el aro de madera les guarda el sitio. Los marcos de país de la Bitácora se adelantan a la 1.1 (Q-M6, confirmado por el dueño el 2026-11-08) | (b) Ya en la 1.0, el de 20 sellos del Reto como marco en lugar de la garza. |
 | Q-AV-12 | Hallazgo: el seudónimo de la Liga incluye la **anaconda**, que el glosario §3.3 descarta (sagrada para varios pueblos) | **(a) Retirarla de los seudónimos nuevos** sin cambiar el índice (el servidor deja de elegirla para los seudónimos nuevos; quien ya la tiene la conserva y la clave sigue en el `enum` para leerla) | (b) Dejarla: es solo texto, sin dibujo. |

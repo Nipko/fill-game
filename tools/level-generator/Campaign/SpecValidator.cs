@@ -50,7 +50,15 @@ internal static class SpecValidator
         ("FALLBACK", "con dos variantes, cada celda con una mecanica de una sola variante (la Tinaja) lleva su respaldo sin ella en fallback, y solo esas (d.5.4; D-019 salida B)"),
         ("HITO-14", "K >= 13 (14 cuias con 1 vacio) solo en hitos, con \"K = 13\" en la celda igual al k_plan, sin capacidades, Pirana ni Tinaja (03 sec. 11; d.5.1)"),
         ("NOVELTY-60", "nunca mas de novelty_max_gap (60) niveles entre dos primeras veces seguidas: entradas del registro de combinaciones o tintes nuevos, contando las especificaciones anteriores (D-009 punto 8; d.5 punto 5; d.5.6)"),
+        ("CURVE-BASE", "curva 2 (D-068; 08 sec. 4.1): las celdas anteriores a curve.from_level son las de base_spec en base_variant (historia, no se generan) y from_level abre un ciclo de 20"),
+        ("ROLE-CAPS", "curva 2: K de cada nivel (k_plan o k_cells) dentro del tope de su papel y K + vacios del plan <= el tope de cuias (role_caps; 03 sec. 12; D-068 P2 A)"),
+        ("MURKY-NORMAL", "curva 2: estreno de las turbias en Normal en sus tableros (murky_normal.debut: comodidad de p3-p5, con estrella y sin otra mecanica) y comfort_per_cycle comodidades turbias por ciclo desde el ciclo del estreno (D-068 P7 A; F1-1)"),
+        ("CURVE-MECH", "curva 2: el Aguape, el Aguape espeso y la Lancha solo desde curve.from_level (pack_schema 5), la Lancha con la Liana o la Flor solo desde el 401 (02 sec. 9.2 regla 7) y nunca en un hito ni en la cuspide (necesita T >= K + k + 1; D-068, preguntas de F3 y F3b)"),
+        ("PRESSURE", "aviso: cada hito de la curva 2 tiene escalon en pressure_plan, que sube (o se queda) dentro del mundo hasta la cuspide; aviso si el escalon que se espera de la celda (con el Aguape) no llega al del plan (03 sec. 12)"),
     ];
+
+    /// <summary>Primer nivel en que la Lancha puede ir con la Liana o la Flor (02 §9.2 regla 7; 03 §11, fila 401-700).</summary>
+    public const int LanchaWithLianaFrom = 401;
 
     /// <summary>Hueco máximo entre dos apariciones de una mecánica o capacidad (resumen, punto 6; d.2 regla 4).</summary>
     public const int MaxGap = 120;
@@ -67,6 +75,8 @@ internal static class SpecValidator
         "HITO-14" => spec.KPlan.Any(r => Math.Max(Math.Max(r.Recovery, r.Comfort), Math.Max(r.Challenge, r.Milestone)) >= HitoK)
             || spec.Calendar.Values.Any(c => NoteK(c) is not null),
         "NOVELTY-60" => spec.NoveltyMaxGap is not null,
+        "CURVE-BASE" or "ROLE-CAPS" or "CURVE-MECH" or "PRESSURE" => spec.Curve is not null,
+        "MURKY-NORMAL" => spec.Curve is not null && spec.MurkyNormal is not null,
         _ => true,
     };
 
@@ -190,7 +200,10 @@ internal static class SpecValidator
             }
 
             // MURKY-SLOT
-            if (c.Has("Tu") && c.Mark is not ("D" or "MD"))
+            // Con murky_normal (D-068, P7 A; solo specs/experimental/), también en comodidad sin estrella desde su nivel.
+            // En la curva 2 también los tableros de estreno de las turbias en Normal (murky_normal.debut), con estrella.
+            bool murkyNormal = spec.MurkyNormal is { } mn && n >= mn.FromLevel && role == SlotRole.Comfort && (!c.Star || mn.Debut.Contains(n));
+            if (c.Has("Tu") && c.Mark is not ("D" or "MD") && !murkyNormal)
             {
                 Fail("MURKY-SLOT", n, "Aguas turbias en un slot sin etiqueta");
             }
@@ -392,9 +405,11 @@ internal static class SpecValidator
             }
 
             int murky = cycle.Count(c => c.Has("Tu"));
-            if (murky > 2)
+            // Desde el ciclo que contiene murky_normal.from_level (el 321-340, con el estreno en el 323).
+            int murkyMax = spec.MurkyNormal is { } rule && start + 19 >= rule.FromLevel ? rule.MaxPerCycle : 2;
+            if (murky > murkyMax)
             {
-                Fail("MURKY-2", start, $"ciclo {name}: {murky} niveles con Aguas turbias (como mucho 2)");
+                Fail("MURKY-2", start, $"ciclo {name}: {murky} niveles con Aguas turbias (como mucho {murkyMax})");
             }
 
             foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Code != "Tu"))
@@ -501,7 +516,8 @@ internal static class SpecValidator
                 Fail("SEASONS", s, $"{same} ciclos seguidos de temporada {season} (como mucho 2)");
             }
 
-            foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Debut >= s && m.Debut < s + 20 && m.Season is "A" or "B" && m.VariantOf is null))
+            foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Debut >= s && m.Debut < s + 20 && m.Season is "A" or "B" && m.VariantOf is null
+                && m.SeasonDebutExempt is null))
             {
                 if (m.Season != season)
                 {
@@ -525,6 +541,181 @@ internal static class SpecValidator
             if (firsts.Count == 0 || spec.LastLevel - firsts[^1] > maxNovelty)
             {
                 Fail("NOVELTY-60", spec.LastLevel, $"{(firsts.Count == 0 ? "ninguna primera vez" : $"ninguna primera vez desde el {firsts[^1]}")} hasta el {spec.LastLevel} (como mucho {maxNovelty})");
+            }
+        }
+
+        if (spec.Curve is not null)
+        {
+            issues.AddRange(CurveIssues(spec, cells));
+        }
+
+        return issues;
+    }
+
+    /// <summary>
+    /// Reglas de la curva 2 (D-068): CURVE-BASE, ROLE-CAPS, MURKY-NORMAL, CURVE-MECH y el aviso PRESSURE. Solo con la clave
+    /// <c>curve</c> (campaign_v3); campaign_v1, campaign_v2 y las experimentales no las ven.
+    /// </summary>
+    private static List<SpecIssue> CurveIssues(CampaignSpec spec, List<CalendarCell> cells)
+    {
+        var issues = new List<SpecIssue>();
+        void Fail(string rule, int level, string message, bool warning = false) =>
+            issues.Add(new SpecIssue(rule, level, message, warning, spec.HasVariants ? spec.Variant : null));
+        CurveInfo curve = spec.Curve!;
+        SlotRole RoleAt(int level) => spec.Positions.First(r => r.Positions.Contains(CampaignSpec.PositionOf(level))).Role;
+
+        // CURVE-BASE: la historia es la de la curva 1 publicada.
+        if ((curve.FromLevel - spec.CycleFrom) % 20 != 0 || curve.FromLevel <= spec.FirstLevel || curve.FromLevel > spec.LastLevel)
+        {
+            Fail("CURVE-BASE", curve.FromLevel, "curve.from_level tiene que abrir un ciclo de 20 dentro de la especificacion (despues de su primer nivel)");
+        }
+
+        if (curve.C is < 2 or > 9)
+        {
+            Fail("CURVE-BASE", curve.FromLevel, string.Create(CultureInfo.InvariantCulture, $"curve.c = {curve.C}; va de 2 a 9 (08 sec. 4.1)"));
+        }
+
+        CampaignSpec? baseSpec = null;
+        try
+        {
+            string basePath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(spec.Path)) ?? ".", curve.BaseSpec);
+            baseSpec = CampaignSpec.Load(basePath, curve.BaseVariant);
+        }
+        catch (CampaignSpecException e)
+        {
+            Fail("CURVE-BASE", curve.FromLevel, "no se puede leer curve.base_spec: " + e.Message);
+        }
+
+        if (baseSpec is not null)
+        {
+            foreach (CalendarCell c in cells.Where(c => c.Level < curve.FromLevel))
+            {
+                if (!baseSpec.Calendar.TryGetValue(c.Level, out CalendarCell? b) || b.Literal != c.Literal)
+                {
+                    Fail("CURVE-BASE", c.Level, $"celda '{c.Literal}' y la curva 1 ({baseSpec.SpecId}, variante {baseSpec.Variant}) tiene '{b?.Literal ?? "-"}'");
+                }
+            }
+        }
+
+        // ROLE-CAPS: el K del plan dentro del tope del papel y K + vacíos dentro del tope de cuias.
+        foreach (CalendarCell c in cells.Where(c => c.Level >= curve.FromLevel))
+        {
+            LevelPlan plan = spec.Plan(c.Level);
+            if (spec.CapOf(plan) is not RoleCap cap)
+            {
+                Fail("ROLE-CAPS", c.Level, $"role_caps no tiene el papel {plan.CapRole}");
+                continue;
+            }
+
+            if (plan.K < cap.KMin || plan.K > cap.KMax)
+            {
+                Fail("ROLE-CAPS", c.Level, string.Create(CultureInfo.InvariantCulture, $"K = {plan.K} fuera del tope de {plan.CapRole} ({cap.KMin}-{cap.KMax})"));
+            }
+
+            if (plan.K + plan.Empties > cap.TMax)
+            {
+                Fail("ROLE-CAPS", c.Level, string.Create(CultureInfo.InvariantCulture,
+                    $"K + vacios = {plan.K + plan.Empties} cuias, por encima del tope de {plan.CapRole} ({cap.TMin}-{cap.TMax})"));
+            }
+        }
+
+        foreach (int level in spec.KCells.Keys.Where(l => l < curve.FromLevel || l > spec.LastLevel).Order())
+        {
+            Fail("ROLE-CAPS", level, "k_cells fuera de la curva 2");
+        }
+
+        // MURKY-NORMAL: el estreno y las comodidades turbias por ciclo.
+        if (spec.MurkyNormal is { } mn)
+        {
+            foreach (int d in mn.Debut)
+            {
+                CalendarCell? c = cells.FirstOrDefault(x => x.Level == d);
+                int p = CampaignSpec.PositionOf(d);
+                if (c is null || !c.Star || c.Mechanics.Count != 1 || !c.Has(MechanicCodes.Murky) || c.Capacities.Count > 0 || p is < 3 or > 5 || d < mn.FromLevel)
+                {
+                    Fail("MURKY-NORMAL", d, $"el estreno de las turbias en Normal va en p3-p5, con estrella y solo con Tu, desde el {mn.FromLevel} ({c?.Literal ?? "-"})");
+                }
+            }
+
+            if (mn.Debut.Count > 0 && !mn.Debut.SequenceEqual(Enumerable.Range(mn.Debut[0], mn.Debut.Count)))
+            {
+                Fail("MURKY-NORMAL", mn.Debut[0], "los tableros de estreno de las turbias en Normal van seguidos");
+            }
+
+            foreach (CalendarCell c in cells.Where(c => c.Level >= curve.FromLevel && c.Star && c.Has(MechanicCodes.Murky) && !mn.Debut.Contains(c.Level)))
+            {
+                Fail("MURKY-NORMAL", c.Level, "estrella de las turbias fuera de su estreno (murky_normal.debut)");
+            }
+
+            if (mn.ComfortPerCycle is int perCycle)
+            {
+                foreach ((int start, List<CalendarCell> cycle) in Cycles(spec, cells).Where(x => x.Start + 19 >= mn.FromLevel && x.Start >= curve.FromLevel))
+                {
+                    int comfort = cycle.Count(c => c.Has(MechanicCodes.Murky) && RoleAt(c.Level) == SlotRole.Comfort);
+                    if (comfort != perCycle)
+                    {
+                        Fail("MURKY-NORMAL", start, string.Create(CultureInfo.InvariantCulture,
+                            $"ciclo {CycleName(start)}: {comfort} comodidades turbias (murky_normal.comfort_per_cycle = {perCycle})"));
+                    }
+                }
+            }
+
+            foreach (CalendarCell c in cells.Where(c => c.Level >= curve.FromLevel && c.Level < mn.FromLevel && c.Has(MechanicCodes.Murky) && RoleAt(c.Level) == SlotRole.Comfort))
+            {
+                Fail("MURKY-NORMAL", c.Level, $"comodidad turbia antes del estreno de las turbias en Normal ({mn.FromLevel})");
+            }
+        }
+
+        // CURVE-MECH: las mecánicas de la 1.1 (Aguapé, Aguapé espeso y Lancha; D-068) solo en la curva 2, la Lancha fuera de los hitos y la Lancha con la Liana
+        // (con fruta o de cuenta) o la Flor solo desde el 401 (02 §9.2 regla 7; 03 §11). Los estrenos (303-305, 347-348 y 363-365)
+        // los comprueban DEBUT-LEVEL y DEBUT-SLOT como los de cualquier mecánica de la tabla.
+        foreach (CalendarCell c in cells)
+        {
+            foreach (MechanicInfo m in c.Mechanics.Where(m => MechanicCodes.Curve.Contains(m.Code) && c.Level < curve.FromLevel))
+            {
+                Fail("CURVE-MECH", c.Level, $"{m.Id} antes de la curva 2 ({curve.FromLevel}; pack_schema 5)");
+            }
+
+            if (c.Has(MechanicCodes.Lancha) && c.Level < LanchaWithLianaFrom
+                && c.Mechanics.Any(m => m.Code is MechanicCodes.Liana or MechanicCodes.LianaCount or MechanicCodes.Flor))
+            {
+                Fail("CURVE-MECH", c.Level, $"Lancha con la Liana antes del {LanchaWithLianaFrom} ({c.Short}; 02 sec. 9.2 regla 7)");
+            }
+
+            // La Lancha nunca en un hito ni en la cúspide (D-068, añadido «las preguntas de F3 y F3b»): necesita T >= K + k + 1 (la
+            // carga, la holgura y sus k vacías), y con K 11-12 pasa del tope de 13-14 cuias.
+            if (c.Has(MechanicCodes.Lancha) && c.Level >= curve.FromLevel && RoleAt(c.Level) == SlotRole.Milestone)
+            {
+                Fail("CURVE-MECH", c.Level, $"Lancha en un hito o en la cuspide ({c.Short}): necesita T >= K + k + 1 y no cabe en su tope (D-068)");
+            }
+        }
+
+        // PRESSURE (aviso): el plan del escalón de cada hito y lo que se espera de su celda.
+        foreach (WorldInfo world in spec.Worlds.Where(w => w.First >= curve.FromLevel))
+        {
+            int previous = -1;
+            int top = spec.PressurePlan.Where(kv => kv.Key >= world.First && kv.Key <= world.Last).Select(kv => kv.Value).DefaultIfEmpty(0).Max();
+            foreach (CalendarCell c in cells.Where(c => c.Level >= world.First && c.Level <= world.Last && RoleAt(c.Level) == SlotRole.Milestone))
+            {
+                if (!spec.PressurePlan.TryGetValue(c.Level, out int planned))
+                {
+                    Fail("PRESSURE", c.Level, "hito sin escalon en pressure_plan", warning: true);
+                    continue;
+                }
+
+                if (planned < previous || (c.Level == world.Last && planned < top))
+                {
+                    Fail("PRESSURE", c.Level, string.Create(CultureInfo.InvariantCulture,
+                        $"el escalon {planned} baja dentro del mundo {world.World} o no es el mayor en la cuspide"), warning: true);
+                }
+
+                previous = planned;
+                int expected = Generation.Pressure.OfCell(c, spec.Plan(c.Level).K, milestone: true);
+                if (expected < planned)
+                {
+                    Fail("PRESSURE", c.Level, string.Create(CultureInfo.InvariantCulture,
+                        $"la celda {c.Short} da un escalon de {expected} y el plan pide {planned} (03 sec. 12)"), warning: true);
+                }
             }
         }
 

@@ -3,7 +3,11 @@ using System;
 
 namespace AF.Audio
 {
-    /// <summary>Los 5 remates musicales cortos (<c>music/stingers/</c>; encargo de sonidos §8; tarea AU3).</summary>
+    /// <summary>
+    /// Los 6 remates musicales cortos (<c>music/stingers/</c>): los 5 de la entrega 1 (encargo de sonidos §8; tarea AU3) y el
+    /// del estreno de la Liga, de la 1.1 (<c>docs/audio/encargo-fanfarria-liga.md</c>). El valor es el índice de su ranura: los
+    /// nuevos van al final.
+    /// </summary>
     public enum StingerId
     {
         /// <summary><c>sting_world_banner</c>: banner de mundo nuevo, bajo la piha.</summary>
@@ -20,6 +24,9 @@ namespace AF.Audio
 
         /// <summary><c>sting_level_failed</c>: Nivel fallido, sin dramatismo.</summary>
         LevelFailed = 4,
+
+        /// <summary><c>sting_league_debut</c>: estreno de la Liga del río (una vez por jugador; 1.1).</summary>
+        LeagueDebut = 5,
     }
 
     /// <summary>Intensidad de la lluvia de un nivel (<c>amb/rain_light</c>, <c>rain_medium</c> y <c>rain_heavy</c>; tarea AU3).</summary>
@@ -55,18 +62,18 @@ namespace AF.Audio
     }
 
     /// <summary>
-    /// Los 173 clips de la entrega 1 (<c>docs/audio/especificacion-sonidos.json</c>, campos <c>id</c> y <c>file</c>; encargo de
-    /// sonidos §3) con un número de ranura fijo, sin motor: así el registro de clips (<c>AF.Audio.Unity.AudioClipRegistry</c>) los
-    /// busca sin asignar y sin cadenas. Las ranuras 0-88 son las de <see cref="AudioBank.Index"/> (los 61 efectos y las 14 notas de
+    /// Los 176 clips grabados (<c>docs/audio/especificacion-sonidos.json</c>, campos <c>id</c> y <c>file</c>; encargo de sonidos
+    /// §3): los 173 de la entrega 1 y los 3 de la 1.1 (<c>docs/audio/encargo-audios-1-1.md</c>), con un número de ranura fijo, sin motor: así el registro de clips (<c>AF.Audio.Unity.AudioClipRegistry</c>) los
+    /// busca sin asignar y sin cadenas. Las ranuras 0-90 son las de <see cref="AudioBank.Index"/> (los 63 efectos y las 14 notas de
     /// <c>sfx_select</c> y de <c>sfx_tint</c>), así que un efecto se busca igual en el registro y en el audio por código de
     /// respaldo. Después: los 4 bucles del vertido, el agua de los mundos 1-9, la lluvia en 3 intensidades, la fauna de cada mundo,
-    /// la música de cada mundo (lecho, 3 capas y variante nocturna), el tema de menú y los 5 remates. Los mundos 10-13 no tienen
+    /// la música de cada mundo (lecho, 3 capas y variante nocturna), el tema de menú y los 6 remates. Los mundos 10-13 no tienen
     /// WAV: suenan con el respaldo por código.
     /// </summary>
     public static class AudioClipIds
     {
-        /// <summary>Clips de la entrega 1.</summary>
-        public const int Count = 173;
+        /// <summary>Clips grabados: los 173 de la entrega 1 y los 3 de la 1.1.</summary>
+        public const int Count = 176;
 
         /// <summary>Mundos con agua, fauna y música grabadas (1-9).</summary>
         public const int Worlds = 9;
@@ -78,7 +85,7 @@ namespace AF.Audio
         public const int PercussionLayers = 3;
 
         /// <summary>Remates.</summary>
-        public const int Stingers = 5;
+        public const int Stingers = 6;
 
         /// <summary>Primera ranura de los bucles del vertido (<c>sfx_pour_loop_l1</c>).</summary>
         public const int PourLoopBase = AudioBank.ClipCount;
@@ -143,6 +150,7 @@ namespace AF.Audio
             "sting_fruit_new",
             "sting_mech_card",
             "sting_level_failed",
+            "sting_league_debut",
         };
 
         private static readonly string[] Ids = new string[Count];
@@ -349,7 +357,7 @@ namespace AF.Audio
         {
             if ((uint)slot >= Count)
             {
-                throw new ArgumentOutOfRangeException(nameof(slot), "Ranura de clip 0-172.");
+                throw new ArgumentOutOfRangeException(nameof(slot), "Ranura de clip 0-175.");
             }
 
             return slot;

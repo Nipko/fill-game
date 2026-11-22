@@ -58,7 +58,8 @@ namespace AF.GameFlow
             }
 
             Events.Publish(new LevelStarted(
-                LevelNumber, EventLevelName, EventVariant, _level.Band ?? string.Empty, _attempt.FailsLevel + 1, _level.World, DifficultyId(_level), _level.IsMurky));
+                LevelNumber, EventLevelName, EventVariant, _level.Band ?? string.Empty, _attempt.FailsLevel + 1, _level.World, DifficultyId(_level), _level.IsMurky,
+                _level.Curve, _level.Pressure)); // curve y pressure (08 §8.2; D-068)
         }
 
         // Undo: una Marea más en el intento.
@@ -78,7 +79,7 @@ namespace AF.GameFlow
             int pours = _session?.AppliedPours ?? 0;
             Events.Publish(new LevelWon(
                 LevelNumber, EventLevelName, pours, _level.Par, _eventsUndoUsed, BoostersJson(), EventTimeMs, _harvest, _harvestDoubled,
-                !_perfect));
+                !_perfect, _level.Curve, _level.Pressure));
         }
 
         // Fail: el resultado de FailResolve y, en el duro, el de la Crecida (LastStreakResult).
@@ -95,7 +96,8 @@ namespace AF.GameFlow
             int relief = FailResolve.ChooseRelief(_level, _attempt, _boosters);
             bool reliefServed = relief >= 0 && relief != _attempt.ReliefIndex;
             Events.Publish(new LevelFailed(
-                LevelNumber, EventLevelName, hard, outcome.CanoeLost, broken, shield, reliefServed, _session?.AppliedPours ?? 0, EventTimeMs));
+                LevelNumber, EventLevelName, hard, outcome.CanoeLost, broken, shield, reliefServed, _session?.AppliedPours ?? 0, EventTimeMs,
+                _level.Curve, _level.Pressure));
         }
 
         /// <summary>

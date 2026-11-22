@@ -7,8 +7,8 @@ using AF.Levels.Json;
 namespace AF.Levels
 {
     /// <summary>
-    /// Lee y valida las paradas del Mapa del río <c>af-river-stops/1</c> (08 §4.5; contrato 30; esquema
-    /// <c>schemas/af-river-stops-1.schema.json</c>) con el lector JSON del cliente (<see cref="JsonParser"/>), con las mismas
+    /// Lee y valida las paradas del Mapa del río <c>af-river-stops/2</c> (08 §4.5; contrato 30; esquema
+    /// <c>schemas/af-river-stops-2.schema.json</c>) con el lector JSON del cliente (<see cref="JsonParser"/>), con las mismas
     /// reglas que <c>tools/river-map/stops.py --check</c> y contra la tabla de mundos (<see cref="WorldTable"/>, glosario §8):
     /// <list type="bullet">
     /// <item><description><c>format</c> = <see cref="RiverStopCatalog.Format"/>, <c>source</c> y de 1 a 100 paradas;</description></item>

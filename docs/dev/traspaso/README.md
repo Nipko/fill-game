@@ -417,6 +417,13 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 
 ### Paso 4 · Pendientes del dueño y del equipo
 
+- **Revisión 4 con Gemini, los textos de la 1.1** (2026-11-09; añadido de D-054). Hoy `LocReleaseGate` para el release de la 1.1 por 52 problemas de 72 filas. Pasos del dueño:
+  1. pegar en Gemini `docs/dev/traspaso/gemini-revision-textos-4.md`, con la carpeta `gemini-revision-4-entrada/`;
+  2. traer la entrega a `docs/dev/traspaso/gemini-revision-4/`;
+  3. aprobar las filas en `cambia` y en `duda`, y el dato [V] de los pueblos, si lo quiere.
+
+  Después, el integrador la aplica con `apply_translations.py --review`.
+
 - **Preguntas del guion de la intro, de la propuesta de fauna y de la propuesta de Magic Sort: decididas el 2026-10-19** las que tenían recomendación (D-029): Q11 (`af_fauna_sighted` y la migración del perfil, en DC15), Q14 (el agua negra #522500, hecha en DC13) y Q17 del guion; F7-F13 de la fauna (F7 y F11, cuando lo dé el asesor; F9, al backlog; F13, en la 1.1); y de Magic Sort, #8, #10-#13, #17-#19 y #21-#25 (#25, «¡Perfecto!», en DC14). Las #2, #9, #14 y #20 de Magic Sort, sin recomendación aplicable, se decidieron el mismo día, después, como el canon (D-030, con la letra de la fuente: #2 A, #9 C, #14 C y #20 C).
 - **Bloqueo técnico C1-9 de la pista A:** la propiedad P1 (R14) falla con la Liana y capacidades mixtas, así que `LevelValidation` rechaza la Liana con capacidades distintas de 4, cueva de la Piraña incluida. Por eso el calendario de la campaña movió o quitó la Liana, y no las capacidades, en cuatro celdas [P]: 94 Ma → Li y 95 Li+Al → Ma+Al (la Cuia alta vuelve en el reto 95 con el Matapi), 160 Ll+Li+Al6 → Ll+Al6 (la Cuia alta de 6 se sigue estrenando en el hito 160) y 198 Pi+Li → Pi+Ho (`calendar_note` de `tools/level-generator/specs/campaign_v1.json`). Está en `Packages/com.amazonfill.core/README.md`, en su CHANGELOG y en `tools/out/campaign_v1_report.md`. **Decidida el 2026-10-19** (pregunta 24 de `docs/GDD.md` §6.3, (b); D-028): el bloqueo es la regla de la 1.0 y la (a) se estudia para la 1.1; DC11 quita «provisional» de los textos del núcleo.
 - **Preguntas del paso 2:** las 27-38 de `docs/GDD.md` §6.3 quedaron **decididas el 2026-10-13** con su recomendación (D-020), y la 39 y la 40, el mismo día (D-015). Tareas que dejan: el cliente con `level_overrides` como respaldo del kill-switch (31), la tabla de temporada del cliente (32), **la tabla de novedades de 201-1000 y el registro de combinaciones antes de generar 201-700** (33) y los textos a 12 sp como mínimo (36). La 20 (caché de `LocalDateKey`) ya está decidida y aplicada (`7677085`).

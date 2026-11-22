@@ -115,14 +115,44 @@ namespace AF.UI
         public static string FireflyGift => Loc.T(Keys.FireflyGift);
 
         /// <summary>
+        /// Aguapé [P] (02 §9.1 M8; estreno en el 303 de la curva 2; D-068): la regla en una frase, con «aguapé», nunca «hielo».
+        /// Borrador; EN y PT-BR pendientes de la revisión de D-054.
+        /// </summary>
+        public static string TutorialAguape => Loc.T(Keys.TutorialAguape);
+
+        /// <summary>Aguapé espeso [P] (02 §9.1 M8, variante; ciclo 341-360; D-068, P13 A). Borrador.</summary>
+        public static string TutorialAguapeN2 => Loc.T(Keys.TutorialAguapeN2);
+
+        /// <summary>
+        /// Lancha [P] (02 §9.1 M11; estreno en el 363 de la curva 2; D-068): atraca con <paramref name="k"/> cuias vacías (el
+        /// <c>k</c> del nivel; 3 en el estreno [P]), con el plural de la tabla. Borrador.
+        /// </summary>
+        public static string TutorialLancha(int k)
+        {
+            return Loc.T(Keys.TutorialLancha, LocArgs.Of("n", k));
+        }
+
+        /// <summary>
         /// Tutorial de una pantalla del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de D-007), o null si no es
         /// ninguno de los 11 de 1-200 ni de las variantes con cliente (Liana de cuenta y Hoja atada, VA1a; Brote de dos hojas y
         /// Flor de vitória-régia, VA1b) ni la Tinaja (323, TJ4: su línea 1; la 2, <see cref="TutorialTinajaScoop"/>).
         /// </summary>
         public static string? Tutorial(string? introMechanic)
         {
+            return Tutorial(introMechanic, LevelCardInfo.LanchaDebutK);
+        }
+
+        /// <summary>
+        /// Como <see cref="Tutorial(string?)"/>, con el <c>k</c> de la Lancha del nivel (<paramref name="lanchaK"/>) para su texto
+        /// (D-068): el Aguapé (<c>aguape</c>), el espeso (<c>aguape_n2</c>) y la Lancha (<c>lancha</c>) de la 1.1.
+        /// </summary>
+        public static string? Tutorial(string? introMechanic, int lanchaK)
+        {
             switch (introMechanic)
             {
+                case LevelCardInfo.AguapeIntro: return TutorialAguape;
+                case LevelCardInfo.AguapeThickIntro: return TutorialAguapeN2;
+                case LevelCardInfo.LanchaIntro: return TutorialLancha(lanchaK);
                 case "chica": return TutorialChica;
                 case "alta": return TutorialAlta;
                 case "hoja": return TutorialHoja;

@@ -108,7 +108,7 @@ internal sealed class GenBoard
             MechanicSpec a = Attrs[i];
             if (!a.IsNone && a.Key != 0)
             {
-                Attrs[i] = new MechanicSpec(a.Type, map[a.Key], a.Partner, a.N, a.K, a.Key2 != 0 ? map[a.Key2] : 0);
+                Attrs[i] = new MechanicSpec(a.Type, map[a.Key], a.Partner, a.N, a.K, a.Key2 != 0 ? map[a.Key2] : 0, a.Group);
             }
         }
     }

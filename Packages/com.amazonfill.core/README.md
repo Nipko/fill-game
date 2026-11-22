@@ -78,7 +78,7 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | `Mechanics.IMechanic` (interno): ganchos de mecánica sin estado (origen, destino, espacio, recepción, `cambia_al_recibir`, exención de origen, etapas (b), (d), (e), (f), victoria y validación), despachados por una tabla estática indexada por el tipo de la cuia | 08 §2.2; 02 §9 |
 | `AF.Core` | `Rules.CuiaRules`: envoltorio heredado sobre cuias sueltas sin mecánicas; capa base de `BoardRules` para el sellado (R5) y el núcleo de `futil` | 02 §1.2, §1.4, §3.1; 04 §5.1 |
 | `AF.Core` | `Rules.Pour` y `Rules.PourRules`: validan argumentos y delegan en `BoardRules`: vertido según el modo (parcial solo en `Run`), `Apply` con `PourEvents`, `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
-| `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult` (con `Events`): partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`) y Volver a la orilla (reinicio); el bloqueo (h) es R13 y, si aún quedan vertidos útiles, R13 ampliada con `DeadEndProbe` | 02 §1.3-1.4, §2; 04 §2.1, §2.7; D-014 |
+| `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult` (con `Events`): partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`; `UndoEscapes`, si saca del atasco) y Volver a la orilla (reinicio); el bloqueo (h) es R13 y, si aún quedan vertidos útiles, R13 ampliada con `DeadEndProbe` y los tableros vistos del intento (un contador por hash que Marea rebaja) | 02 §1.3-1.4, §2; 04 §2.1, §2.7; D-014 |
 | `AF.Core` | `Session.DeadEndProbe`: cierre acotado de Aguas estancadas por bucle (R13 ampliada): estados alcanzables con todos los vertidos legales, en anchura, canónicos (`BoardCanon`, igualdad por valor); ≤ `MaxStates` (64 [P]) y sin victoria ⇒ perdido; sin asignaciones tras calentar (ver «Aguas estancadas por bucle») | 02 R13, R14; D-014 |
 | `AF.Core` | `Determinism.Prng`: xoshiro256** sembrado con SplitMix64 desde la FNV-1a de 64 bits de `amazonfill:v1:m{mm}:v{v}:n{nnnn}` (`LevelSeed`), sub-semillas (`SubSeed`) y `NextInt(bound)` sin sesgo (Lemire); solo enteros, valores dorados en `PrngTests` | 09 R26; 08 §2.1 #5, §4.1 |
 | `AF.Solver` | `Collections.MinHeap`: montículo con desempate FIFO (sustituto de `PriorityQueue`) | 08 §2.2 |
@@ -244,9 +244,36 @@ y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
   distintas sí puede cambiarlo (P2, 02 R16). Así que, sin mecánicas y con capacidades iguales, los dos cierres son idénticos en `run`.
   Por eso tampoco depende de `futile_rule_enabled`: el kill-switch devuelve R13 al criterio clásico, pero el cierre sigue.
   Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada, aplicada por el dueño el 2026-10-13. R14 se reformula con D-014 («mientras exista progreso posible») y P1 se sigue exigiendo (`DeadEndProbePropertyTests`).
-- **Nivel 66:** Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel queda perdido de verdad (4 estados
-  alcanzables; A* con todos los legales: irresoluble); los vertidos 10-12 del dueño ya eran vueltas del bucle y ahora no entran
-  (R15). Hasta el 8.º el nivel se gana.
+- **Nivel 66:** el 9.º vertido (`1>5`) deja el nivel perdido de verdad (4 estados alcanzables; A* con todos los legales:
+  irresoluble). Con D-014 Aguas estancadas salía justo ahí; desde su añadido del 2026-11-06 (sección siguiente) sale justo tras el
+  12.º, porque los vertidos 10 y 11 del dueño aún llevaban a tableros nuevos. Hasta el 8.º el nivel se gana.
+- **Estancado solo al repetir (añadido de D-014 del 2026-11-06, 1.1; punto 1 del añadido de D-059 del 2026-10-31).** Con el
+  cierre perdido, `LevelSession` solo da `Stuck` si **todo vertido legal** (útil o fútil) lleva a un tablero ya visto en el intento
+  (`DeadEndProbe.IsStagnant`, que reutiliza el estado 0 del cierre y no asigna). Los vistos llevan el hash canónico del cierre
+  (`DeadEndProbe.CanonicalHash`) de todo tablero que fue `Current`; solo se consultan por clave (`SeenBoards`). `Restart` los olvida
+  (intento nuevo) [P]; la Pororoca, la Luciérnaga y `RestoreRevealed` los conservan.
+- **Marea saca de vistos lo que deshace (añadido de D-014 del 2026-11-17, «opción 1 y 3» del dueño).** Los vistos son un
+  `Dictionary<ulong, int>`, un contador por hash [P]: cada vez que un tablero queda en pantalla suma 1; `Undo()` resta 1 al tablero
+  que deja y, a 0, lo quita; el tablero al que vuelve ya estaba contado (solo entra con 1 si lo revelado lo cambió). Así, si el mismo
+  tablero salió dos veces en el historial (ida y vuelta), deshacer la segunda lo deja visto por la primera. Antes lo deshecho seguía
+  visto [P], y Marea desde Aguas estancadas podía volver al instante al modal (el dueño, en el teléfono). Consecuencia: Marea deja
+  los vistos como estaban antes de su vertido, cuando la partida estaba en `Playing`, así que con historial y sin dosis ocultas
+  siempre saca del atasco. `LevelSession.UndoEscapes` (la opción 3) lo dice antes de gastarla, sin cambiar nada: false sin
+  historial (tras una Pororoca, o con `ResumeStuck` en el tablero del intento) o si lo revelado (Aguas turbias) deja el tablero de
+  antes bloqueado; el modal no ofrece Marea entonces. Usa el mismo cierre con una vista del contador (`SeenBoards.AfterUndo`: el
+  tablero que se deja con 1 menos, el de antes visto) sobre un búfer propio, sin `BoardState` nuevo.
+- **Coste de la opción 1** (las asignaciones y la memoria): el diccionario nace con capacidad para 256 tableros
+  (`LevelSession.SeenCapacity` [P], unos 7 KB por partida, frente al `HashSet` que nacía vacío y crecía); `Remove` deja la entrada
+  en su lista libre, así que verter, deshacer y volver a verter no asignan, y solo crece (amortizado) en un intento con más de 256
+  tableros distintos, como antes. `Undo()` y `UndoEscapes` no asignan una vez calentados
+  (`HotLoopAllocationTests.WarmUndoAndUndoEscapes_DoNotAllocate`), salvo el `BoardState` con lo revelado cuando el vertido
+  deshecho reveló una dosis oculta (como antes). `UndoEscapes` cuesta un cierre (≤ 64 estados, < 1 ms) y solo lo pide el modal.
+  `SeenBoardCount` es diagnóstico y `ResumeStuck()` reabre el modal al reanudar si el cierre sigue perdido [P]. Regresión: el nivel
+  26 (`Level26Board`, 12 estados, sigue en `Playing` con 2 → 9, 1 → 2 y 6 → 7); propiedades con un oráculo independiente
+  (`StagnationOracle`, con su propio contador; `DotnetOnly/StagnationPropertyTests`, también con `UndoEscapes` en todas las
+  historias de hasta 7 vertidos del 66 y del 26) y `HotLoopAllocationTests.WarmStagnationCheck_DoesNotAllocate`. Desde el
+  añadido del 2026-11-17, probar cada vertido y deshacerlo ya no agota un tablero: el jugador que repite lo hace sin Marea
+  (`StagnationOracle.WalkUntilStuck`).
 - **Coste** (.NET 10 Release, equipo de escritorio x64, 2026-10-13; `DeadEndProbePerformanceTests`, comando de la tabla de arriba):
   0,015 ms en el tablero del 66 (cierre entero), 0,093 ms en el de 14 cuias (se llena) y, en 4.026 estados de partidas al azar sobre
   los 36 tableros de referencia, 0,043 ms de media y 0,322 ms en el peor (Tu, 64 estados): objetivo < 1 ms. Sin asignaciones tras
@@ -490,3 +517,58 @@ key ≠ key2). Estreno en el 403.
   solo dotnet `FutilePropertyTests` (P1-P3 en `run` y `single` con capacidades uniformes; las mixtas, bloqueadas, y su
   contraejemplo), `HotLoopAllocationTests.FlorBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas, en el vertido que la abre y en el
   bot; < 1 KB por `Solve`) y la fila Fl de `ReferenceBoards` y `MechanicsPerformanceTests`.
+
+## Mecánicas de la 1.1: Aguapé, Aguapé espeso y Lancha (D-068, fase F2)
+
+Fuente: D-068 (`docs/dev/decisiones.md`, con sus añadidos del 2026-11-07), 02 §9.1 M8 y M11, 03 §3 y §9, 08 §4.1
+(`pack_schema` 5). Lo que necesitan F3 (`tools/`) y F4 (cliente); la API es estable.
+
+**Formato y carga** (`BoardBuilder.Build`, que ya usan el cliente y las herramientas):
+
+- `MechanicType.Aguape` (código 12, clave `"aguape"`) y `MechanicType.Lancha` (13, `"lancha"`); `MechanicTypes.Last` = `Lancha`.
+- `MechanicSpec` gana `Group` (0-7, −1 si falta) con el parámetro opcional `group` al final del constructor:
+  `new MechanicSpec(MechanicType.Aguape, n: 2, group: g)` y `new MechanicSpec(MechanicType.Lancha, k: k)`. Los lectores de
+  JSON solo tienen que leer el campo `group` (como `key2`).
+- Aguapé: `group` obligatorio (0-7), `n` 1 o 2 (sin `n` es 1), el mismo `n` en todo el grupo; `group` solo en el Aguapé. Lancha:
+  solo `k`, de 2 a 7 (3 bits).
+- En la cuia: `Cuia.MechanicGroup` (el id de grupo, en los bits del id de pareja; tras canonicalizar está renumerado, así que
+  sirve para saber qué cuias van juntas, no como nombre), `MechanicN` (1 o 2) y `MechanicK` (la `k` de la Lancha).
+
+**Reglas** (todas en `BoardRules`; nadie más las reimplementa):
+
+- Aguapé: no es origen mientras lleva la mata; como destino, la regla normal y la `futil` normal (sin exención). Se suelta todo el
+  grupo en la etapa (d) de R10 en el vertido en que `n` cuias del grupo quedan selladas (las cuias selladas siguen con la
+  mecánica hasta la suelta). `ReleaseBySeals` decide todas las sueltas de una pasada antes de aplicarlas.
+- Lancha: no es origen ni destino hasta atracar; atraca en la etapa (f) en cuanto el tablero tiene `k` o más cuias vacías (toda
+  cuia sin dosis, de cualquier capacidad y mecánica, sin contar la lancha [P]) y queda normal (sin mecánica: es el bit «atracada»).
+- `PourRules.Settle(state, out events)`: (d) y (f) sin vertido. `LevelSession` lo aplica a su tablero inicial y al de la Pororoca
+  si llevan una lancha sin atracar: con la Cuia extra o de rescate (la sesión rehecha con una vacía más) la lancha atraca al
+  momento [P]. En un nivel válido no cambia nada.
+- Eventos: `PourEvents.AguapeReleasedMask` y `LanchaDockedMask` (también en `ReleasedMask`).
+- Consultas para la presentación y las herramientas (`CurveMechanics`): `AguapeSeals(state, group)` (1 = el espeso ya se
+  aclaró), `SealableByReceiving(state, i)` (máscara de frutas con que la cuia sellaría solo recibiendo; la regla 6 de M8) y
+  `LanchaEmpties(state, lancha)` (las vacías que cuentan para `k`), con las constantes de tamaños y cargas.
+
+**Validación** (`LevelValidation.Validate`): grupo contiguo (índices consecutivos), de 2-5 cuias (4-5 en el espeso), con una cuia
+(dos con frutas distintas en el espeso) que sella solo recibiendo; el Aguapé va con Aguas turbias y nunca con la Tinaja. Lancha:
+una por nivel, carga de 1-3 dosis y no llena, `k` ≥ vacíos iniciales + 1 y `k` ≤ T − 1, nunca con Aguas turbias ni con la
+Tinaja. Lo que depende del número de nivel (Lancha con Liana solo desde el 401, estrenos) es de level-qa.
+`LevelValidation.ValidateRows(state, rows)`: 1-3 filas de 1-7 que suman las cuias y ningún grupo partido entre filas (los
+topes de 02 §5 por número de filas son de level-qa).
+
+**Clave canónica:** `BoardCanon.Sort` renumera los grupos del Aguapé en orden canónico (los grupos se ordenan por la lista
+ordenada de los `Packed` de sus cuias sin el id). Sin Aguapé no cambia nada: el golden de todos los packs publicados
+(`DotnetOnly/CanonicalHashGoldenTests`, calculado en 1830df08) y el compartido de `AguapeTests` lo fijan. El solver traduce
+su solución a índices reales con los grupos renumerados (`AStarSolver.CanonicalOrder`).
+
+**Solver y bots:** la heurística no cambia (filtros; admisible y consistente en `CurveSolverTests`). Pororoca: las cuias con
+mecánica quedan fijas (`Shuffler.IsFixed`), así que la mata y la carga sin atracar no se mueven. Nuevo **bot atento ×40** [P]
+(`AF.Solver.Bot.AttentiveBot`, propuesta §6.4): el casual con lookahead de 2 vertidos (puntuación casual del vertido más la
+mejor del siguiente, +1.000 si gana) y sin los vertidos que dejan el tablero en Aguas estancadas (si todos bloquean, juega
+entre todos). Misma `BotOptions` y misma `BotResult`; semilla `AttentiveBot.SeedFor(seed)` (flujo `0xA7E07`). Solo para el
+informe de level-qa, nunca para la etiqueta. Sin asignaciones una vez calentado.
+
+**Pruebas:** `AguapeTests`, `LanchaTests` y `CurveSolverTests` (compartidas); en `DotnetOnly/`, P1-P3 con capacidades uniformes
+y mixtas (`FutilePropertyTests`, también sobre tableros de 7 cuias que pasan la validación), el cierre de D-014
+(`DeadEndProbePropertyTests.R13b_CurveBoards_…`), la clave canónica con permutaciones y renumeraciones, el bucle caliente sin
+asignaciones, Pororoca, Luciérnaga, Morpho y la carga de un nivel con `pack_schema` 5 (`CurveMechanicsTests`).

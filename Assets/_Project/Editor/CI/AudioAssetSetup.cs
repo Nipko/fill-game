@@ -16,9 +16,10 @@ using Debug = UnityEngine.Debug;
 namespace AF.EditorTools
 {
     /// <summary>
-    /// Audio definitivo de la entrega 1 en el proyecto (tarea AU3; encargo de sonidos §11; 08 §6): la forma versionada de fijar los
-    /// ajustes de importación de los 173 WAV de <c>Assets/_Project/Audio/</c> y de generar el registro de clips
-    /// (<see cref="AudioClipRegistry"/>, que la escena cuelga de <c>GameBootstrap</c>). Nunca se edita YAML a mano: los
+    /// Audio definitivo en el proyecto (tarea AU3; encargo de sonidos §11; 08 §6): la forma versionada de fijar los ajustes de
+    /// importación de los 176 WAV de <c>Assets/_Project/Audio/</c> (los 173 de la entrega 1 y los 3 de la 1.1, con los mismos
+    /// ajustes por clase que sus vecinos) y de generar el registro de clips (<see cref="AudioClipRegistry"/>, que la escena
+    /// cuelga de <c>GameBootstrap</c>). Nunca se edita YAML a mano: los
     /// <c>.meta</c> y el <c>.asset</c> los escribe Unity. Idempotente: si todo ya está como debe, no toca nada.
     ///
     /// Ajustes por clase (<see cref="AudioClipIds.ClassOf"/>), todos con «Load In Background», sin «Normalize» (con «Force To
@@ -93,7 +94,7 @@ namespace AF.EditorTools
             }
         }
 
-        /// <summary>Fija los ajustes de importación de los 173 WAV y genera (o pone al día) el registro de clips.</summary>
+        /// <summary>Fija los ajustes de importación de los 176 WAV y genera (o pone al día) el registro de clips.</summary>
         [MenuItem("Amazon Fill/Audio/Importar el audio definitivo y generar el registro")]
         public static void Apply()
         {

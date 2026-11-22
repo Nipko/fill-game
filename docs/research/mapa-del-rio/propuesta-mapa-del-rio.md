@@ -298,6 +298,8 @@ Cumple la idea original del dueño («desde donde nace… y el final será la de
 
 ### 3.3 Qué se dibuja
 
+> **Cambio de D-069 (Mapa v2, bloque M2-1, 2026-11-07; `docs/dev/propuesta-mapa-rio-v2.md` §3.1 y §9.4):** con `ui_map_v2` encendida, la tierra lleva zonas (dosel, sabana, roca y nieve, con el borde difuminado), várzea junto al río, orillas (playas y barrancos) y selva en capas, y los ríos de la vista Mundo miden 26, 14 y 6 dp (en la 1.0, 8, 5 y 3) con color por vértice y la franja del Encuentro que se funde, sobre el mismo trazo. Apagada, el Mapa de esta sección.
+
 1. **El cauce principal**, grueso, del Mismi al Atlántico por el canal norte. Lleva además el **ramal del Pará** hasta Belém, que está en el estuario del Pará y no en el cauce [E wp_para].
 2. **Los afluentes de los mundos,** con grosor por clase y color por tipo de agua: Tapajós, Negro, Casiquiare, Branco, Takutu, Napo, Marañón, Madeira, Madre de Dios, Beni, Mamoré e Iténez-Guaporé. El Ucayali es el propio cauce.
 3. **Los afluentes de paso,** que dan la silueta: Xingu, Trombetas, Purus, Juruá, Japurá y Putumayo-Içá. Y el **Tocantins**, que no es afluente del Amazonas en sentido estricto, porque desemboca en el estuario del Pará junto a Belém, y solo a veces se incluye en la cuenca [E wp_tocantins]. Es el canon del mundo 1 («Amazonas / Tocantins», glosario §8) y da la forma real de la zona de salida: va lleno desde el primer Mapa, como el estuario.
@@ -1078,6 +1080,8 @@ El final de 961-1.000 cambia de río y no cambia nada de 1-200:
 
 ## 7. Coleccionables y economía (sin tocar 05)
 
+> **Cambio de D-069 (Mapa v2, bloque M2-1):** con `ui_map_v2` encendida, las paradas futuras se ven como una boya de vidrio de 14 dp; la mini cuia queda en las alcanzadas (con su agua) y en la siguiente (con un brillo que late). Se tocan igual. El cierre de mundo conserva la baliza.
+
 | Pieza | Cómo se gana | Qué es | Dónde se ve | Economía |
 |---|---|---|---|---|
 | **Muestra del río** | Al llegar a la parada | Una **cuia de vidrio en miniatura** (silueta de D-006, nunca un tubo) con el agua del sitio y una **etiqueta de madera** con la silueta del sitio. **Las siluetas se hornean en el atlas del Mapa** (en el Editor o en `tools/river-map`), sin leer los héroes en tiempo de ejecución (sección 10.7). En los «paisajes del tramo», la silueta es la del kit con la inicial del sitio. Así las muestras de agua blanca de 81-200 se distinguen entre sí. En Santarém y el Encuentro lleva dos aguas en capas; en Allpahuayo-Mishana y Pacaya-Samiria, agua negra | Sobre el río, en su punto real (es el marcador de la parada), y en el Muestrario | Ninguna |
@@ -1398,6 +1402,8 @@ Cálculo con ASTC, bloque de 128 bits: 6×6 = 3,56 bpp y 8×8 = 2 bpp [V Wikiped
 
 ### 11.1 Arquitectura (sin escena nueva, sin prefabs y sin YAML a mano)
 
+> **Cambio de D-069 (Mapa v2, bloque M2-1):** las piezas nuevas del río vivo (`CanopyGraphic`, `MapLiveArt`, las partes `Varzea` y `Banks` de `RiverRibbonGraphic` y el parcial `RiverMapScreen.Live.cs`) están en la nota del añadido de D-069 en `docs/dev/decisiones.md`; los anchos de 8/5/3 dp de abajo son los de la 1.0 (con `ui_map_v2` apagada). Los 3 lienzos de §11.4 son 6 con el Mapa v2: la atmósfera (luz, nubes y niebla), la corriente y el primer plano, cada uno en su lienzo para que lo que se mueve no rehaga el resto.
+
 | Pieza | Ensamblado | Qué hace |
 |---|---|---|
 | `RiverJourney` | `AF.GameFlow` (sin motor) | Funciones puras sobre `ProgressData.MaxLevel`, `NextLevel`, `SkippedLevels` y el campo nuevo `MapSeenLevel` (`Save/Profile.cs`; sección 11.5) y `WorldTable`: lo pendiente de animar (de `MapSeenLevel` a `MaxLevel`), la parada `k = (nextLevel − 1) / 10`, la fracción de llenado, las bocas pasadas, las banderas, los km, los niveles que faltan y si la victoria del nivel `n` es llegada (`n % 10 == 0`) o cambio de mundo |
@@ -1570,7 +1576,7 @@ Todo el arte nuevo es del artista (CLAUDE.md, «Humanos»).
 | 4 | Follaje | `foliage_<juego>_tl/tr/bl/br` | ≤ 480 × 510 | 1 juego nuevo × 4 (el de Brasil es el del canon) | El açaí solo en el juego de Brasil; el nuevo, de Amazonia occidental, con aguaje |
 | 5 | Texturas de terreno | `map_tile_canopy/varzea/savanna/rock/snow` | 512², sin costuras | 5 | Brillantes, de juego; nada de papel |
 | 6 | Máscara de zonas del terreno | Dato de `tools/river-map` | PNG o SVG por zonas, sobre la guía de F2 | 1 | Natural Earth no trae dosel, várzea, sabana, roca ni nieve: las dibuja el artista y la herramienta las vectoriza (11.3) |
-| 7 | Canoa con Capi remando | `map_canoe` (rig de Capi) | Bucle de 12 fotogramas a 32-40 dp; cuias atadas con cuerda | 1 | Del bucle de `capi_rescue`; mástil con anclaje para la bandera; sin personas |
+| 7 | Canoa con Capi remando | `map_canoe` (rig de Capi) | Bucle de 12 fotogramas a 32-40 dp; cuias atadas con cuerda. Con el Mapa v2 (D-069, M2-3), 60 × 44 dp en la vista Mundo, rig por código con 6 gestos | 1 | Del bucle de `capi_rescue`; mástil con anclaje para la bandera; sin personas |
 | 8 | Rosa en el Mapa | Poses del canon reducidas, más `rosa_farewell`; con Q18-A, la paleta del bufeo boliviano | Rig de Rosa | +1 pose (+1 paleta) | La despedida del 961; el bufeo, sin nombre propio |
 | 9 | Mini cuia y su etiqueta | `map_minicuia` | 96 × 160, vidrio en capas | 1 | Silueta de D-006, **nunca un tubo**; el líquido lo pinta el código; las siluetas de los sitios se hornean en el atlas (10.7) |
 | 10 | Repisa del Muestrario | `map_rack` | 9 cortes | 1 | Madera tallada y repisa (guía §4.4 y §4.5) |

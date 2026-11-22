@@ -1,0 +1,37 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+a11y_map_city,{place} · ciudad de paso · {country},{place} · passing city · {country},{place} · cidade de passagem · {country},traducido,traducido
+a11y_map_city_place,{place} · ciudad de paso,{place} · passing city,{place} · cidade de passagem,traducido,traducido
+a11y_map_crew_join_toucan,Se une al viaje: tucán,Joins the trip: toucan,Entrou na viagem: tucano,traducido,traducido
+a11y_map_crew_join_tucuxi,Se une al viaje: tucuxi,Joins the trip: tucuxi,Entrou na viagem: tucuxi,traducido,traducido
+a11y_map_town,{place} · pueblo de paso · {country},{place} · passing town · {country},{place} · povoado de passagem · {country},traducido,traducido
+a11y_map_town_place,{place} · pueblo de paso,{place} · passing town,{place} · povoado de passagem,traducido,traducido
+avatar_animals_title,Animales,Animals,Animais,traducido,traducido
+avatar_frame_cell_a11y,"Marco de {world}, {country}. Toca para ponerlo","{world} frame, {country}. Tap to put it on","Moldura de {world}, {country}. Toque para colocar",traducido,traducido
+avatar_frame_chosen_a11y,"Marco de {world}, {country}, puesto","{world} frame, {country}, on","Moldura de {world}, {country}, colocada",traducido,traducido
+avatar_frame_new_a11y,"Marco de {world}, {country}, nuevo. Toca para ponerlo","{world} frame, {country}, new. Tap to put it on","Moldura de {world}, {country}, nova. Toque para colocar",traducido,traducido
+avatar_frame_none,Sin marco,No frame,Sem moldura,traducido,traducido
+avatar_frame_none_a11y,Sin marco. Toca para quitar el marco,No frame. Tap to take the frame off,Sem moldura. Toque para tirar a moldura,traducido,traducido
+avatar_frame_none_chosen_a11y,"Sin marco, elegido","No frame, selected","Sem moldura, escolhido",traducido,traducido
+avatar_frames_title,Marcos de país,Country frames,Molduras do país,traducido,traducido
+avatar_home_new_frame_a11y,Tu avatar: {animal}. Hay un marco nuevo. Toca para cambiarlo,Your avatar: {animal}. There's a new frame. Tap to change it,Seu avatar: {animal}. Há uma moldura nova. Toque para trocar,traducido,traducido
+avatar_with_frame_a11y,{animal} con el marco de {world},{animal} with the {world} frame,{animal} com a moldura de {world},traducido,traducido
+league_debut_body,Gana niveles y el Reto del río para sumar puntos cada semana. Compite con jugadores de tu país y de todo el mundo.,Win levels and the River Challenge to score points every week. Compete with players from your country and around the world.,Vença níveis e o Desafio do Rio para somar pontos toda semana. Dispute com jogadores do seu país e do mundo todo.,traducido,traducido
+league_debut_later,Luego,Later,Depois,traducido,traducido
+league_debut_open,Ver la Liga,See the League,Ver a Liga,traducido,traducido
+league_debut_title,¡Llegó la Liga del río!,The River League is here!,A Liga do Rio chegou!,traducido,traducido
+league_new,Nueva,New,Nova,traducido,traducido
+logbook_frame_reveal,Marco de {world}: ya lo lleva tu avatar,{world} frame: your avatar is wearing it,Moldura de {world}: seu avatar já está usando,traducido,traducido
+logbook_frame_view,Ver tu avatar,See your avatar,Ver seu avatar,traducido,traducido
+map_crew_join_toucan,¡Se une al viaje! · Tucán,Joins the trip! · Toucan,Entrou na viagem! · Tucano,traducido,traducido
+map_crew_join_tucuxi,¡Se une al viaje! · Tucuxi,Joins the trip! · Tucuxi,Entrou na viagem! · Tucuxi,traducido,traducido
+map_stop_label_prize,"{place}
+{n:plural:Premio del mundo · falta {}|Premio del mundo · faltan {}}","{place}
+{n:plural:World prize · {} left|World prize · {} left}","{place}
+{n:plural:Prêmio do mundo · falta {}|Prêmio do mundo · faltam {}}",traducido,traducido
+map_stop_label_remaining,"{place}
+{n:plural:falta {} nivel|faltan {} niveles}","{place}
+{n:plural:{} level left|{} levels left}","{place}
+{n:plural:falta {} nível|faltam {} níveis}",traducido,traducido
+tutorial_aguape,"El aguapé sujeta estas cuias: puedes verter en ellas, pero no sacar. Sella una y se suelta.","The water hyacinth holds these cuias: you can pour into them, but not out. Seal one and it lets go.","O aguapé prende estas cuias: você pode despejar nelas, mas não tirar. Sele uma e ele se solta.",traducido,traducido
+tutorial_aguape_n2,Este aguapé es espeso: sella dos cuias del grupo para soltarlo.,This water hyacinth is thick: seal two cuias in the group to free it.,Este aguapé é denso: sele duas cuias do grupo para soltá-lo.,traducido,traducido
+tutorial_lancha,La lancha atraca cuando tengas {n:plural:{} cuia vacía|{} cuias vacías}: trae fruta para terminar.,The riverboat docks when you have {n:plural:{} empty cuia|{} empty cuias}: it brings fruit to finish.,O recreio atraca quando você tiver {n:plural:{} cuia vazia|{} cuias vazias}: ele traz fruta para terminar.,traducido,traducido

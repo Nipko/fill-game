@@ -189,6 +189,27 @@ namespace AF.UI
         /// <summary>Silueta de un mundo futuro: <c>panel_alto</c> (#234452, el azul petróleo del panel, D-004; propuesta §3.5).</summary>
         public static readonly Color SilhouetteColor = Palette.Panel.Top;
 
+        /// <summary>
+        /// Observación 2 de la segunda ronda de la 1.1 (2026-11-09, el dueño: «los puntos son muy marcados, no deja ver bien el
+        /// tucán»): con el Mapa v2, cada boya se dibuja a esta fracción de su radio de colocación [P]. Por qué 0,75: en la Cuenca, el
+        /// disco de 2,5 dp baja a menos de 2, un punto que se sigue leyendo como hilera sin competir con la canoa de 40 dp; en el Mundo,
+        /// de 4 a 3 dp. El radio de colocación (el que esquivan rótulos y placas) no cambia.
+        /// </summary>
+        public const float BuoyLiveDrawScale = 0.75f;
+
+        /// <summary>
+        /// Con el Mapa v2, opacidad de las boyas [P] (observación 2 de la segunda ronda de la 1.1). Por qué 0,6: el mismo tinte que el
+        /// tramo en curso (<see cref="FrontLiveAlpha"/>), para que la hilera acompañe al agua en vez de marcarse sobre ella.
+        /// </summary>
+        public const float BuoyLiveAlpha = 0.6f;
+
+        /// <summary>
+        /// Con el Mapa v2, el claro alrededor de la canoa con su tripulación y del guía con el tucuxi (dp) [P] (observación 2 de la
+        /// segunda ronda de la 1.1): una boya cuyo disco cae en su caja crecida esto no se dibuja; la cuenta la da «Faltan N». Por qué
+        /// 2 dp: la fila corta de los tramos sin largo va ya a <see cref="BuoyCompactGapDp"/> (3 dp) bajo la canoa y se sigue viendo.
+        /// </summary>
+        public const float BuoyCrewClearDp = 2f;
+
         /// <summary>Boya encendida: <c>destello</c> (#FFF4D2) con el canto de madera del marco.</summary>
         public static readonly Color BuoyLitColor = Palette.Glint;
 
@@ -238,6 +259,7 @@ namespace AF.UI
         private float[] _fillFrom = Array.Empty<float>();
         private float[] _seenFrom = Array.Empty<float>();
         private RiverMap? _progressMap;
+        private RiverRoutes? _progressRoutes;
         private int _progressLevel = -1;
         private int _progressBuilds;
         private bool _silhouettesPlaced;
@@ -372,6 +394,12 @@ namespace AF.UI
 
         /// <summary>Boyas dibujadas entre las dos mallas (sin las saltadas, que llevan a Rosa).</summary>
         public int BuoysDrawn => (_buoys != null ? _buoys.DrawnCount : 0) + (_buoysAhead != null ? _buoysAhead.DrawnCount : 0);
+
+        /// <summary>
+        /// Boyas que no se dibujan por caer en el claro de la canoa con su tripulación o del guía (observación 2 de la segunda ronda
+        /// de la 1.1; solo con el Mapa v2): con <see cref="BuoysDrawn"/>, las del tramo sin las saltadas.
+        /// </summary>
+        public int BuoysCleared => (_buoys != null ? _buoys.HiddenCount : 0) + (_buoysAhead != null ? _buoysAhead.HiddenCount : 0);
 
         /// <summary>
         /// Las boyas del frente van en la fila corta bajo la parada (<see cref="BuoyCompactBelowDp"/>): el tramo, a la escala de la
@@ -695,13 +723,14 @@ namespace AF.UI
             }
 
             int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
-            if (ReferenceEquals(map, _progressMap) && max == _progressLevel)
+            if (ReferenceEquals(map, _progressMap) && ReferenceEquals(routes, _progressRoutes) && max == _progressLevel)
             {
                 RefreshBuoyStates();
                 return;
             }
 
             _progressMap = map;
+            _progressRoutes = routes; // D-069, M2-2: con o sin la excursión local (ui_map_towns), otras boyas
             _progressLevel = max;
             _progressBuilds++;
             bool ahead = FrontAheadNow(max);
@@ -715,6 +744,7 @@ namespace AF.UI
             }
 
             BuildFront(map, routes, max, ahead);
+            FillLiveEnds(lines);
             if (BuildSilhouettes(map, routes, max) && _silhouettesPlaced)
             {
                 ReplaceSilhouettes(); // «ponerse al día» cruzó una gran parada: las placas, cada una junto a la de su mundo (FX8)
@@ -934,6 +964,12 @@ namespace AF.UI
                 }
             }
 
+            if (_live && _progressMap != null)
+            {
+                FillLiveEnds(_progressMap.Lines); // el fundido cruzado del lleno con el tramo, a la escala de esta vista
+                FrontJointsForView(); // y el de las uniones de las piezas del tramo
+            }
+
             PlaceBuoys(space);
             LayoutOrientationLabels(); // antes que las placas: «Norte arriba» se coloca bajo «Andes ↑» si lo pisaría (FX7)
             BasinControlObstacles(); // los controles de la Cuenca, obstáculo de los países y de las placas (FX7)
@@ -1006,13 +1042,13 @@ namespace AF.UI
                             blocked = true;
                             if (underClearance < 0f)
                             {
-                                underClearance = Mathf.Max(underClearance, LineClearance(map, space, _view, box, 0f));
+                                underClearance = Mathf.Max(underClearance, LineClearance(map, space, _view, box, 0f, _live));
                             }
 
                             continue;
                         }
 
-                        float clearance = LineClearance(map, space, _view, box, CountryLineClearanceDp);
+                        float clearance = LineClearance(map, space, _view, box, CountryLineClearanceDp, _live);
                         if (clearance > bestClearance)
                         {
                             bestClearance = clearance;
@@ -1040,7 +1076,7 @@ namespace AF.UI
                         var c = new Vector2(xMax - (size.x * 0.5f), home.y);
                         var box = new Rect(xMax - size.x, c.y - (size.y * 0.5f), size.x, size.y);
                         hidden = box.xMin < LabelEdgeDp || OverlapsPlaced(box) || HitsBasinControl(box)
-                            || LineClearance(map, space, _view, box, CountryLineClearanceDp) < 0f;
+                            || LineClearance(map, space, _view, box, CountryLineClearanceDp, _live) < 0f;
                         if (!hidden)
                         {
                             best = c;
@@ -1179,7 +1215,7 @@ namespace AF.UI
                         // Como los países: el sitio libre más cercano que no tape el curso de los ríos (ni el frente, que va por
                         // ellos) ni el lleno. Si ninguno lo consigue, el respaldo es el que tapa menos líneas del lleno y, a
                         // igualdad, el de más hueco (salvo que en la Cuenca FarSpot encuentre uno fuera del lleno).
-                        float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
+                        float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp, _live);
                         int fillHits = FillLinesUnder(map, space, _view, box);
                         if (!any || fillHits < bestFillHits || (fillHits == bestFillHits && clearance > bestClearance))
                         {
@@ -1226,8 +1262,8 @@ namespace AF.UI
             }
 
             Vector2 at = space.ToLocal(_canoeMap);
-            const float w = ProceduralArt.MapCanoeWidthDp;
-            const float h = ProceduralArt.MapCanoeHeightDp;
+            float w = CanoeWidthDp;
+            float h = CanoeHeightDp;
             return new Rect(at.x - (0.5f * w), at.y - (CanoePivotY * h), w, h);
         }
 
@@ -1288,7 +1324,7 @@ namespace AF.UI
                         continue;
                     }
 
-                    float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
+                    float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp, _live);
                     if (!any || hits < bestFill || distance < bestDistance - 0.01f || clearance > bestClearance)
                     {
                         any = true;
@@ -1397,7 +1433,7 @@ namespace AF.UI
         /// de clase 1-2 del Mapa, con su ancho en la vista <paramref name="view"/>; negativo si la pisa. Deja de buscar por encima de
         /// <paramref name="enough"/> (devuelve como mucho ese valor). Sin asignaciones.
         /// </summary>
-        internal static float LineClearance(RiverMap map, MapSpace space, MapView view, Rect box, float enough)
+        internal static float LineClearance(RiverMap map, MapSpace space, MapView view, Rect box, float enough, bool live = false)
         {
             float clearance = enough;
             IReadOnlyList<RiverLine> lines = map.Lines;
@@ -1409,7 +1445,7 @@ namespace AF.UI
                     continue;
                 }
 
-                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp; // con la orla del lleno
+                float half = (RibbonWidthDp(view, line.Class, live) * 0.5f) + RiverRibbonGraphic.CasingDp; // con la orla del lleno (D-069: con el ancho del Mapa v2)
                 float reach = half + clearance;
                 Rect near = Rect.MinMaxRect(box.xMin - reach, box.yMin - reach, box.xMax + reach, box.yMax + reach);
                 Vector2 a = space.ToLocal(line.X(0), line.Y(0));
@@ -1451,7 +1487,7 @@ namespace AF.UI
                 }
 
                 RiverLine line = lines[l];
-                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
+                float half = (MapRibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
                 Rect near = Rect.MinMaxRect(box.xMin - half, box.yMin - half, box.xMax + half, box.yMax + half);
                 float[] cumulative = line.Cumulative;
                 float start = from * line.Length;
@@ -1617,6 +1653,7 @@ namespace AF.UI
                     }
 
                     float t = Mathf.Clamp01(left / length);
+                    bool last = left <= length || i == path.Count - 1;
                     left -= length;
                     int k = _frontCount++;
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
@@ -1630,6 +1667,7 @@ namespace AF.UI
                     SetFrontPiece(_frontCasing[k], line, _frontCasingBudget[i], piece.S0, end);
                     _front[k].SetAnchors(LineAnchors(line)); // FX12: la misma curva que el vidrio
                     _frontCasing[k].SetAnchors(LineAnchors(line));
+                    FrontLiveLook(k, i == 0, last);
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
@@ -1656,6 +1694,7 @@ namespace AF.UI
 
             _frontRoute = route;
             _frontStopMap = route != null ? PlacePoint(map, route.At) : Vector2.zero;
+            FrontJointsForView(); // con todas las piezas ya puestas: el fundido de cada unión mira a sus vecinas
             for (int i = 0; i < BuoysPerLeg; i++)
             {
                 _buoyLevel[i] = route != null ? ((stop - 1) * RiverStopCatalog.LevelsPerStop) + i + 1 : 0;
@@ -1745,7 +1784,7 @@ namespace AF.UI
 
                 int sections = floor + extra;
                 used += sections * FrontSectionVertices(line, piece);
-                _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core);
+                _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core, _live);
                 _frontCasingBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
             }
 
@@ -1768,9 +1807,9 @@ namespace AF.UI
         public const int FrontMinSections = 24;
 
         // Vértices de una sección de la pieza del frente: el agua y la orla.
-        private static int FrontSectionVertices(RiverLine line, RiverPathPiece piece)
+        private int FrontSectionVertices(RiverLine line, RiverPathPiece piece)
         {
-            return RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
+            return RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core, _live)
                 + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
         }
 
@@ -1786,6 +1825,124 @@ namespace AF.UI
             }
 
             return _front[i];
+        }
+
+        /// <summary>
+        /// Opacidad del agua del tramo en curso con el Mapa v2 [P] (añadido de D-069 del 2026-11-08, observación 9 de la prueba de la
+        /// 1.1: el tramo recorrido se veía como una franja oscura sobre el río): un tinte del agua sobre el vidrio, no una franja.
+        /// </summary>
+        public const float FrontLiveAlpha = 0.6f;
+
+        /// <summary>Largo de las puntas difuminadas del tramo en curso con el Mapa v2 (dp) [P]: sin el bloque de borde recto.</summary>
+        public const float FrontLiveFadeDp = 28f;
+
+        // Añadido de D-069 del 2026-11-08 (observación 9): con el Mapa v2, el lleno de cada línea se difumina en sus puntas abiertas,
+        // sin el bloque de borde recto sobre el vidrio: río arriba (s menor) y, en un afluente, en su boca (s = 1) sobre el río al
+        // que llega. Observación 3 de la segunda ronda de la 1.1 (el trozo de borde recto donde acaba el lleno y sigue el tramo en
+        // curso): en la línea del tramo en curso, el lleno se alarga FrontLiveFadeDp río arriba, por debajo del principio del tramo,
+        // y se funde ahí mientras el tramo entra con su propio fundido: un fundido cruzado, sin corte. Depende de la escala de la
+        // vista: lo llaman la reconstrucción del progreso y ProgressSpace. Con la 1.0, como siempre.
+        private void FillLiveEnds(IReadOnlyList<RiverLine> lines)
+        {
+            int frontLine = _frontCount > 0 && _frontRoute != null ? _frontRoute.Path[_frontPathIndex[0]].Line : -1;
+            float dpPerUnit = _space.DpPerUnit;
+            for (int i = 0; i < _fill.Count; i++)
+            {
+                bool used = i < lines.Count && _fillFrom[i] < 1f;
+                float from = used ? _fillFrom[i] : 1f;
+                bool cross = _live && !MouthBlendOffForCapture && used && i == frontLine && from > 0f && FrontLeavesUpstreamFrom(from);
+                bool up = _live && used && from > 0f && (i != frontLine || cross);
+                bool mouth = _live && used && lines[i].Kind != RiverLineKind.Main;
+                if (cross && dpPerUnit > 0f && lines[i].Length > 0f)
+                {
+                    from = Mathf.Max(0f, from - (FrontLiveFadeDp / (dpPerUnit * lines[i].Length)));
+                }
+
+                if (used)
+                {
+                    ShowRibbon(_fill[i], true, from, 1f);
+                    ShowRibbon(_fillCasing[i], true, from, 1f);
+                }
+
+                float fade = up || mouth ? FrontLiveFadeDp : 0f;
+                _fill[i].SetEndFade(fade, up, mouth);
+                _fillCasing[i].SetEndFade(fade, up, mouth);
+            }
+        }
+
+        // La primera pieza del tramo en curso sale de s = from río arriba (s decreciente): el lleno puede alargarse por debajo.
+        private bool FrontLeavesUpstreamFrom(float from)
+        {
+            if (_frontCount <= 0 || _frontRoute == null)
+            {
+                return false;
+            }
+
+            RiverPathPiece piece = _frontRoute.Path[_frontPathIndex[0]];
+            return piece.S1 < piece.S0 && Mathf.Abs(piece.S0 - from) < 1e-4f;
+        }
+
+        // Con el Mapa v2, la cinta k del frente (y su orla): el tinte del agua y las puntas del tramo difuminadas (la de la parada de
+        // partida en la primera pieza, la de la canoa en la última). Observación 3 de la
+        // segunda ronda de la 1.1 (el trozo de borde recto en las uniones del tramo, la boca del Coca): las puntas donde una pieza
+        // pasa a la siguiente (una confluencia) también se funden, en medio ancho de la cinta más ancha de las dos, dentro del agua
+        // del río que las une; una pieza con una punta abierta usa FrontLiveFadeDp en las dos. El largo depende de la vista: lo
+        // vuelve a fijar ProgressSpace (FrontJointsForView). Con la 1.0, como siempre.
+        private void FrontLiveLook(int k, bool first, bool last)
+        {
+            float alpha = _live ? FrontLiveAlpha : 1f;
+            float fade = _live ? (first || last ? FrontLiveFadeDp : FrontJointFadeDp(k)) : 0f;
+            bool atMin = _live; // cada punta es abierta (la parada de partida, la canoa) o una unión: con el v2, todas se funden
+            bool atMax = _live;
+            if (_live && MouthBlendOffForCapture && !(first && last))
+            {
+                // Las capturas de «antes»: las uniones, sin fundir (solo la punta abierta de la primera o de la última pieza).
+                RiverPathPiece piece = _frontRoute != null && k < _frontCount ? _frontRoute.Path[_frontPathIndex[k]] : default;
+                bool forward = piece.S0 <= piece.S1;
+                fade = FrontLiveFadeDp;
+                atMin = forward ? first : last;
+                atMax = forward ? last : first;
+            }
+            var tint = new Color(1f, 1f, 1f, alpha);
+            if (_front[k].color != tint)
+            {
+                _front[k].color = tint;
+                _frontCasing[k].color = tint;
+            }
+
+            _front[k].SetEndFade(fade, atMin, atMax);
+            _frontCasing[k].SetEndFade(fade, atMin, atMax);
+        }
+
+        // Medio ancho de la cinta más ancha entre la pieza k del frente y sus vecinas (dp, en esta vista).
+        private float FrontJointFadeDp(int k)
+        {
+            float w = 0f;
+            for (int j = Mathf.Max(0, k - 1); j <= k + 1 && j < _frontCount; j++)
+            {
+                RiverLine? line = _front[j].Line;
+                if (line != null)
+                {
+                    w = Mathf.Max(w, MapRibbonWidthDp(_view, line.Class));
+                }
+            }
+
+            return 0.5f * w;
+        }
+
+        // Al cambiar de vista: el largo de los fundidos de las uniones del frente, a la escala nueva (FrontLiveLook).
+        private void FrontJointsForView()
+        {
+            if (!_live || _frontRoute == null)
+            {
+                return;
+            }
+
+            for (int k = 0; k < _frontCount; k++)
+            {
+                int i = _frontPathIndex[k];
+                FrontLiveLook(k, i == 0, k == _frontCount - 1);
+            }
         }
 
         private static void SetFrontPiece(RiverRibbonGraphic ribbon, RiverLine line, int budget, float s0, float s1)
@@ -1845,7 +2002,10 @@ namespace AF.UI
             if (ribbon.Line != null)
             {
                 ribbon.SetSpace(space);
-                ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetWidth(MapRibbonWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetShapeWidth(MapShapeWidthDp(_view, ribbon.Line.Class)); // D-069: la forma del trazo
+                ribbon.SetAnchorWidth(MapAnchorWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetLive(_live);
                 ribbon.SetCurve(_view == MapView.World); // FX12: la misma curva que el vidrio
             }
         }
@@ -2083,7 +2243,131 @@ namespace AF.UI
                 _buoysAhead.SetBuoys(_buoyLocal, _buoyState, _buoyCount, radius);
             }
 
+            UpdateBuoyClear();
+
             PlaceSource(space, radius); // el hito y el rótulo de la naciente (revisión de FX13)
+        }
+
+        // Observación 2 de la segunda ronda de la 1.1: con el Mapa v2, las boyas, más discretas (BuoyLiveDrawScale y BuoyLiveAlpha) y
+        // sin dibujarse sobre la canoa con su tripulación ni sobre el guía con el tucuxi (un claro de BuoyCrewClearDp alrededor). Lo
+        // llaman la colocación de las boyas y la de la canoa (también en el viaje: solo rehace la malla si cambia qué boya se oculta).
+        // Con la 1.0 o con «Norte arriba», como siempre. Sin asignaciones.
+        private void UpdateBuoyClear()
+        {
+            if (_buoys == null)
+            {
+                return;
+            }
+
+            bool soft = _live;
+            Rect a = default;
+            Rect b = default;
+            if (soft && !_northUpOn && !_buoysCompact && _hasCanoe && _canoe.gameObject.activeSelf)
+            {
+                // La fila corta de un tramo sin largo ya va bajo la canoa, con su hueco (CompactBuoy): nada que despejar.
+                a = Grow(CanoeBoxLocal, BuoyCrewClearDp);
+                if (_guide != null && _guide.gameObject.activeInHierarchy)
+                {
+                    Rect g = LocalBox(_guide.rectTransform);
+                    if (_view == MapView.World && _tucuxi != null && _tucuxi.gameObject.activeInHierarchy)
+                    {
+                        // Su imagen se coloca después (RiverMapScreen.Crew.cs): la caja, como en CollectCrewLabelBoxes.
+                        g = Union(g, TucuxiBoxBeside(g, _canoeFacing));
+                    }
+
+                    b = Grow(g, BuoyCrewClearDp);
+                }
+            }
+
+            // Observación 3 de la prueba r2b de la 1.1 («Let·icia», «Fonte B·oa», «Niv·el 81»): tampoco sobre los rótulos de las paradas
+            // y de los pueblos ni sobre las placas de mundo, con el mismo claro.
+            CollectBuoyLabelClear(soft && !_northUpOn && !_buoysCompact);
+            _buoys.SetLook(soft, a, b, _buoyLabelClear, _buoyLabelClearCount);
+            _buoysAhead?.SetLook(soft, a, b, _buoyLabelClear, _buoyLabelClearCount);
+        }
+
+        /// <summary>Rótulos y placas que las boyas despejan como mucho (observación 3 de la prueba r2b de la 1.1).</summary>
+        public const int BuoyLabelClearMax = 48;
+
+        private readonly Rect[] _buoyLabelClear = new Rect[BuoyLabelClearMax];
+        private int _buoyLabelClearCount;
+        private bool _buoyClearDirty; // el claro de los rótulos se recalcula en el próximo Tick (RiverMapScreen.Tick)
+        private static readonly Vector3[] s_buoyCorners = new Vector3[4];
+
+        /// <summary>Cajas de rótulos que las boyas despejan ahora (tests).</summary>
+        internal int BuoyLabelClearCount => _buoyLabelClearCount;
+
+        /// <summary>La caja <paramref name="k"/> de <see cref="BuoyLabelClearCount"/>, con su claro, en coordenadas locales de las boyas (tests).</summary>
+        internal Rect BuoyLabelClear(int k)
+        {
+            return _buoyLabelClear[k];
+        }
+
+        // Las cajas (locales de las boyas, con el claro de BuoyCrewClearDp) de los rótulos de parada, los de los pueblos y las placas
+        // de mundo que se ven. Sin asignaciones.
+        private void CollectBuoyLabelClear(bool on)
+        {
+            _buoyLabelClearCount = 0;
+            if (!on || _buoys == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _markerCount && i < _stopLabels.Count; i++)
+            {
+                if (_markers[i].Root.gameObject.activeInHierarchy && _stopLabels[i].Pill.gameObject.activeInHierarchy)
+                {
+                    AddBuoyLabelClear(_stopLabels[i].Pill);
+                }
+            }
+
+            for (int i = 0; i < _townCount; i++)
+            {
+                TownMarker m = _townMarkers[i];
+                if (m.Root.gameObject.activeInHierarchy && m.Pill.gameObject.activeInHierarchy)
+                {
+                    AddBuoyLabelClear(m.Pill);
+                }
+            }
+
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                Silhouette sil = _silhouettes[k];
+                if (sil.Root.gameObject.activeInHierarchy && sil.Plate.enabled)
+                {
+                    AddBuoyLabelClear(sil.Root);
+                }
+            }
+        }
+
+        private void AddBuoyLabelClear(RectTransform rt)
+        {
+            if (_buoyLabelClearCount >= _buoyLabelClear.Length)
+            {
+                return;
+            }
+
+            RectTransform frame = _buoys!.rectTransform;
+            rt.GetWorldCorners(s_buoyCorners);
+            Vector2 a = frame.InverseTransformPoint(s_buoyCorners[0]);
+            Vector2 b = frame.InverseTransformPoint(s_buoyCorners[2]);
+            Rect r = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+            if (r.width > 0f && r.height > 0f)
+            {
+                _buoyLabelClear[_buoyLabelClearCount++] = Grow(r, BuoyCrewClearDp);
+            }
+        }
+
+        // La caja de rt en las coordenadas locales de su padre (dp, y hacia arriba), por su tamaño, su pivote y su volteo (Rosa y el
+        // bufeo se voltean con la escala x según el sentido de la canoa).
+        private static Rect LocalBox(RectTransform rt)
+        {
+            Vector2 size = rt.sizeDelta;
+            Vector2 at = rt.anchoredPosition;
+            Vector3 k = rt.localScale;
+            float px = k.x < 0f ? 1f - rt.pivot.x : rt.pivot.x;
+            float py = k.y < 0f ? 1f - rt.pivot.y : rt.pivot.y;
+            return new Rect(at.x - (px * size.x), at.y - (py * size.y), size.x, size.y);
         }
 
         // Boya i de la fila corta de un tramo sin largo a la escala de la vista: una fila horizontal de 10, centrada bajo la parada
@@ -2096,7 +2380,7 @@ namespace AF.UI
             float half = step * (BuoysPerLeg - 1) * 0.5f;
             float contentW = _map != null ? space.DpPerUnit * _map.Width : float.MaxValue;
             float x0 = Mathf.Clamp(stop.x - half, radius + LabelEdgeDp, Mathf.Max(radius + LabelEdgeDp, contentW - radius - LabelEdgeDp - (2f * half)));
-            float below = ProceduralArt.MapCanoeHeightDp * CanoePivotY;
+            float below = CanoeHeightDp * CanoePivotY;
             return new Vector2(x0 + (i * step), stop.y - below - BuoyCompactGapDp - radius - _compactDropDp);
         }
 
@@ -2120,6 +2404,13 @@ namespace AF.UI
 
         // ============================================================================================ siluetas y rótulos
 
+        /// <summary>
+        /// Placas «Mundo N · … · Nivel N» de los mundos futuros que salen con el Mapa v2 [P] (observación 5 de la prueba r2b de la 1.1:
+        /// seis seguidas en la Cuenca y tres o cuatro en la vista Mundo tapaban Perú y Bolivia): solo la del mundo siguiente. Con la
+        /// 1.0 (<c>ui_map_v2</c> apagada), una por mundo futuro, como en M3.4.
+        /// </summary>
+        public const int LiveFutureWorldPlates = 1;
+
         // Una silueta por mundo futuro del catálogo con ruta hasta su gran parada (la que aún no se alcanzó: max < 10 · n), en esa
         // parada, con «Mundo {n} · {nombre} · Nivel {primer nivel}» (map_next_world). Su texto se asigna aquí: al abrir y, al
         // ponerse al día, cuando se alcanza una gran parada. True si cambió qué mundo lleva alguna caja o cuáles se ven: entonces
@@ -2136,6 +2427,11 @@ namespace AF.UI
                 if (gate == null || route == null || max >= gate.N * RiverStopCatalog.LevelsPerStop)
                 {
                     continue;
+                }
+
+                if (_live && used >= LiveFutureWorldPlates)
+                {
+                    break; // observación 5 de la prueba r2b de la 1.1: con el Mapa v2, solo la del mundo siguiente
                 }
 
                 Silhouette s = SilhouetteAt(used++);
@@ -2254,12 +2550,12 @@ namespace AF.UI
 
             float andesRoom = _viewW - (2f * OrientationInsetDp);
             Vector2 andes = FitOrientationLabel(_andesLabel, andesRoom);
-            UiBuilder.Place(_andesLabel.rectTransform, FramePadDp + ((_viewW - andes.x) * 0.5f), FramePadDp + OrientationInsetDp, andes.x, andes.y);
+            UiBuilder.Place(_andesLabel.rectTransform, ViewPadDp + ((_viewW - andes.x) * 0.5f), ViewPadDp + OrientationInsetDp, andes.x, andes.y);
 
             float buttonW = ((RectTransform)_backToCanoe.Button.transform).sizeDelta.x;
             float atlanticRoom = Mathf.Max(MinTouchDp, _viewW - (3f * OrientationInsetDp) - buttonW);
             Vector2 atlantic = FitOrientationLabel(_atlanticLabel, atlanticRoom);
-            UiBuilder.Place(_atlanticLabel.rectTransform, FramePadDp + OrientationInsetDp, FramePadDp + _viewH - OrientationInsetDp - atlantic.y, atlantic.x, atlantic.y);
+            UiBuilder.Place(_atlanticLabel.rectTransform, ViewPadDp + OrientationInsetDp, ViewPadDp + _viewH - OrientationInsetDp - atlantic.y, atlantic.x, atlantic.y);
         }
 
         // Caja de un rótulo de orientación en «room» dp: la de su texto a OrientationLabelSp o, si no cabe, «room» con el texto
@@ -2439,9 +2735,106 @@ namespace AF.UI
             private readonly BuoyState[] _states = new BuoyState[BuoysPerLeg];
             private int _count;
             private float _radius;
+            private bool _soft;
+            private Rect _clearA;
+            private Rect _clearB;
+            private readonly Rect[] _clearLabels = new Rect[BuoyLabelClearMax];
+            private int _clearLabelCount;
+            private int _hiddenMask;
 
-            /// <summary>Boyas dibujadas por esta malla (sin las saltadas).</summary>
+            /// <summary>Boyas dibujadas por esta malla (sin las saltadas ni las del claro de la canoa).</summary>
             public int DrawnCount { get; private set; }
+
+            /// <summary>
+            /// Boyas de esta malla que no se dibujan por caer en el claro de la canoa con su tripulación o del guía (observación 2
+            /// de la segunda ronda de la 1.1; solo con el Mapa v2).
+            /// </summary>
+            public int HiddenCount { get; private set; }
+
+            /// <summary>Radio con que se dibuja cada disco (dp): el de colocación o, con el Mapa v2, por <see cref="BuoyLiveDrawScale"/>.</summary>
+            public float DrawnRadius => _soft ? _radius * BuoyLiveDrawScale : _radius;
+
+            /// <summary>La boya <paramref name="i"/> cae en el claro de la canoa o del guía (tests).</summary>
+            public bool IsHidden(int i)
+            {
+                return (_hiddenMask & (1 << i)) != 0;
+            }
+
+            /// <summary>
+            /// El acabado del Mapa v2 (<paramref name="soft"/>: más pequeñas y translúcidas) y los claros <paramref name="a"/> y
+            /// <paramref name="b"/> (cajas locales; vacías, ninguno). Solo rehace la malla si cambia algo visible. Sin asignaciones.
+            /// </summary>
+            public void SetLook(bool soft, Rect a, Rect b)
+            {
+                SetLook(soft, a, b, Array.Empty<Rect>(), 0);
+            }
+
+            /// <summary>
+            /// Como <see cref="SetLook(bool, Rect, Rect)"/>, con los rótulos y las placas que tampoco pisan (<paramref name="labels"/>,
+            /// las <paramref name="labelCount"/> primeras; observación 3 de la prueba r2b de la 1.1). Sin asignaciones.
+            /// </summary>
+            public void SetLook(bool soft, Rect a, Rect b, Rect[] labels, int labelCount)
+            {
+                _clearA = a;
+                _clearB = b;
+                _clearLabelCount = Mathf.Min(labelCount, _clearLabels.Length);
+                for (int k = 0; k < _clearLabelCount; k++)
+                {
+                    _clearLabels[k] = labels[k];
+                }
+                int mask = HiddenMask(soft);
+                if (soft == _soft && mask == _hiddenMask)
+                {
+                    return;
+                }
+
+                _soft = soft;
+                _hiddenMask = mask;
+                SetVerticesDirty();
+            }
+
+            private int HiddenMask(bool soft)
+            {
+                if (!soft)
+                {
+                    return 0;
+                }
+
+                float r = _radius * BuoyLiveDrawScale;
+                int mask = 0;
+                for (int i = 0; i < _count; i++)
+                {
+                    Vector2 p = _points[i];
+                    if (DiscHits(_clearA, p, r) || DiscHits(_clearB, p, r))
+                    {
+                        mask |= 1 << i;
+                        continue;
+                    }
+
+                    for (int k = 0; k < _clearLabelCount; k++)
+                    {
+                        if (DiscHits(_clearLabels[k], p, r))
+                        {
+                            mask |= 1 << i;
+                            break;
+                        }
+                    }
+                }
+
+                return mask;
+            }
+
+            private static bool DiscHits(Rect box, Vector2 p, float r)
+            {
+                if (box.width <= 0f || box.height <= 0f)
+                {
+                    return false;
+                }
+
+                float dx = Mathf.Max(Mathf.Max(box.xMin - p.x, p.x - box.xMax), 0f);
+                float dy = Mathf.Max(Mathf.Max(box.yMin - p.y, p.y - box.yMax), 0f);
+                return (dx * dx) + (dy * dy) < r * r;
+            }
 
             /// <summary>
             /// Esta malla dibuja las boyas por ganar (va encima de la canoa); si no, las encendidas (detrás de ella). Se fija al
@@ -2474,6 +2867,7 @@ namespace AF.UI
                     _states[i] = states[i];
                 }
 
+                _hiddenMask = HiddenMask(_soft);
                 SetVerticesDirty();
             }
 
@@ -2482,10 +2876,14 @@ namespace AF.UI
             {
                 vh.Clear();
                 DrawnCount = 0;
+                HiddenCount = 0;
                 if (_radius <= 0f)
                 {
                     return;
                 }
+
+                float r = DrawnRadius;
+                float alpha = _soft ? BuoyLiveAlpha : 1f;
 
                 for (int i = 0; i < _count; i++)
                 {
@@ -2495,11 +2893,23 @@ namespace AF.UI
                         continue;
                     }
 
+                    if (IsHidden(i))
+                    {
+                        HiddenCount++;
+                        continue;
+                    }
+
                     bool lit = state == BuoyState.Lit;
-                    Disc(vh, _points[i], _radius, lit ? Palette.Frame : Palette.Panel.Top);
-                    Disc(vh, _points[i], _radius * 0.66f, lit ? BuoyLitColor : BuoyUnlitColor);
+                    Disc(vh, _points[i], r, Faded(lit ? Palette.Frame : Palette.Panel.Top, alpha));
+                    Disc(vh, _points[i], r * 0.66f, Faded(lit ? BuoyLitColor : BuoyUnlitColor, alpha));
                     DrawnCount++;
                 }
+            }
+
+            private static Color Faded(Color c, float alpha)
+            {
+                c.a *= alpha;
+                return c;
             }
 
             private void Disc(VertexHelper vh, Vector2 c, float r, Color tint)

@@ -10,8 +10,9 @@ namespace AF.Core.Session
     public enum LevelStatus
     {
         /// <summary>
-        /// No es victoria, hay al menos un vertido útil y, en <see cref="LevelSession"/>, el cierre acotado de R13 ampliada no da
-        /// el tablero por perdido (D-014).
+        /// No es victoria, hay al menos un vertido útil y, en <see cref="LevelSession"/>, R13 ampliada no se cumple: el cierre
+        /// acotado no da el tablero por perdido, o lo da pero aún queda un vertido legal a un tablero no visto en el intento
+        /// (D-014 y su añadido del 2026-11-06).
         /// </summary>
         Playing = 0,
 
@@ -20,10 +21,11 @@ namespace AF.Core.Session
 
         /// <summary>
         /// Aguas estancadas: sin vertidos útiles y sin victoria (R13); o, en <see cref="LevelSession"/>, con vertidos útiles pero
-        /// sin salida: los estados alcanzables con todos los vertidos legales son como mucho <see cref="DeadEndProbe.MaxStates"/>
-        /// (64 [P]) y ninguno es victoria (R13 ampliada, D-014; el bucle del nivel 66; opción (a) de la pregunta 46 de
-        /// <c>docs/GDD.md</c> §6.3, decidida el 2026-10-13; D-020). <c>BoardRules.EvaluateStatus</c> y <c>PourRules.IsStuck</c>
-        /// solo miran R13.
+        /// sin salida y repitiendo: los estados alcanzables con todos los vertidos legales son como mucho
+        /// <see cref="DeadEndProbe.MaxStates"/> (64 [P]) y ninguno es victoria (R13 ampliada, D-014; el bucle del nivel 66;
+        /// opción (a) de la pregunta 46 de <c>docs/GDD.md</c> §6.3, decidida el 2026-10-13; D-020), y todo vertido legal lleva a
+        /// un tablero ya visto en el intento (añadido de D-014 del 2026-11-06; el nivel 26 del añadido de D-059 del
+        /// 2026-10-31). <c>BoardRules.EvaluateStatus</c> y <c>PourRules.IsStuck</c> solo miran R13.
         /// </summary>
         Stuck = 2,
     }

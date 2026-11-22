@@ -150,6 +150,8 @@ namespace AF.Presentation
                     return BuildHeroPixels(name, DrawMudGlyph);
                 case LianaCountIconKey:
                     return BuildHeroPixels(name, DrawLianaCountGlyph);
+                case AguapeThickIconKey:
+                    return BuildHeroPixels(name, (pc, sz) => DrawAguapeGlyph(pc, sz, true)); // el Aguapé espeso (ProceduralArt.Aguape.cs; D-068)
                 case BroteTwoLeavesIconKey:
                     return BuildHeroPixels(name, DrawBroteTwoLeavesGlyph); // ProceduralArt.BroteDosHojas.cs (VA1b)
                 case StreakHeroIconKey:
@@ -305,7 +307,7 @@ namespace AF.Presentation
         // water: el centro es agua oscura (CardWater) en lugar de madera pulida, con un brillo más tenue.
         private Sprite BuildCardMedallion(bool water)
         {
-            const float k = UiPxPerDp;
+            float k = UiPxPerDp;
             int s = Mathf.RoundToInt(CardMedallionDp * k);
             var pc = new PixelCanvas(s, s);
             float c = s * 0.5f;

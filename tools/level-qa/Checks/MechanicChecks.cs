@@ -88,7 +88,9 @@ internal static class MechanicChecks
     {
         int remolino = b.Attrs.Count(a => a.Type == MechanicType.Remolino);
         int tinaja = Math.Max(b.Attrs.Count(a => a.Type == MechanicType.Tinaja), b.Attrs.Count(a => a.Type == MechanicType.Cucharon));
-        int attrs = b.Attrs.Count(a => !a.IsNone && a.Type != MechanicType.Remolino && !IsTinajaPair(a.Type));
+        int attrs = b.Attrs.Count(a => !a.IsNone && a.Type is not (MechanicType.Remolino or MechanicType.Aguape) && !IsTinajaPair(a.Type));
+        // Un grupo de Aguapé (D-068) es un ejemplar, con todas sus cuias (02 §9.1 M8).
+        attrs += b.Attrs.Where(a => a.Type == MechanicType.Aguape).Select(a => a.Group).Distinct().Count();
         int mud = b.Cuias.Sum(c => c.Count(x => x == Cuia.MudColor));
         int murky = MurkyHidden(b).Select(h => h.Length > 0 ? h[0] : -1).Distinct().Count();
         return attrs + (remolino / 2) + tinaja + mud + murky;

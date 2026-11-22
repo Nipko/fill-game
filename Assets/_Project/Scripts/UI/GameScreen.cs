@@ -204,6 +204,7 @@ namespace AF.UI
         private readonly Canvas _canvas;
         private readonly CanvasScaler _scaler;
         private readonly RectTransform _root;
+        private readonly ScreenColumn _column;
 
         private readonly Image _baseFill;
         private readonly Image _skyFill;
@@ -398,12 +399,14 @@ namespace AF.UI
             _scaler = canvasGo.GetComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             _scaler.referencePixelsPerUnit = 100f;
-            _root = (RectTransform)canvasGo.transform;
+            // La interfaz va en la columna (añadido de D-059 del 2026-11-06; ScreenFrame): en los teléfonos, el lienzo entero.
+            _column = ScreenColumn.Create((RectTransform)canvasGo.transform);
+            _root = _column.Rect;
 
             // ---- Escena (capas 0-3): panorama, ambiente lejano, muelle, follaje y velo de escena. ----
             RectTransform scene = UiBuilder.Rect("Scene", _root);
             _baseFill = UiBuilder.Image("BaseFill", scene, null, Palette.RiverFar);
-            UiBuilder.Stretch(_baseFill.rectTransform);
+            ScreenColumn.Bleed(_baseFill.rectTransform); // el agua del río llena los lados de la columna
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop); // cielo sobre el panorama si el horizonte baja
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
 
@@ -431,7 +434,7 @@ namespace AF.UI
                 _foliage[i].gameObject.AddComponent<Canvas>();
             }
             _sceneVeil = UiBuilder.Image("SceneVeil", scene, null, new Color(0x6B / 255f, 0x6B / 255f, 0x6B / 255f, 0f));
-            UiBuilder.Stretch(_sceneVeil.rectTransform);
+            ScreenColumn.Bleed(_sceneVeil.rectTransform);
 
             // Victoria (revisión visual del 2026-10-07): la escena se atenúa al 30 % salvo bajo los rayos (velo con un hueco
             // centrado en la cinta) y, detrás del tablero, un brillo radial cálido y 12 rayos aditivos de destello que
@@ -555,7 +558,7 @@ namespace AF.UI
             // ---- Aguas estancadas (02 §7; 07 §7.5; guía 5.3): tablero atenuado detrás; panel de madera clara abajo. ----
             _stuckOverlay = UiBuilder.Rect("StuckOverlay", _root);
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
-            UiBuilder.Stretch(_stuckDim.rectTransform);
+            ScreenColumn.Bleed(_stuckDim.rectTransform);
             _stuck = new StuckModal(_stuckOverlay, art, actions);
             _stuck.RescueMissing = () => OnMissingTap("rescue", reduce => _stuck.PulseRescueMissing(reduce), _stuck.View?.RescueMissing ?? 0);
             _stuck.RefillSeedsMissing = () => OnMissingTap("refill_seeds", reduce => _stuck.PulseRefillSeedsMissing(reduce), _stuck.View?.UndoRefillMissing ?? 0);
@@ -566,7 +569,7 @@ namespace AF.UI
             // tiempo, salvo tras la Cosecha doble, que avanza sola por el camino de Siguiente (D-011, punto 4; TickAutoNext). ----
             _victoryOverlay = UiBuilder.Rect("VictoryOverlay", _root);
             _victoryDim = UiBuilder.Image("Dim", _victoryOverlay, null, new Color(0f, 0f, 0f, 0f), true);
-            UiBuilder.Stretch(_victoryDim.rectTransform);
+            ScreenColumn.Bleed(_victoryDim.rectTransform);
 
             _victoryPanel = UiBuilder.Rect("Panel", _victoryOverlay);
             _victorySurface = UiBuilder.ModalBody(_victoryPanel, art);
@@ -684,6 +687,12 @@ namespace AF.UI
         /// visuales de prueba en el Editor; null = <see cref="Screen"/> real. No se usa en el juego.
         /// </summary>
         public static Vector4? SimulatedScreen { get; set; }
+
+        /// <summary>
+        /// Solo tests: lo que tapa el sistema a la izquierda y a la derecha de <see cref="SimulatedScreen"/> (px; recorte o barra de
+        /// navegación en apaisado; añadido de D-059 del 2026-11-06); null = nada.
+        /// </summary>
+        internal static Vector2? SimulatedSideInsets { get; set; }
 
         /// <summary>La cola visual está vacía (02 §3.2).</summary>
         public bool IsViewIdle => _animator.IsIdle;
@@ -1806,6 +1815,7 @@ namespace AF.UI
 
             _views = views;
             _generatedCount = Mathf.Max(1, flow.GeneratedCuias); // cuias generadas: fijan las filas (D-006); las añadidas van a la más corta
+            _boardRows = flow.BoardRows; // rows del tablero del intento (pack_schema 5; D-068), o null
             _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
             OrderBoardLayers();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
@@ -1819,6 +1829,11 @@ namespace AF.UI
             _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
             _animator.SpeedFactor = f;
             _animator.ReduceMotion = flow.ReduceMotion;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                _views[i].OverlayHost.ReduceMotion = flow.ReduceMotion; // lo que un overlay anima en reposo (la Lancha; D-068)
+            }
+
             _animator.ReduceMotionFactor = (float)ReduceMotionFactor; // B9: el de los pasos de mecánica, el mismo que el de los vertidos
             _fx.ReduceMotion = flow.ReduceMotion;
             ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3); Alto contraste, 35 % (B9)
@@ -2368,13 +2383,20 @@ namespace AF.UI
                 input.Pair = species.HasTrait("colas_entrelazadas"); // la pareja se sienta junta con las colas trenzadas
             }
 
-            _troop.Prepare(species);
+            // F13 (añadido de D-029 del 2026-11-08): el segundo gesto de la especie, desde la mitad de su primer mundo largo y en
+            // niveles alternos; en desarrollo, af_troop_gesture lo fuerza.
+            int forcedGesture = LaunchOptions.ResolveTroopGesture(Debug.isDebugBuild);
+            _troop.Prepare(species, FaunaGestureRule.UsesSecond(species, flow.LevelNumber, forcedGesture));
             _intro.ReduceMotion = flow.ReduceMotion;
 
             // El agua del mundo del nivel (07 §2.1; mundo 3, agua negra), no la del primer paquete del catálogo.
             Color water = Palette.WaterBase(flow.Level.WaterBase);
             IntroWaterColor = water;
             _intro.Start(_views, flow.Session.Current, water, durationMs);
+            if (species != null)
+            {
+                _probe.TroopGesture(flow.LevelNumber, species, _troop, _intro.Plan, flow.ReduceMotion, forcedGesture);
+            }
         }
 
         // D-021: ¿va este intento con la tropa lateral? Solo en primer intento, con el tablero en 3 filas sin la franja de la
@@ -2722,13 +2744,16 @@ namespace AF.UI
         {
             ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            float scale = CurrentCanvasScale(_screenW, _screenH); // de 320 a 360 dp de ancho con 1 dp físico por dp (Q-B11-5 (a))
+            // De 320 a 360 dp de ancho con 1 dp físico por dp (Q-B11-5 (a)); en una ventana ancha, la columna (ScreenFrame).
+            ScreenFrame frame = ScreenFrame.Compute(_screenW, _screenH, _safeArea, ReadPxPerDp());
+            float scale = frame.Scale;
             _scaler.scaleFactor = scale;
             _art.ScreenScale = scale;
-            _canvasW = _screenW / scale;
-            _canvasH = _screenH / scale;
-            float insetTop = (_screenH - _safeArea.yMax) / scale;
-            float insetBottom = _safeArea.yMin / scale;
+            _column.Apply(frame);
+            _canvasW = frame.ColumnWidth;
+            _canvasH = frame.CanvasHeight;
+            float insetTop = frame.InsetTop;
+            float insetBottom = frame.InsetBottom;
             _safeTop = Mathf.Max(MinSafeTop, insetTop);
             _safeBottom = Mathf.Max(MinSafeBottom, insetBottom);
 
@@ -3316,7 +3341,8 @@ namespace AF.UI
             // [P]), ninguna cuia cambia de fila (T-C) y solo se recalcula el ancho con el T en pantalla (re-layout de 300 ms,
             // 02 §4.1; tope de D-004).
             int generated = _generatedCount > 0 ? Mathf.Min(_generatedCount, _views.Length) : _views.Length;
-            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, LayoutTinajaIndex);
+            // rows del nivel (pack_schema 5; 02 §5; D-068): las filas fijas del tablero del intento, si las trae.
+            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, LayoutTinajaIndex, _boardRows);
             BoardLayoutResult l = _layout;
             for (int i = 0; i < _views.Length; i++)
             {
@@ -3725,7 +3751,8 @@ namespace AF.UI
                 Vector4 sim = SimulatedScreen.Value;
                 width = Mathf.Max(1, (int)sim.x);
                 height = Mathf.Max(1, (int)sim.y);
-                safeArea = new Rect(0f, sim.w, width, height - sim.z - sim.w);
+                Vector2 sides = SimulatedSideInsets ?? Vector2.zero;
+                safeArea = new Rect(sides.x, sim.w, width - sides.x - sides.y, height - sim.z - sim.w);
                 return;
             }
 
@@ -3739,7 +3766,7 @@ namespace AF.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(HitArea));
             go.transform.SetParent(parent, false);
             var rt = (RectTransform)go.transform;
-            UiBuilder.Stretch(rt);
+            ScreenColumn.Bleed(rt); // también en los lados de la columna
             go.GetComponent<HitArea>().raycastTarget = true;
             return rt;
         }

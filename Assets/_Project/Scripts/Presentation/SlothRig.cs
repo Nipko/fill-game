@@ -409,7 +409,7 @@ namespace AF.Presentation
             _backArm.color = back;
             float limbPx = art.Limb.rect.width;
             float pxPerDp = limbPx / Mathf.Max(1f, art.LimbWidthS * _s);
-            float mult = pxPerDp / ProceduralArt.UiPxPerDp;
+            float mult = pxPerDp / ProceduralArt.MaxUiPxPerDp;
             _backLeg.pixelsPerUnitMultiplier = mult;
             _backArm.pixelsPerUnitMultiplier = mult;
             _frontLeg.pixelsPerUnitMultiplier = mult;

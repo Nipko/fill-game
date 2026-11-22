@@ -66,6 +66,12 @@ namespace AF.UI
         public const int MaxCanoeFlags = 8;
 
         /// <summary>
+        /// Banderas del mástil con el Mapa v2 [P] (observación 6 de la prueba r2b de la 1.1: en Bolivia, la pila de cinco junto a la canoa
+        /// cargaba el Mapa): las más recientes, la del país de ahora arriba. Con la 1.0, todas (<see cref="MaxCanoeFlags"/>).
+        /// </summary>
+        public const int LiveMaxCanoeFlags = 3;
+
+        /// <summary>
         /// Escala de las banderas en el mástil de la canoa del Mapa [P]: 1, las 16 × 11 dp del banner (revisión de M3.5: a 0,75 el
         /// escudo de Ecuador no se distinguía en el teléfono).
         /// </summary>
@@ -1020,6 +1026,7 @@ namespace AF.UI
             else
             {
                 SetCompactRowDrop(space, 0f);
+                CollectObstacles(space); // D-069, M2-3 y pregunta 5: la caja del equipo de la canoa también en la Cuenca (PlateBlocked), con o sin el Mapa v2
             }
 
             PlaceHouse(space);
@@ -1132,7 +1139,7 @@ namespace AF.UI
             // afina con FrameStepDp alrededor de la mejor. Solo al cambiar de vista o de encuadre; sin asignaciones.
             _frameWindow = _homeWindow != null && _homeWindow.Ready;
             _frameWin = _frameWindow ? HomeWindowInView() : default;
-            _frameAndes = FixedViewRect(AndesLabel);
+            _frameAndes = WithRemainingChip(FixedViewRect(AndesLabel)); // D-069, M2-3: con «Faltan N» en el Mapa v2
             _frameAtlantic = FixedViewRect(AtlanticLabel);
             _frameButton = FixedViewRect((RectTransform)_backToCanoe.Button.transform);
             Vector2 start = new Vector2(ClampAxis(offset.x, _contentW, _viewW), ClampAxis(offset.y, _contentH, _viewH));
@@ -1441,11 +1448,11 @@ namespace AF.UI
             return FixedViewRect(label.rectTransform);
         }
 
-        private static Rect FixedViewRect(RectTransform rt)
+        private Rect FixedViewRect(RectTransform rt)
         {
             Vector2 p = rt.anchoredPosition;
             Vector2 size = rt.sizeDelta;
-            return new Rect(p.x - FramePadDp, -p.y - FramePadDp, size.x, size.y);
+            return new Rect(p.x - ViewPadDp, -p.y - ViewPadDp, size.x, size.y);
         }
 
         // Caja local (y hacia arriba) en coordenadas de la zona visible (y hacia abajo) con el contenido en o.
@@ -1537,7 +1544,9 @@ namespace AF.UI
             _markersLevel = max;
             int raw = CanoeFlags(_stops!, max, _flagScratch);
             _flagCount = 0;
-            for (int i = 0; i < raw; i++)
+            // Observación 6 de la prueba r2b de la 1.1: con el Mapa v2, solo las LiveMaxCanoeFlags más recientes en el mástil.
+            int first = _live ? Mathf.Max(0, raw - LiveMaxCanoeFlags) : 0;
+            for (int i = first; i < raw; i++)
             {
                 string iso = _flagScratch[i]!;
                 Sprite? sprite = _art.MapFlag(iso);
@@ -1608,6 +1617,7 @@ namespace AF.UI
             }
 
             MetaShowMarkers(max); // B14: la Canasta (cestita o ✓) y el Premio del mundo (RiverMapScreen.Meta.cs)
+            LiveMarkers(max); // D-069, M2-1: las paradas futuras, boyas (RiverMapScreen.Live.cs)
             PlaceCanoeGear(_space);
         }
 
@@ -1701,6 +1711,27 @@ namespace AF.UI
 
         // Una mini cuia por parada con ruta de los mundos abiertos hasta el de «Jugar» (las de los mundos futuros van en su silueta,
         // M3.4). Solo asigna al crecer la reserva; el agua y la baliza se fijan aquí, al abrir.
+        // La parada n es la siguiente a la del nivel en juego y, con el Mapa v2, se dibuja aunque sea de otro mundo (añadido de D-069
+        // del 2026-11-08).
+        private bool NextStopOfNextWorld(RiverStopCatalog stops, int n)
+        {
+            return n >= 0 && n == NextWorldStop(stops);
+        }
+
+        // Con el Mapa v2, la parada siguiente a la del nivel en juego si abre el mundo que viene (la dibuja la vista Mundo y la
+        // encuadra su zoom, para que su rótulo con «Faltan N» se vea; añadido de D-069 del 2026-11-08); −1 si no.
+        private int NextWorldStop(RiverStopCatalog stops)
+        {
+            if (!_live || !_remainingReady)
+            {
+                return -1; // sin «Faltan N» (nada que jugar o sin nombre), nada que enseñar
+            }
+
+            RiverStop? current = stops.StopOf(_playLevel);
+            RiverStop? next = current != null ? stops.At(current.N + 1) : null;
+            return next != null && next.World > _world ? next.N : -1;
+        }
+
         private void BuildStopMarkers(RiverMap map, RiverRoutes routes, RiverStopCatalog stops)
         {
             _hasRim = ArtSlots.Find(ProceduralArt.MiniCuiaSlot) == null; // el canto es de la silueta provisional
@@ -1709,7 +1740,9 @@ namespace AF.UI
             {
                 RiverStop? stop = stops.At(n);
                 RiverStopRoute? route = routes.At(n);
-                if (stop == null || route == null || stop.World > _world || !ModesShowsStop(stop)) // ui_map_mode = worlds (M4.3)
+                // Añadido de D-069 del 2026-11-08 (observación 4): con el Mapa v2, también la parada siguiente aunque abra el mundo
+                // que viene (la del 80, Leticia, jugando el 71-80), para que lleve «Faltan N» en su rótulo y no en la placa.
+                if (stop == null || route == null || (stop.World > _world && !NextStopOfNextWorld(stops, n)) || !ModesShowsStop(stop)) // ui_map_mode = worlds (M4.3)
                 {
                     continue;
                 }
@@ -2224,7 +2257,7 @@ namespace AF.UI
                 pen += Crowding(c, _fanPos[k], fan);
             }
 
-            if (river && pen < budget && LineClearance(_map!, space, _view, box, MarkerLineClearanceDp) < MarkerLineClearanceDp)
+            if (river && pen < budget && LineClearance(_map!, space, _view, box, MarkerLineClearanceDp, _live) < MarkerLineClearanceDp)
             {
                 pen += 10f;
             }
@@ -2329,10 +2362,10 @@ namespace AF.UI
         }
 
         // Caja de la canoa (su imagen, con su pivote) con el mástil y las banderas, que ondean hacia popa.
-        private static Rect GearBox(Vector2 canoe, Vector2 foot, float mastH, float facing)
+        private Rect GearBox(Vector2 canoe, Vector2 foot, float mastH, float facing)
         {
-            float w = ProceduralArt.MapCanoeWidthDp;
-            float h = ProceduralArt.MapCanoeHeightDp;
+            float w = CanoeWidthDp;
+            float h = CanoeHeightDp;
             var box = new Rect(canoe.x - (w * 0.5f), canoe.y - (h * CanoePivotY), w, h);
             if (mastH > 0f)
             {
@@ -2564,7 +2597,7 @@ namespace AF.UI
                 {
                     float x = home.x + (s == 0 ? -d : d);
                     var box = new Rect(x - half, home.y, 2f * half, h);
-                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp && !OverlapsShownMarker(box))
+                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp, _live) >= HomeLineClearanceDp && !OverlapsShownMarker(box))
                     {
                         return s == 0 ? -d : d;
                     }
@@ -2600,7 +2633,7 @@ namespace AF.UI
                     }
 
                     var box = new Rect(foot.x, foot.y - half, h, 2f * half);
-                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp)
+                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp, _live) >= HomeLineClearanceDp)
                     {
                         return side;
                     }
@@ -2710,6 +2743,8 @@ namespace AF.UI
                     f.localRotation = upright;
                 }
             }
+
+            UpdateBuoyClear(); // observación 2 de la segunda ronda de la 1.1: el claro de las boyas sigue a la canoa (RiverMapScreen.Progress.cs)
         }
 
         // La canoa en canoeMap con level niveles ganados (fraccionario) y flags banderas: dónde se pinta, dónde nada el guía
@@ -2733,7 +2768,7 @@ namespace AF.UI
                 // GuideMastClearDp por delante del mástil de popa, hacia la proa, para que el mástil y las banderas no lo tapen.
                 RiverStopRoute? goal = _routes!.Goal;
                 bool atGoal = goal != null && level >= goal.N * RiverStopCatalog.LevelsPerStop;
-                float side = atGoal ? facing * (GuideMastClearDp - (ProceduralArt.MapCanoeWidthDp * SternFraction)) : 0f;
+                float side = atGoal ? facing * (GuideMastClearDp - (CanoeWidthDp * SternFraction)) : 0f;
                 guideLocal = canoe + new Vector2(side, GuideAboveDp);
                 guideMap = new Vector2(canoeMap.x + (side / dpu), canoeMap.y - (GuideAboveDp / dpu));
             }
@@ -2753,7 +2788,7 @@ namespace AF.UI
             guideLocal = ClearGoalBuoys(space, route, fraction, guideLocal);
             float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
             mastH = flags > 0 ? (2f * MastPadDp) + (flags * (fh + CanoeFlagGapDp)) : 0f;
-            mastFoot = canoe + new Vector2(-facing * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+            mastFoot = canoe + new Vector2(-facing * CanoeWidthDp * SternFraction, 2f);
         }
 
         // Revisión final de FX13: en el tramo de la meta (691-700; las boyas que «Faltan N» invita a contar), el guía que nada por
@@ -2858,15 +2893,15 @@ namespace AF.UI
                 return;
             }
 
-            float bottom = FramePadDp + _viewH - MinTouchDp - 8f; // la fila de «Volver a la canoa»
+            float bottom = ViewPadDp + _viewH - MinTouchDp - 8f; // la fila de «Volver a la canoa»
             TMPro.TextMeshProUGUI? atlantic = AtlanticLabel;
             if (atlantic != null && atlantic.gameObject.activeSelf)
             {
                 bottom = Mathf.Min(bottom, -atlantic.rectTransform.anchoredPosition.y);
             }
 
-            float top = Mathf.Max(FramePadDp + OrientationInsetDp, bottom - HomeWindowGapDp - _homeWindow.HeightDp);
-            _homeWindow.Place(FramePadDp + OrientationInsetDp, top, FramePadDp + _viewW - OrientationInsetDp);
+            float top = Mathf.Max(ViewPadDp + OrientationInsetDp, bottom - HomeWindowGapDp - _homeWindow.HeightDp);
+            _homeWindow.Place(ViewPadDp + OrientationInsetDp, top, ViewPadDp + _viewW - OrientationInsetDp);
         }
 
         // La ventanita sale cuando la casa queda fuera de la vista (con su arte; nunca sin parada). Devuelve si se ve. Sin
@@ -2894,12 +2929,12 @@ namespace AF.UI
             return vx >= m && vx <= _viewW - m && vy >= m && vy <= _viewH - m;
         }
 
-        // La ventanita con su píldora en coordenadas de la zona visible (dp, y hacia abajo): la zona empieza FramePadDp dentro del
+        // La ventanita con su píldora en coordenadas de la zona visible (dp, y hacia abajo): la zona empieza ViewPadDp dentro del
         // marco.
         private Rect HomeWindowInView()
         {
             Rect b = _homeWindow!.Bounds;
-            return new Rect(b.x - FramePadDp, b.y - FramePadDp, b.width, b.height);
+            return new Rect(b.x - ViewPadDp, b.y - ViewPadDp, b.width, b.height);
         }
 
         // ============================================================================================ toques y sueño
@@ -3476,6 +3511,12 @@ namespace AF.UI
             public bool Fanned { get; set; }
 
             public bool BeaconLit { get; set; }
+
+            /// <summary>La boya de vidrio del Mapa v2 (D-069, M2-1), creada la primera vez que hace falta.</summary>
+            public Image? Buoy { get; set; }
+
+            /// <summary>El brillo que late de la parada siguiente en el Mapa v2.</summary>
+            public Image? Glow { get; set; }
         }
 
         /// <summary>

@@ -36,6 +36,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.MapLiveConfigOverride = null;
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
@@ -353,6 +354,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator SamplesTab_HasItsOwnRow_AndEverythingIsReadableAndTouchable()
         {
+            GameBootstrap.MapLiveConfigOverride = new MapLiveConfig { UiMapV2 = false }; // el pie de la 1.0 (con el Mapa v2, MapCapiPlayTests; D-069, M2-3)
             var sizes = new[] { new Vector4(1080f, 2340f, 96f, 48f), new Vector4(720f, 1280f, 48f, 0f) };
             foreach (Vector4 size in sizes)
             {

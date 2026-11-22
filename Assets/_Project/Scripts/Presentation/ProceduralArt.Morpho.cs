@@ -132,7 +132,7 @@ namespace AF.Presentation
             if (disabled)
             {
                 DrawIconButterfly(pc, 0f, Palette.DisabledGlyph, Palette.DisabledGlyph, Palette.DisabledGlyph);
-                return MakeSprite(pc, "icon_morpho_disabled", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+                return MakeSprite(pc, "icon_morpho_disabled", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
             }
 
             DrawIconButterfly(pc, 7.5f, Palette.Ink, Palette.Ink, Palette.Ink);
@@ -148,7 +148,7 @@ namespace AF.Presentation
             pc.FillCapsule(80f, 75f, 80f, 87f, 1.6f, Palette.UiPaper);
             pc.FillCapsule(74f, 81f, 86f, 81f, 1.6f, Palette.UiPaper);
             pc.FillCircle(80f, 81f, 2.6f, Palette.UiPaper);
-            return MakeSprite(pc, "icon_morpho", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+            return MakeSprite(pc, "icon_morpho", new Vector2(0.5f, 0.5f), Vector4.zero, MaxUiPxPerDp);
         }
 
         // Las dos cuias del glifo (cuerpo, cuello y boca), desplazadas oy px.

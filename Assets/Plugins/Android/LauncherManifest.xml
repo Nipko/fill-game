@@ -83,8 +83,11 @@
             <meta-data android:name="com.unity3d.services.core.configuration.AdsSdkInitializer"
                        tools:node="remove"/>
         </provider>
+        <!-- Q-BB-1 (b), anadido de D-059 del 2026-11-06: sin android:screenOrientation (Unity pondria fullUser con la autorrotacion);
+             el vertical de los telefonos lo pide el codigo (AfSplashHold y AF.UI.OrientationPolicy). -->
         <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
                   android:theme="@style/AfLaunchTheme"
-                  tools:replace="android:theme"/>
+                  tools:replace="android:theme"
+                  tools:remove="android:screenOrientation"/>
     </application>
 </manifest>

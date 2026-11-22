@@ -42,6 +42,19 @@ namespace AF.Presentation
         /// <see cref="RiverRibbonGraphic.ReflectionOffset"/> del ancho hacia el borde de arriba.
         /// </summary>
         Core = 2,
+
+        /// <summary>
+        /// Mapa v2 (D-069, M2-1; propuesta del Mapa v2 §3.1, capa 1): la <b>várzea</b>, una banda clara de
+        /// <see cref="RiverRibbonGraphic.SetBand"/> dp a cada lado del agua que se apaga hacia fuera, debajo del río.
+        /// </summary>
+        Varzea = 3,
+
+        /// <summary>
+        /// Mapa v2 (D-069, M2-1; capa 2): las <b>orillas</b> por fuera del agua, de <c>banks</c> (<see cref="RiverRibbonGraphic.SetBanks"/>):
+        /// playa de arena en la orilla de dentro de un meandro, barranco de tierra roja en la de fuera y, en el resto, una línea fina
+        /// de hierba. Los tramos entran y salen con una rampa, sin escalones.
+        /// </summary>
+        Banks = 4,
     }
 
     /// <summary>
@@ -125,7 +138,7 @@ namespace AF.Presentation
     /// (<see cref="SetFill"/> sin cambios no hace nada ni asigna memoria); al reconstruirse no asigna memoria tras la primera vez.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
-    public sealed class RiverRibbonGraphic : MaskableGraphic
+    public sealed partial class RiverRibbonGraphic : MaskableGraphic
     {
         /// <summary>Ancho del cauce y del ramal del Pará (clase 1), en dp [P].</summary>
         public const float WidthClass1Dp = 6f;
@@ -321,6 +334,13 @@ namespace AF.Presentation
         private float _s0;
         private float _s1 = 1f;
         private float _widthDp = -1f;
+        private float _shapeWidthDp = -1f;
+        private float _anchorWidthDp = -1f;
+        private bool _live;
+        private RiverBanks? _banks;
+        private float _bandDp;
+        private float _sectionArc;
+        private float _arcLength;
         private int _budget = MaxVertices;
         private int _vertexCount;
         private int _markCount;
@@ -417,6 +437,85 @@ namespace AF.Presentation
 
         /// <summary>Ancho de la cinta en dp: el fijado con <see cref="SetWidth"/> o el de la clase de la línea.</summary>
         public float WidthDp => _widthDp > 0f ? _widthDp : (_line != null ? WidthForClass(_line.Class) : WidthClass1Dp);
+
+        /// <summary>
+        /// Ancho con el que se calcula la forma del trazo suave y curvo (los puntos que se quedan, las anclas y el desvío máximo de la
+        /// curva; D-069, M2-1): el fijado con <see cref="SetShapeWidth"/> o, sin él, <see cref="WidthDp"/>. El Mapa v2 dibuja los ríos
+        /// más anchos con una forma de algo menos de su ancho (el 70 %; <c>RiverMapScreen.LiveShapeFactor</c>) y las anclas de la 1.0
+        /// (<see cref="SetAnchorWidth"/>), para que el río no se pliegue en los codos y las paradas sigan en el eje dibujado.
+        /// </summary>
+        public float ShapeWidthDp => _shapeWidthDp > 0f ? _shapeWidthDp : WidthDp;
+
+        /// <summary>
+        /// Ancho con el que se miden las anclas de la curva (cuánto se juntan y a cuánto pasa la curva de ellas): el fijado con
+        /// <see cref="SetAnchorWidth"/> o, sin él, <see cref="ShapeWidthDp"/> (D-069, M2-1: el Mapa v2 lo deja en el de la 1.0).
+        /// </summary>
+        public float AnchorWidthDp => _anchorWidthDp > 0f ? _anchorWidthDp : ShapeWidthDp;
+
+        /// <summary>Ancho de las anclas en dp (<see cref="AnchorWidthDp"/>); ≤ 0 vuelve a <see cref="ShapeWidthDp"/>.</summary>
+        public void SetAnchorWidth(float widthDp)
+        {
+            widthDp = widthDp > 0f ? widthDp : -1f;
+            if (widthDp != _anchorWidthDp)
+            {
+                _anchorWidthDp = widthDp;
+                _curveUnits = -1f; // las anclas se vuelven a juntar con el ancho nuevo
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Dibuja con el acabado del Mapa v2 (<see cref="SetLive"/>).</summary>
+        public bool Live => _live;
+
+        /// <summary>Ancho de la banda de la várzea (dp; <see cref="RibbonPart.Varzea"/>).</summary>
+        public float BandDp => _bandDp;
+
+        /// <summary>Ancho de la forma en dp (<see cref="ShapeWidthDp"/>); ≤ 0 vuelve a <see cref="WidthDp"/>.</summary>
+        public void SetShapeWidth(float widthDp)
+        {
+            widthDp = widthDp > 0f ? widthDp : -1f;
+            if (widthDp != _shapeWidthDp)
+            {
+                _shapeWidthDp = widthDp;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>
+        /// Acabado del Mapa v2 (D-069, M2-1; propuesta del Mapa v2 §3.1, capa 3): en el agua (<see cref="RibbonPart.Core"/>), color
+        /// por vértice, con el canal del centro a <see cref="DeepChannelFactor"/> y las orillas claras, y la franja de la segunda agua
+        /// de una pareja (el Encuentro de las Aguas) que se funde con la primera en sus últimos <see cref="MeetingFadeDp"/> dp. Apagado,
+        /// como en la 1.0.
+        /// </summary>
+        public void SetLive(bool on)
+        {
+            if (on != _live)
+            {
+                _live = on;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Orillas de las que lee <see cref="RibbonPart.Banks"/> los tramos de su línea (D-069, M2-1).</summary>
+        public void SetBanks(RiverBanks? banks)
+        {
+            if (!ReferenceEquals(banks, _banks))
+            {
+                _banks = banks;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Ancho en dp de la banda de <see cref="RibbonPart.Varzea"/> a cada lado del agua [P].</summary>
+        public void SetBand(float bandDp)
+        {
+            bandDp = Mathf.Max(0f, bandDp);
+            if (bandDp != _bandDp)
+            {
+                _bandDp = bandDp;
+                SetVerticesDirty();
+            }
+        }
 
         /// <summary>Vértices de la última malla construida.</summary>
         public int LastVertexCount => _vertexCount;
@@ -833,6 +932,7 @@ namespace AF.Presentation
             float half = WidthDp * 0.5f;
             float rim = Mathf.Min(RimDp, half * RimMaxFraction) / half;
             float length = cursor.Length;
+            _arcLength = length;
             float aStart = _s0 * length;
             float aEnd = _s1 * length;
             bool water = _look == RibbonLook.Water && _part != RibbonPart.Casing;
@@ -856,7 +956,7 @@ namespace AF.Presentation
             // Trazo suave: solo los puntos que se quedan (UpdateKeep) y, cerca de las dos puntas del intervalo, ninguno a menos de
             // media separación de ellas (una cuerda de nada haría un quiebro).
             bool curve = _curve && !CurveOffForSnapshots;
-            float units = _smooth ? (curve ? CurveSpacingWidths : SpacingWidths) * WidthDp / _space.DpPerUnit : 0f;
+            float units = _smooth ? (curve ? CurveSpacingWidths : SpacingWidths) * ShapeWidthDp / _space.DpPerUnit : 0f;
             float endSq = 0f;
             Vector2 startPoint = Vector2.zero;
             Vector2 endPoint = Vector2.zero;
@@ -985,6 +1085,7 @@ namespace AF.Presentation
                 RunLook sectionLook = _planLook[i];
                 int connect = _planConnect[i] ? previous : -1;
                 remaining -= Cost(sectionLook);
+                _sectionArc = _planArc[i]; // D-069, M2-1: las orillas y el Encuentro miran dónde cae la sección
 
                 // Trazo suave: un codo cerrado va en bisel (dos secciones en el punto) si cabe en el presupuesto con lo que queda.
                 if (_smooth && connect >= 0 && vh.currentVertCount + (2 * Cost(sectionLook)) + remaining <= _budget
@@ -1030,9 +1131,12 @@ namespace AF.Presentation
             switch (_part)
             {
                 case RibbonPart.Casing:
+                case RibbonPart.Varzea:
                     return 3;
+                case RibbonPart.Banks:
+                    return 2;
                 case RibbonPart.Core:
-                    return split ? 3 : 2;
+                    return split || _live ? 3 : 2;
                 default:
                     return split ? 4 : 3;
             }
@@ -1168,15 +1272,34 @@ namespace AF.Presentation
                 return -1;
             }
 
-            float alpha = color.a;
+            float alpha = color.a * EndFadeAt(_sectionArc); // añadido de D-069 del 2026-11-08: las puntas difuminadas del frente
             int start = vh.currentVertCount;
+
+            // Observación 3 de la segunda ronda de la 1.1 (las cuñas oscuras en las curvas cerradas): en un codo más cerrado que el
+            // medio ancho, los vértices del lado de dentro caen detrás de la sección anterior y la malla se pliega: con el agua
+            // translúcida, el pliegue se pinta dos veces. Un vértice así va al punto donde la sección nueva cruza la anterior
+            // (Unfold, UnfoldPair). Vale también en la segunda sección de un bisel (medido: sin ella no queda ningún pliegue menos).
+            // Sin asignaciones.
+            Vector2 advance = mid - _foldPrevMid;
+            bool guard = !FoldGuardOff && connect >= 0 && advance.sqrMagnitude > 1e-8f;
+            _foldPrevMid = mid;
             for (int k = 0; k < bands; k++)
             {
-                Band(look, k, rim, half, up, out float u0, out float u1, out Color c);
+                Band(look, k, rim, half, up, out float u0, out float u1, out Color c, out Color c1);
                 c.a *= alpha;
-                Color32 c32 = c;
-                vh.AddVert(mid + (axis * u0), c32, Vector4.zero);
-                vh.AddVert(mid + (axis * u1), c32, Vector4.zero);
+                c1.a *= alpha;
+                Vector2 v0 = mid + (axis * u0);
+                Vector2 v1 = mid + (axis * u1);
+                if (guard)
+                {
+                    int p = connect + (2 * k);
+                    v0 = Unfold(vh, p, p, p + 1, v0, advance, mid, axis);
+                    v1 = Unfold(vh, p + 1, p, p + 1, v1, advance, mid, axis);
+                    v0 = UnfoldPair(vh, p, v0, v1, advance);
+                }
+
+                vh.AddVert(v0, (Color32)c, Vector4.zero);
+                vh.AddVert(v1, (Color32)c1, Vector4.zero);
                 if (connect >= 0)
                 {
                     int p = connect + (2 * k);
@@ -1187,6 +1310,129 @@ namespace AF.Presentation
             }
 
             return start;
+        }
+
+        private Vector2 _foldPrevMid;
+
+        /// <summary>Solo para las capturas y los tests de «antes»: sin la guarda de los codos (la malla vuelve a plegarse).</summary>
+        internal static bool FoldGuardOff { get; set; }
+
+        // El vértice v de la sección nueva (en la recta mid + axis · u) o, si cae detrás del borde de la banda anterior (de a a b) y el
+        // triángulo que lo une con ella saldría del revés, el punto donde la sección nueva cruza la anterior: el lado de dentro gira
+        // sobre ese punto, como un abanico, sin solaparse ni dejar hueco. «Detrás» respecto del lado hacia el que avanza el centro.
+        private static Vector2 Unfold(VertexHelper vh, int prev, int a, int b, Vector2 v, Vector2 advance, Vector2 mid, Vector2 axis)
+        {
+            if (prev < 0 || b >= vh.currentVertCount)
+            {
+                return v;
+            }
+
+            UIVertex scratch = default;
+            vh.PopulateUIVertex(ref scratch, prev);
+            var own = (Vector2)scratch.position;
+            vh.PopulateUIVertex(ref scratch, a);
+            var pa = (Vector2)scratch.position;
+            vh.PopulateUIVertex(ref scratch, b);
+            var pb = (Vector2)scratch.position;
+            Vector2 edge = pb - pa;
+            if (edge.sqrMagnitude < 1e-10f)
+            {
+                return Vector2.Dot(v - own, advance) < 0f ? own : v;
+            }
+
+            float ahead = Cross(edge, advance);
+            float side = Cross(edge, v - pa);
+            if (!((ahead > 0f && side < 0f) || (ahead < 0f && side > 0f)))
+            {
+                return v;
+            }
+
+            float den = Cross(axis, edge);
+            if (Mathf.Abs(den) < 1e-8f)
+            {
+                return own;
+            }
+
+            float t = -Cross(mid - pa, edge) / den;
+            return mid + (axis * t);
+        }
+
+        // El segundo triángulo del cuadrilátero de la banda (v1, v0, el vértice a de la anterior) tampoco sale del revés: si la sección
+        // nueva gira más que la anterior, v0 se queda en a (probado: llevarlo al cruce de las secciones pliega más).
+        private static Vector2 UnfoldPair(VertexHelper vh, int a, Vector2 v0, Vector2 v1, Vector2 advance)
+        {
+            if (a < 0 || a + 1 >= vh.currentVertCount)
+            {
+                return v0;
+            }
+
+            UIVertex scratch = default;
+            vh.PopulateUIVertex(ref scratch, a);
+            var pa = (Vector2)scratch.position;
+            vh.PopulateUIVertex(ref scratch, a + 1);
+            var pb = (Vector2)scratch.position;
+            float ahead = Cross(pb - pa, advance);
+            float area = Cross(v0 - v1, pa - v1);
+            return (ahead > 0f && area < -1e-6f) || (ahead < 0f && area > 1e-6f) ? pa : v0;
+        }
+
+        private static float Cross(Vector2 a, Vector2 b)
+        {
+            return (a.x * b.y) - (a.y * b.x);
+        }
+
+        /// <summary>
+        /// Solo para tests (observación 3 de la segunda ronda de la 1.1): construye la malla y cuenta sus triángulos con área
+        /// (<paramref name="total"/>) y los que van del revés respecto de la mayoría (un pliegue: se pintan dos veces). Asigna.
+        /// </summary>
+        internal int CountFoldedTriangles(out int total)
+        {
+            return CountFoldedTriangles(out total, out _);
+        }
+
+        /// <summary>Como <see cref="CountFoldedTriangles(out int)"/>, con el centro del primer triángulo de la minoría (tests).</summary>
+        internal int CountFoldedTriangles(out int total, out string where)
+        {
+            var vh = new VertexHelper();
+            try
+            {
+                OnPopulateMesh(vh);
+                var stream = new System.Collections.Generic.List<UIVertex>();
+                vh.GetUIVertexStream(stream);
+                int pos = 0;
+                int neg = 0;
+                string firstPos = string.Empty;
+                string firstNeg = string.Empty;
+                for (int i = 0; i + 2 < stream.Count; i += 3)
+                {
+                    Vector2 a = stream[i].position;
+                    Vector2 b = stream[i + 1].position;
+                    Vector2 c = stream[i + 2].position;
+                    float area = ((b.x - a.x) * (c.y - a.y)) - ((c.x - a.x) * (b.y - a.y));
+                    if (area > 1e-2f)
+                    {
+                        if (pos++ == 0)
+                        {
+                            firstPos = "#" + (i / 3) + " " + a + " " + b + " " + c + " área " + area;
+                        }
+                    }
+                    else if (area < -1e-2f)
+                    {
+                        if (neg++ == 0)
+                        {
+                            firstNeg = "#" + (i / 3) + " " + a + " " + b + " " + c + " área " + area;
+                        }
+                    }
+                }
+
+                total = pos + neg;
+                where = pos < neg ? firstPos : firstNeg;
+                return Mathf.Min(pos, neg);
+            }
+            finally
+            {
+                vh.Dispose();
+            }
         }
 
         // Bisel (trazo suave) en la sección i del plan, si es un codo cuyo inglete pasaría de BevelMiter medios anchos: dos
@@ -1366,7 +1612,7 @@ namespace AF.Presentation
             Vector2[]? targets = _anchors?.Points;
             bool[]? isMouth = _anchors?.Mouth;
             bool[]? isTight = _anchors?.Tight;
-            float merge = CurveAnchorMergeWidths * WidthDp / dp;
+            float merge = CurveAnchorMergeWidths * AnchorWidthDp / dp;
             int m = anchors != null ? anchors.Length : 0;
             float length = cursor.Length;
             float gap = 0.5f * units;
@@ -1438,7 +1684,7 @@ namespace AF.Presentation
                 SmoothKept(count, 0.5f);
             }
 
-            float maxShift = CurveMaxShiftWidths * WidthDp / dp;
+            float maxShift = CurveMaxShiftWidths * ShapeWidthDp / dp;
             for (int k = 1; k < count - 1; k++)
             {
                 Vector2 shift = _keptPoint[k] - _keptOrigin[k];
@@ -1452,7 +1698,7 @@ namespace AF.Presentation
             // y los puntos de alrededor con ella, cada vez menos hasta CurveAnchorReach separaciones; las puntas no se mueven. FX14:
             // hasta CurveAnchorPasses vueltas, mientras alguna siga más lejos.
             float reach = CurveAnchorReach * units;
-            float slack = CurveAnchorWidths * WidthDp / dp;
+            float slack = CurveAnchorWidths * AnchorWidthDp / dp;
             float tightSlack = Mathf.Min(slack, CurveStopAnchorDp / dp); // revisión de FX14: las paradas
             int pulls = 0;
             while (pulls < CurveAnchorPasses && PullAnchors(count, reach, slack, tightSlack))
@@ -1953,7 +2199,7 @@ namespace AF.Presentation
                 return 0;
             }
 
-            float units = CurveSpacingWidths * WidthDp / _space.DpPerUnit;
+            float units = CurveSpacingWidths * ShapeWidthDp / _space.DpPerUnit;
             UpdateKeep(_cursor, units);
             UpdateCurve(_cursor, units);
             float length = _cursor.Length;
@@ -1964,7 +2210,7 @@ namespace AF.Presentation
         /// Vértices de una sección del trozo [s0, s1] de <paramref name="line"/> con la parte <paramref name="part"/> (en el agua, con
         /// dos aguas lado a lado en el trozo, un par más), para repartir un tope.
         /// </summary>
-        public static int SectionVertices(RiverLine line, float s0, float s1, RibbonPart part)
+        public static int SectionVertices(RiverLine line, float s0, float s1, RibbonPart part, bool live = false)
         {
             bool split = false;
             for (int i = 0; i < line.Splits.Count; i++)
@@ -1975,9 +2221,12 @@ namespace AF.Presentation
             switch (part)
             {
                 case RibbonPart.Casing:
+                case RibbonPart.Varzea:
                     return 6;
+                case RibbonPart.Banks:
+                    return 4;
                 case RibbonPart.Core:
-                    return split ? 6 : 4;
+                    return split || live ? 6 : 4;
                 default:
                     return split ? 8 : 6;
             }
@@ -2045,6 +2294,26 @@ namespace AF.Presentation
 
         // Banda k de la sección: de u0 a u1 en medios anchos (+1 = orilla izquierda mirando río abajo) y su color. «half» es el
         // medio ancho del agua en dp y «up», la componente vertical (local, hacia arriba) de la normal izquierda.
+        private void Band(RunLook look, int k, float rim, float half, float up, out float u0, out float u1, out Color c, out Color c1)
+        {
+            switch (_part)
+            {
+                case RibbonPart.Varzea:
+                    VarzeaBand(k, half, out u0, out u1, out c, out c1);
+                    return;
+                case RibbonPart.Banks:
+                    BankBand(k, half, out u0, out u1, out c, out c1);
+                    return;
+                case RibbonPart.Core when _live:
+                    LiveCoreBand(look, k, half, up, out u0, out u1, out c, out c1);
+                    return;
+            }
+
+            Band(look, k, rim, half, up, out u0, out u1, out c);
+            c1 = c;
+        }
+
+        // La banda de un solo color de la 1.0 (y de la orla y el vidrio del Mapa v2).
         private void Band(RunLook look, int k, float rim, float half, float up, out float u0, out float u1, out Color c)
         {
             if (_part == RibbonPart.Casing)

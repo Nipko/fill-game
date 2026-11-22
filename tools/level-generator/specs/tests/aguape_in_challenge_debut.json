@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v3.json",
+  "description": "Fixture negativo de la curva 2 (D-068, F3b): un cuarto tablero de estreno del Aguapé en el reto 306 falla DEBUT-SLOT (nada estrena en un reto, c.3 regla 6; y el estreno pasa a tener 4 tableros).",
+  "expect_rule": "DEBUT-SLOT",
+  "calendar": {
+    "306": "★Ag (D)"
+  }
+}

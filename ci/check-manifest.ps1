@@ -52,6 +52,11 @@
          de bloqueo). Solo se exime la pantalla de un anuncio de Google ($LockScreenExemptPrefixes), que no es nuestra.
          Lo que Unity pone por codigo en los builds de desarrollo lo quita en tiempo de ejecucion el plugin propio
          AfLockGuard.androidlib (docs/dev/decisiones.md, nota tecnica de la observacion 9); el manifiesto no lo ve.
+      6 quater. Pantallas grandes (anadido de D-059 del 2026-11-06, Q-BB-1 (b)): la actividad de Unity
+         (com.unity3d.player.UnityPlayer*) no restringe la orientacion (android:screenOrientation ausente o sin restriccion:
+         unspecified, user, behind, sensor, fullSensor, fullUser) ni es no redimensionable (resizeableActivity=false), ni lleva
+         android:maxAspectRatio o minAspectRatio. El vertical de los telefonos lo pone el codigo (AfSplashHold y
+         AF.UI.OrientationPolicy). Sin la actividad de Unity en el manifiesto (autotest), no se comprueba.
       7. IL2CPP ARM64 (.claude/rules/ci.md): las bibliotecas nativas del artefacto (lib/<abi>/ en el APK,
          base/lib/<abi>/ en el AAB) son solo de arm64-v8a y entre ellas esta libil2cpp.so.
 
@@ -121,6 +126,9 @@ $ForbiddenComponentReasons = @{
 # un anuncio de Google no es nuestra.
 $LockScreenAttributes = @('showWhenLocked', 'turnScreenOn')
 $LockScreenExemptPrefixes = @('com.google.android.gms.ads.')
+# 6 quater: valores de android:screenOrientation que no restringen (por nombre y compilados) y prefijo de la actividad de Unity.
+$UnrestrictedOrientations = @('unspecified', 'user', 'behind', 'sensor', 'fullSensor', 'fullUser', '-1', '2', '3', '4', '10', '13', '4294967295')
+$UnityActivityPrefix = 'com.unity3d.player.UnityPlayer'
 $BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission, $NotificationsPermission, $BillingPermission, $AdIdPermission)
 
 function Stop-WithCode {
@@ -144,6 +152,7 @@ function New-Model {
         HasIl2cpp      = $false
         Raw            = ''       # texto del volcado, para los componentes prohibidos (6 bis)
         LockScreen     = [System.Collections.Generic.List[string]]::new()   # 'actividad:atributo' a true (6 ter)
+        UnityActivity  = $null    # atributos de la actividad de Unity (6 quater); $null = no esta en el manifiesto
     }
 }
 
@@ -173,6 +182,14 @@ function ConvertFrom-ManifestXml([string]$Text) {
                 $m.Debuggable = $node.GetAttribute('debuggable', $AndroidNs)
                 $m.BackCallback = $node.GetAttribute('enableOnBackInvokedCallback', $AndroidNs)
                 foreach ($child in $node.ChildNodes) {
+                    if ($child.NodeType -eq [System.Xml.XmlNodeType]::Element -and $child.LocalName -eq 'activity' -and
+                        $child.GetAttribute('name', $AndroidNs).StartsWith($UnityActivityPrefix, [System.StringComparison]::Ordinal)) {
+                        $ua = @{}
+                        foreach ($attr in @('screenOrientation', 'resizeableActivity', 'maxAspectRatio', 'minAspectRatio')) {
+                            if ($child.HasAttribute($attr, $AndroidNs)) { $ua[$attr] = $child.GetAttribute($attr, $AndroidNs) }
+                        }
+                        $m.UnityActivity = $ua
+                    }
                     if ($child.NodeType -eq [System.Xml.XmlNodeType]::Element -and $child.LocalName -in @('activity', 'activity-alias')) {
                         foreach ($attr in $LockScreenAttributes) {
                             if (Test-True $child.GetAttribute($attr, $AndroidNs)) { $m.LockScreen.Add("$($child.GetAttribute('name', $AndroidNs)):$attr") }
@@ -256,6 +273,13 @@ function ConvertFrom-Aapt2Tree([string]$Text) {
     }
     if (-not $m.Package) { throw 'la salida de aapt2 no tiene package en <manifest>' }
     foreach ($a in $activities) {
+        if ($a.Name -eq 'activity' -and $a.Attrs.ContainsKey('name') -and "$($a.Attrs['name'])".StartsWith($UnityActivityPrefix, [System.StringComparison]::Ordinal)) {
+            $ua = @{}
+            foreach ($attr in @('screenOrientation', 'resizeableActivity', 'maxAspectRatio', 'minAspectRatio')) {
+                if ($a.Attrs.ContainsKey($attr)) { $ua[$attr] = "$($a.Attrs[$attr])" }
+            }
+            $m.UnityActivity = $ua
+        }
         foreach ($attr in $LockScreenAttributes) {
             if ($a.Attrs.ContainsKey($attr) -and (Test-True "$($a.Attrs[$attr])")) {
                 $name = if ($a.Attrs.ContainsKey('name')) { $a.Attrs['name'] } else { '?' }
@@ -342,6 +366,21 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
         foreach ($prefix in $LockScreenExemptPrefixes) { if ($entry.StartsWith($prefix, [System.StringComparison]::Ordinal)) { $exempt = $true } }
         if ($exempt) { $note.Add("NOTA: $entry=true en la pantalla de un anuncio de Google (no es nuestra).") }
         else { $fail.Add("pantalla de bloqueo: $entry=true (observacion 9 de la jornada 6: el juego no se muestra sobre el bloqueo)") }
+    }
+
+    if ($null -ne $M.UnityActivity) {
+        $ua = $M.UnityActivity
+        if ($ua.ContainsKey('screenOrientation') -and "$($ua['screenOrientation'])" -notin $UnrestrictedOrientations) {
+            $fail.Add("pantallas grandes: la actividad de Unity restringe la orientacion (screenOrientation=$($ua['screenOrientation']); Q-BB-1 (b): el vertical de los telefonos va por codigo)")
+        }
+        if ($ua.ContainsKey('resizeableActivity') -and -not (Test-True "$($ua['resizeableActivity'])")) {
+            $fail.Add("pantallas grandes: la actividad de Unity no es redimensionable (resizeableActivity=$($ua['resizeableActivity']))")
+        }
+        foreach ($attr in @('maxAspectRatio', 'minAspectRatio')) {
+            if ($ua.ContainsKey($attr)) { $fail.Add("pantallas grandes: la actividad de Unity lleva $attr=$($ua[$attr])") }
+        }
+        $orientText = if ($ua.ContainsKey('screenOrientation')) { $ua['screenOrientation'] } else { '(sin restriccion)' }
+        $note.Add("Actividad de Unity: screenOrientation=$orientText.")
     }
 
     if ($null -ne $M.Abis) {
@@ -458,6 +497,14 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'aapt2: turnScreenOn compilado 0xffffffff';   Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:turnScreenOn(0x010104ed)=(type 0x12)0xffffffff"; Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: actividad sin atributos de bloqueo';  Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:showWhenLocked(0x010104ec)=false"; Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: appCategory 3';                        Fmt = 'tree'; Text = $okTree.Replace('(0x01010545)=0', '(0x01010545)=3'); Prof = 'dev'; Fails = 1 }
+        @{ Name = 'aapt2: Unity sin screenOrientation (Q-BB-1 b)'; Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:resizeableActivity(0x010104f6)=true"; Prof = 'dev'; Fails = 0 }
+        @{ Name = 'aapt2: Unity en fullUser (13)'; Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:screenOrientation(0x0101001e)=13"; Prof = 'dev'; Fails = 0 }
+        @{ Name = 'aapt2: Unity en portrait (1)'; Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:screenOrientation(0x0101001e)=1"; Prof = 'dev'; Fails = 1 }
+        @{ Name = 'aapt2: Unity no redimensionable'; Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.unity3d.player.UnityPlayerGameActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:resizeableActivity(0x010104f6)=false"; Prof = 'dev'; Fails = 1 }
+        @{ Name = 'aapt2: portrait en el anuncio de Google'; Fmt = 'tree'; Text = $okTree + "`n          E: activity (line=60)`n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=`"com.google.android.gms.ads.AdActivity`" (Raw: `"x`")`n            A: http://schemas.android.com/apk/res/android:screenOrientation(0x0101001e)=1"; Prof = 'dev'; Fails = 0 }
+        @{ Name = 'xml: Unity en sensorPortrait'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity android:name="com.unity3d.player.UnityPlayerGameActivity" android:screenOrientation="sensorPortrait"/><activity android:name="x">'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: Unity con maxAspectRatio'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity android:name="com.unity3d.player.UnityPlayerGameActivity" android:maxAspectRatio="2.4"/><activity android:name="x">'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: Unity en fullUser'; Fmt = 'xml'; Text = $okXml.Replace('<activity android:name="x">', '<activity android:name="com.unity3d.player.UnityPlayerGameActivity" android:screenOrientation="fullUser" android:resizeableActivity="true"/><activity android:name="x">'); Prof = 'release'; Fails = 0 }
     )
     $arm = @('base/lib/arm64-v8a/libil2cpp.so', 'base/lib/arm64-v8a/libunity.so', 'base/dex/classes.dex')
     $cases += @(

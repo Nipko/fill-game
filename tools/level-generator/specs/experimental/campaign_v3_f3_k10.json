@@ -1,0 +1,10 @@
+{
+  "extends": "../campaign_v3.json",
+  "spec": "campaign_v3_f3_k10",
+  "description": "Especificacion EXPERIMENTAL de la fase F3 de D-068 (docs/dev/curva-1.1-f1-medicion.md, seccion 8): la misma que campaign_v3.json con K 10 en los retos de los mundos 8 y 9 que con K 9 se quedaron en el 63-73 % del bot (429, 466, 566, 632, 649, 652, 672, 686 y 698), y el reto turbio 418 (Ba+Tu), que con K 9 dejaba sin colocacion el ciclo 401-420 del mundo 7; como la regla F1-1 hizo con el 329, el 346 y el 349. Los retos con la Pirana y el Brote (452, 592 y 646) no caben en el tope de 12 cuias con K 10 y no se tocan. Solo --measure: no genera packs.",
+  "k_cells": {
+    "note": "Los de campaign_v3.json mas los retos de prueba de los mundos 8 y 9 con K 10.",
+    "323": 7, "324": 7, "329": 10, "343": 7, "344": 7, "345": 7, "346": 10, "349": 10, "420": 12, "560": 12, "700": 12,
+    "418": 10, "429": 10, "466": 10, "566": 10, "632": 10, "649": 10, "652": 10, "672": 10, "686": 10, "698": 10
+  }
+}

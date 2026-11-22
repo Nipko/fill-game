@@ -139,6 +139,15 @@ namespace AF.UI
         public const float FramePadDp = 8f;
 
         /// <summary>
+        /// Relleno entre el borde del marco y la zona del mapa en esta apertura (dp): <see cref="FramePadDp"/> en el Mapa de la 1.0 y 0
+        /// en el Mapa v2, sin marco (D-069, P2 (a)).
+        /// </summary>
+        internal float ViewPadDp => _live ? 0f : FramePadDp;
+
+        /// <summary>Mapa v2: aire entre la zona del mapa y la fila de arriba del pie, sobre la barra de madera (dp) [P].</summary>
+        public const float LiveFooterGapDp = 10f;
+
+        /// <summary>
         /// Mar del Mapa (<c>mar_a</c> de la muestra, <c>generar_mapa.py</c>) [P]: solo para el polígono del mar o la esquina
         /// atlántica. <c>river_map_v1.json</c> aún no los trae, así que hoy no se pinta en ningún sitio (hasta M3.4): fuera de la
         /// cuenca no hay mar, sino tierra (<see cref="GroundColor"/>).
@@ -160,6 +169,15 @@ namespace AF.UI
 
         /// <summary>Ancho de los ríos locales (clase 3) en la vista Mundo, en dp [P].</summary>
         public const float WorldWidthClass3Dp = 3f;
+
+        /// <summary>Ancho del cauce y del ramal del Pará en la vista Mundo del Mapa v2 (dp; D-069, M2-1; propuesta del Mapa v2 §3.1).</summary>
+        public const float LiveWidthClass1Dp = 26f;
+
+        /// <summary>Ancho de los afluentes en la vista Mundo del Mapa v2 (dp).</summary>
+        public const float LiveWidthClass2Dp = 14f;
+
+        /// <summary>Ancho de los ríos locales en la vista Mundo del Mapa v2 (dp).</summary>
+        public const float LiveWidthClass3Dp = 6f;
 
         /// <summary>Pivote vertical de la canoa: su punto del río queda a esta fracción del alto de su imagen, desde abajo.</summary>
         public const float CanoePivotY = 0.35f;
@@ -290,7 +308,7 @@ namespace AF.UI
 
             // Fondo: tapa lo de detrás y se queda con sus toques.
             _background = UiBuilder.Image("Background", _root, null, BackgroundColor, true);
-            UiBuilder.Stretch(_background.rectTransform);
+            ScreenColumn.Bleed(_background.rectTransform); // de borde a borde también fuera de la columna (añadido de D-059)
 
             // ---- Zona del mapa: marco de madera, máscara, tierra de fondo, contenido (dos lienzos anidados) y «Volver a la canoa». ----
             _frame = UiBuilder.Sliced("Frame", _root, art.RoundedRect, Palette.Frame);
@@ -687,9 +705,14 @@ namespace AF.UI
             _dragging = false;
             _activeMs = 0f;
             _openedAt = Time.realtimeSinceStartup;
+            _journeyWideOpen = false;
+            _journeyWideFrom = 0f;
 
             _canvas.Canvas.gameObject.SetActive(true);
             EnsureGeometry(map);
+            LiveOpen(map); // D-069, M2-1: el Mapa v2 o, con ui_map_v2 apagada, el de la 1.0 (RiverMapScreen.Live.cs)
+            TownsRoutes(ref routes); // D-069, M2-2: con ui_map_towns, la excursión local de los tramos de 0 km (RiverMapScreen.Towns.cs)
+            _routes = routes;
             _hasCanoe = TryCanoePoint(map, routes, progress.MaxLevel, out _canoeMap);
             _canoe.sprite = _art.MapCanoe;
             _canoe.gameObject.SetActive(_hasCanoe);
@@ -707,6 +730,8 @@ namespace AF.UI
             ApplyScreenMetrics();
             ApplyView(view);
             JourneyOpen(source); // D-053: con viaje, «Jugar» y «←» esperan a que la canoa llegue
+            CapiOpen(source); // D-069, M2-3: Capi al remo (RiverMapScreen.Capi.cs)
+            CrewOpen(source); // D-069, M2-4: la tripulación (RiverMapScreen.Crew.cs)
             EmitLayout();
         }
 
@@ -730,6 +755,10 @@ namespace AF.UI
             SequenceClose();
             JourneyClose();
             NorthUpClose();
+            LiveClose(); // D-069, M2-1: suelta el arte del Mapa v2 y escribe AF_PERF map_frames
+            TownsClose(); // D-069, M2-2: suelta el atlas de los pueblos
+            CrewClose(); // D-069, M2-4: suelta el atlas de la tripulación y devuelve a Rosa a su sitio
+            CapiClose(); // D-069, M2-3: suelta el atlas del rig de Capi
 
             _dragging = false;
             _activeMs = 0f;
@@ -752,12 +781,25 @@ namespace AF.UI
             }
 
             CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
-            if (view == _view)
+
+            // Observación 2 de la prueba r2c de la 1.1: con la canoa ya llegada, lo que queda de la secuencia del Mapa del 10 (el
+            // bocadillo y la placa del dato) acaba como con un toque (también con la pestaña de la vista en que ya está, que antes
+            // recibía el área que la salta) y la vista cambia (si no, la secuencia volvía a su encuadre de la Cuenca).
+            bool other = view != _view;
+            if (L10SequenceActive && !JourneyLocked)
+            {
+                _seqEndingForView = other; // el encaje y AF_LAYOUT, con el encuadre de la vista nueva (ApplyView)
+                SkipL10Sequence();
+                _seqEndingForView = false;
+            }
+
+            if (!other)
             {
                 return;
             }
 
             _viewChanges++;
+            _journeyWideOpen = false; // el jugador cambia de vista: la vista Mundo vuelve a su zoom de siempre (RiverMapScreen.Capi.cs)
             ApplyView(view);
             EmitLayout();
         }
@@ -790,6 +832,7 @@ namespace AF.UI
                 return;
             }
 
+            CancelSettle(); // el jugador pide su encuadre: el final del viaje, anulado
             CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
             if (!_hasCanoe)
             {
@@ -830,6 +873,17 @@ namespace AF.UI
             SequenceTick(dtMs, ref animating);
             NorthUpTick(dtMs, ref animating);
             JourneyTick(dtMs, ref animating); // tras «ponerse al día» y «Norte arriba»: el balanceo, sobre la canoa ya colocada
+            CapiTick(dtMs, ref animating); // D-069, M2-3: los gestos, la cámara y la luz
+            CrewTick(dtMs, ref animating); // D-069, M2-4: la tripulación, el cameo del miquito y el chip
+            LiveTick(dtMs); // D-069, M2-1: la corriente, las nubes y el brillo de la siguiente, sin pedir 60 fps
+            // Observación 3 de la prueba r2b de la 1.1: las boyas, fuera de los rótulos donde estén ahora. Solo mientras algo se mueve
+            // (el viaje, la cámara, un arrastre, un fundido) y un fotograma después; en reposo, nada.
+            bool moving = animating || _dragging;
+            if (moving || _buoyClearDirty)
+            {
+                UpdateBuoyClear();
+                _buoyClearDirty = moving;
+            }
             if (_activeMs > 0f)
             {
                 _activeMs -= dtMs;
@@ -878,10 +932,19 @@ namespace AF.UI
 
         /// <summary>
         /// Punto a la fracción <paramref name="fraction"/> (0-1, por longitud de arco) de la ruta <paramref name="route"/>, por sus
-        /// tramos de agua en orden (también los que remontan). Sin largo, la parada. Sin asignaciones.
+        /// tramos de agua en orden (también los que remontan). Sin largo, la parada; o, con la excursión local en uso (D-069, M2-2:
+        /// <c>ui_map_towns</c>, <see cref="RiverRoutes.WithExcursions"/>), su punto de la vuelta (<see cref="RiverTowns.ExcursionPoint"/>).
+        /// Sin asignaciones.
         /// </summary>
         public static Vector2 RoutePoint(RiverMap map, RiverStopRoute route, float fraction)
         {
+            RiverExcursion? excursion = route.Excursion;
+            if (excursion != null)
+            {
+                RiverTowns.ExcursionPoint(map, excursion, fraction, out float x, out float y);
+                return new Vector2(x, y);
+            }
+
             return PlacePoint(map, RoutePlace(map, route, fraction));
         }
 
@@ -1038,10 +1101,12 @@ namespace AF.UI
         /// paradas del mundo <paramref name="world"/> (y de la canoa, si la hay) ocupa <see cref="WorldFill"/> de la zona, entre
         /// <see cref="WorldZoomMin"/> y <see cref="WorldZoomMax"/>; a 1× la cuenca mide <see cref="MapSpace.BasinWidthDp"/> dp de
         /// ancho (13,1 dp por grado; propuesta del Mapa §3.1).
-        /// <paramref name="center"/> es el centro de esa caja, en unidades del marco.
+        /// <paramref name="center"/> es el centro de esa caja, en unidades del marco. Con <paramref name="alsoStop"/> ≥ 0, la caja
+        /// cuenta también esa parada (añadido de D-069 del 2026-11-08: con el Mapa v2, la parada siguiente que abre el mundo que
+        /// viene, para que su rótulo con «Faltan N» se vea).
         /// </summary>
         public static float WorldZoom(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int world, bool hasCanoe, Vector2 canoe,
-            float viewW, float viewH, out Vector2 center)
+            float viewW, float viewH, out Vector2 center, int alsoStop = -1)
         {
             float x0 = float.MaxValue;
             float y0 = float.MaxValue;
@@ -1051,7 +1116,7 @@ namespace AF.UI
             {
                 RiverStop? stop = stops.At(n);
                 RiverStopRoute? route = routes.At(n);
-                if (stop == null || route == null || stop.World != world)
+                if (stop == null || route == null || (stop.World != world && n != alsoStop))
                 {
                     continue;
                 }
@@ -1172,6 +1237,66 @@ namespace AF.UI
         /// </summary>
         public static float RibbonWidthDp(MapView view, int lineClass)
         {
+            return RibbonWidthDp(view, lineClass, false);
+        }
+
+        /// <summary>
+        /// Ancho de la cinta con el Mapa v2 (<paramref name="live"/>; D-069, M2-1; propuesta del Mapa v2 §3.1, capa 3): en la vista
+        /// Mundo, <see cref="LiveWidthClass1Dp"/>, <see cref="LiveWidthClass2Dp"/> y <see cref="LiveWidthClass3Dp"/>; en la Cuenca y
+        /// sin el Mapa v2, el de <see cref="RibbonWidthDp(MapView, int)"/>.
+        /// </summary>
+        public static float RibbonWidthDp(MapView view, int lineClass, bool live)
+        {
+            if (live && view == MapView.World)
+            {
+                return lineClass == 1 ? LiveWidthClass1Dp : lineClass == 2 ? LiveWidthClass2Dp : LiveWidthClass3Dp;
+            }
+
+            return LegacyRibbonWidthDp(view, lineClass);
+        }
+
+        /// <summary>
+        /// Con el Mapa v2, el trazo de cada línea se calcula con esta fracción de su ancho dibujado (y nunca con menos que el ancho de la
+        /// 1.0) [P]: con el de la 1.0 (8 dp), un río de 26 dp se plegaba por dentro en los codos más cerrados (medio ancho / radio de
+        /// hasta 1,35 en las pruebas de FX12); con la mitad larga, los codos se abren y las paradas siguen en el eje (anclas
+        /// ajustadas, ≤ 1 dp) y la canoa y las boyas, sobre el agua (anclas a 0,45 anchos de forma).
+        /// </summary>
+        public const float LiveShapeFactor = 0.7f;
+
+        /// <summary>
+        /// Ancho de la forma del trazo (<see cref="RiverRibbonGraphic.SetShapeWidth"/>) de la clase <paramref name="lineClass"/> en
+        /// <paramref name="view"/>: con el Mapa v2 en la vista Mundo, <see cref="LiveShapeFactor"/> del ancho dibujado (como poco, el de
+        /// la 1.0); si no, el ancho dibujado.
+        /// </summary>
+        public static float ShapeWidthDp(MapView view, int lineClass, bool live)
+        {
+            float legacy = RibbonWidthDp(view, lineClass);
+            return live && view == MapView.World ? Mathf.Max(legacy, RibbonWidthDp(view, lineClass, true) * LiveShapeFactor) : legacy;
+        }
+
+        /// <summary>
+        /// El ancho con el que se miden las anclas del trazo con el Mapa de esta apertura: con el Mapa v2, el de la 1.0 (las paradas y
+        /// las boyas siguen igual de cerca del eje dibujado); sin él, el de la forma (−1).
+        /// </summary>
+        internal float MapAnchorWidthDp(MapView view, int lineClass)
+        {
+            return _live ? RibbonWidthDp(view, lineClass) : -1f;
+        }
+
+        /// <summary>La forma del trazo con el Mapa de esta apertura (sin el Mapa v2, la del ancho dibujado).</summary>
+        internal float MapShapeWidthDp(MapView view, int lineClass)
+        {
+            return _live ? ShapeWidthDp(view, lineClass, true) : -1f;
+        }
+
+        /// <summary>Ancho de la cinta de clase <paramref name="lineClass"/> en <paramref name="view"/> con el Mapa de esta apertura.</summary>
+        internal float MapRibbonWidthDp(MapView view, int lineClass)
+        {
+            return RibbonWidthDp(view, lineClass, _live);
+        }
+
+        private static float LegacyRibbonWidthDp(MapView view, int lineClass)
+        {
             if (view != MapView.World)
             {
                 return RiverRibbonGraphic.WidthForClass(lineClass);
@@ -1191,6 +1316,7 @@ namespace AF.UI
         // La vista: escala, mallas a esa escala (solo si cambia), la canoa y el encuadre.
         private void ApplyView(MapView view)
         {
+            CancelSettle(); // observación 3 de la segunda ronda de la 1.1: el encuadre final tras el viaje, de la vista anterior
             _view = view;
             _viewWorld.SetSelected(view == MapView.World);
             _viewBasin.SetSelected(view == MapView.Basin);
@@ -1207,15 +1333,51 @@ namespace AF.UI
                 RiverStopRoute? goal = _routes.Goal;
                 _zoom = goal != null && _progress != null && OnGoalLeg(_routes, _progress.MaxLevel)
                     ? GoalZoom(map, goal, _hasCanoe, _canoeMap, _viewW, _viewH, out center) // FX13: el tramo hasta la naciente
-                    : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
+                    : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center, NextWorldStop(_stops));
                 SamplesFrame(ref _zoom, ref center);
+                ApplyJourneyWideZoom(ref _zoom); // observación 1 de la segunda ronda de la 1.1: el viaje con menos zoom (RiverMapScreen.Capi.cs)
             }
             else
             {
+                _journeyWideFrom = 0f;
                 _zoom = 1f;
                 center = new Vector2(map.Width * 0.5f, map.Height * 0.5f);
             }
 
+            _remainingZoomedOut = false;
+            _remainingZoomFrom = _zoom;
+            _remainingZoomBlocked = false;
+            LayoutView(map, view, center, 0);
+            UpdateBuoyClear(); // observación 3 de la prueba r2b de la 1.1: con los rótulos y las placas ya colocados
+            _buoyClearDirty = true; // y una vez más en el primer Tick, por si algo los recoloca tras el encuadre
+        }
+
+        // El zoom del mundo antes de alejarse y si ya no se aleja más (vuelve a él: la placa de respaldo).
+        private float _remainingZoomFrom;
+        private bool _remainingZoomBlocked;
+
+        /// <summary>Vueltas de encuadre como mucho al alejar el zoom para la parada siguiente (las del paso y la vuelta atrás).</summary>
+        private const int RemainingZoomPasses = 10;
+
+        private bool _remainingZoomedOut;
+
+        /// <summary>
+        /// La vista Mundo se alejó del zoom del mundo para que quepan juntas la parada siguiente con «Faltan N» y la canoa (añadido
+        /// de D-069 del 2026-11-09, respuesta 2 del dueño; tests).
+        /// </summary>
+        internal bool RemainingZoomedOut => _remainingZoomedOut;
+
+        /// <summary>
+        /// Ni alejándose hasta <see cref="RemainingZoomFloor"/> se veían juntas la parada siguiente con su rótulo y la canoa: la vista
+        /// volvió al zoom del mundo y «Faltan N» sale en la placa de respaldo (añadido de D-069 del 2026-11-09; tests).
+        /// </summary>
+        internal bool RemainingNeedsBelowFloor => _remainingZoomBlocked;
+
+        // Escala, mallas a esa escala, la canoa y el encuadre con _zoom y center. Si la parada siguiente y la canoa no caben juntas
+        // (FrameRemaining), otra vuelta, como mucho dos más, con el zoom con que caben (añadido de D-069 del 2026-11-09).
+        private void LayoutView(RiverMap map, MapView view, Vector2 center, int pass)
+        {
+            CuiasRestore(); // añadido de D-069 del 2026-11-09: las mini cuias que cedieron ante una placa en el encuadre anterior
             var space = new MapSpace(MapSpace.BasinWidthDp * _zoom, Vector2.zero);
             _space = space;
             _contentW = space.DpPerUnit * map.Width;
@@ -1228,7 +1390,9 @@ namespace AF.UI
                 if (ribbon.gameObject.activeSelf && ribbon.Line != null)
                 {
                     ribbon.SetSpace(space);
-                    ribbon.SetWidth(RibbonWidthDp(view, ribbon.Line.Class));
+                    ribbon.SetWidth(MapRibbonWidthDp(view, ribbon.Line.Class));
+                    ribbon.SetShapeWidth(MapShapeWidthDp(view, ribbon.Line.Class)); // D-069: la forma del trazo
+                    ribbon.SetAnchorWidth(MapAnchorWidthDp(view, ribbon.Line.Class));
                     ribbon.SetCurve(view == MapView.World); // FX12: en el Mundo, el zoom deja ver las esquinas
                 }
             }
@@ -1241,7 +1405,7 @@ namespace AF.UI
                 rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0.5f, CanoePivotY);
                 rt.anchoredPosition = local;
-                rt.sizeDelta = new Vector2(ProceduralArt.MapCanoeWidthDp, ProceduralArt.MapCanoeHeightDp);
+                rt.sizeDelta = new Vector2(CanoeWidthDp, CanoeHeightDp); // D-069, M2-3: 60 × 44 dp en la vista Mundo del Mapa v2
             }
 
             ProgressSpace(space);
@@ -1249,11 +1413,63 @@ namespace AF.UI
             SamplesSpace(space);
             SequenceSpace(space);
             NorthUpSpace(space);
+            LiveSpace(space); // D-069, M2-1
             Vector2 c = space.ToLocal(center);
             Vector2 offset = new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y);
             MarkersFrame(ref offset);
+            float fit = FrameRemaining(ref offset); // añadido de D-069 del 2026-11-08: la parada siguiente con «Faltan N» y la canoa, a la vista
+            if (fit < -1.5f)
+            {
+                _remainingZoomBlocked = true; // ni con el tope caben: la placa de respaldo, con el zoom del mundo
+                if (_remainingZoomedOut && pass < RemainingZoomPasses)
+                {
+                    ZoomBackForRemaining(map, view, center, pass);
+                    return;
+                }
+            }
+            else if (fit > 0f && fit < _zoom - 1e-3f && pass < RemainingZoomPasses && !_remainingZoomBlocked)
+            {
+                // Respuesta 2 del dueño (2026-11-09, «Bajar el zoom»): la cámara se aleja lo justo para que quepan las dos, con
+                // margen, hasta RemainingZoomFloor; sin la placa de respaldo.
+                _zoom = fit;
+                _remainingZoomedOut = true;
+                LayoutView(map, view, center, pass + 1);
+                return;
+            }
+
             SetOffset(offset);
             PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
+            RemainingLabelFitView(); // añadido de D-069 del 2026-11-08: el rótulo con «Faltan N», entero a la vista (RiverMapScreen.Towns.cs)
+            StopLabelsAvoidHomeWindow(); // observación 1 de la prueba r2c de la 1.1: ningún rótulo de parada bajo la ventanita de casa
+            CuiasYieldToPlates(); // añadido de D-069 del 2026-11-09: ninguna mini cuia sobre una placa ni un país
+            HeroesAfterFrame(); // añadido de D-069 del 2026-11-09: la ciudad con hito, nunca debajo de una placa
+            TownLabelsAfterFrame(); // añadido de D-069 del 2026-11-09: el pueblo cede ante las boyas, las placas y los rótulos
+            if (!(_remainingOffView || RemainingLabelHidden()) || view != MapView.World || pass >= RemainingZoomPasses)
+            {
+                return;
+            }
+
+            // El rótulo de la parada siguiente aún no se ve entero (una parada junto al borde, en abanico o con el rótulo largo del
+            // Premio del mundo): un paso más lejos, hasta el tope; si con el tope tampoco, vuelta al zoom del mundo y la placa.
+            if (!_remainingZoomBlocked && _zoom > RemainingZoomFloor + 1e-3f)
+            {
+                _zoom = Mathf.Max(RemainingZoomFloor, _zoom * RemainingZoomStep);
+                _remainingZoomedOut = true;
+                LayoutView(map, view, center, pass + 1);
+            }
+            else if (_remainingZoomedOut)
+            {
+                ZoomBackForRemaining(map, view, center, pass);
+            }
+        }
+
+        // Ni con el tope se ve la parada siguiente: vuelve al zoom del mundo (la placa de respaldo es el último recurso).
+        private void ZoomBackForRemaining(RiverMap map, MapView view, Vector2 center, int pass)
+        {
+            _remainingZoomBlocked = true;
+            _remainingZoomedOut = false;
+            _zoom = _remainingZoomFrom;
+            LayoutView(map, view, center, pass + 1);
         }
 
         // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa»: en
@@ -1275,6 +1491,8 @@ namespace AF.UI
             {
                 _backToCanoe.Button.gameObject.SetActive(show);
             }
+
+            LiveOffset(); // D-069, M2-1: la atmósfera, el parallax y la región de la selva
         }
 
         // Esquina del contenido que deja la canoa en el centro de la vista (o lo más cerca que deja el borde del mapa).
@@ -1375,7 +1593,7 @@ namespace AF.UI
             _canvas.Measure();
             _canvasW = _canvas.Width;
             _canvasH = _canvas.Height;
-            _scale = Mathf.Max(0.01f, _screenW / _canvasW);
+            _scale = Mathf.Max(0.01f, _canvas.Scale); // px por dp (la columna puede ser más estrecha que la pantalla: añadido de D-059)
             _safeTop = Mathf.Max(GameScreen.MinSafeTop, (_screenH - _safeArea.yMax) / _scale);
             _safeBottom = Mathf.Max(GameScreen.MinSafeBottom, _safeArea.yMin / _scale);
             Layout();
@@ -1444,22 +1662,29 @@ namespace AF.UI
 
             UiBuilder.Place(_samplesSlot, 16f, samplesTop, w - 32f, SamplesRowDp);
             SamplesLayout(_samplesSlot);
+            CapiFooter(playTop, ref samplesTop); // D-069, M2-3: con el Mapa v2, una sola fila (RiverMapScreen.Capi.cs)
 
-            // Zona del mapa: entre la cabecera y el pie (y la fila del Muestrario), en su marco.
-            float frameTop = _safeTop + HeaderDp + 8f;
-            float frameBottom = samplesTop - frameGap;
-            float frameW = w - (2f * FrameInsetDp);
-            float frameH = Mathf.Max(2f * FramePadDp + 48f, frameBottom - frameTop);
-            UiBuilder.Place(_frame.rectTransform, FrameInsetDp, frameTop, frameW, frameH);
-            _viewW = frameW - (2f * FramePadDp);
-            _viewH = frameH - (2f * FramePadDp);
-            UiBuilder.Place(_viewport, FramePadDp, FramePadDp, _viewW, _viewH);
-            UiBuilder.Place(_frameCorners.rectTransform, FramePadDp, FramePadDp, _viewW, _viewH);
+            // Zona del mapa: entre la cabecera y el pie (y la fila del Muestrario), en su marco. Con el Mapa v2 (D-069, P2 (a)), a
+            // pantalla completa: de la cabecera a la barra de madera de abajo, sin placa ni marco (RiverMapScreen.Live.cs).
+            float pad = ViewPadDp;
+            float frameTop = _live ? _safeTop + HeaderDp : _safeTop + HeaderDp + 8f;
+            float frameBottom = _live ? samplesTop - LiveFooterGapDp : samplesTop - frameGap;
+            float frameX = _live ? 0f : FrameInsetDp;
+            float frameW = w - (2f * frameX);
+            float frameH = Mathf.Max(2f * pad + 48f, frameBottom - frameTop);
+            UiBuilder.Place(_frame.rectTransform, frameX, frameTop, frameW, frameH);
+            _viewW = frameW - (2f * pad);
+            _viewH = frameH - (2f * pad);
+            UiBuilder.Place(_viewport, pad, pad, _viewW, _viewH);
+            UiBuilder.Place(_frameCorners.rectTransform, pad, pad, _viewW, _viewH);
 
             // «Volver a la canoa», abajo a la derecha de la zona del mapa, a la medida de su texto.
             float canoeLabelW = Mathf.Ceil(UiBuilder.MinTextWidth(_backToCanoeLabel));
             float buttonW = Mathf.Min(_viewW - 16f, Mathf.Max(MinTouchDp * 2f, canoeLabelW + 32f));
-            UiBuilder.Place((RectTransform)_backToCanoe.Button.transform, FramePadDp + _viewW - buttonW - 8f, FramePadDp + _viewH - MinTouchDp - 8f, buttonW, MinTouchDp);
+            UiBuilder.Place((RectTransform)_backToCanoe.Button.transform, pad + _viewW - buttonW - 8f, pad + _viewH - MinTouchDp - 8f, buttonW, MinTouchDp);
+            LiveLayout(frameTop, frameBottom); // D-069, M2-1
+            CapiLayout(frameTop); // D-069, M2-3: «Faltan N» en el Mapa (o, desde M2-4, en el rótulo de la parada siguiente)
+            CrewLayout(); // D-069, M2-4: el chip «¡Se une al viaje!»
             SequenceLayout();
             NorthUpLayout();
         }
@@ -1498,6 +1723,11 @@ namespace AF.UI
                 ids.Add("stop_remaining");
                 rects.Add(_remaining);
             }
+            else if (_remainingMerged && StopLabelOf(RemainingStopN()) is TextMeshProUGUI merged)
+            {
+                ids.Add("stop_remaining"); // D-069, M2-4: con el Mapa v2, «Faltan N» va en el rótulo de la parada siguiente
+                rects.Add(merged.rectTransform);
+            }
 
             MarkersLayoutIds(ids, rects);
             SamplesLayoutIds(ids, rects);
@@ -1513,6 +1743,12 @@ namespace AF.UI
             SetRenderInterval(1);
         }
 
+        /// <summary>Suelta el arrastre como el dedo (tests).</summary>
+        internal void EndDragForTests()
+        {
+            EndDrag();
+        }
+
         private void DragPixels(Vector2 pixels)
         {
             Drag(pixels / _scale);
@@ -1522,6 +1758,8 @@ namespace AF.UI
         {
             _dragging = false;
             _activeMs = ActiveLingerMs;
+            TownLabelsAfterDrag(); // revisión de la segunda vuelta de la r2d: los rótulos de pueblo que el encuadre quitó, otra vez
+
             EmitLayoutIfCanoeButtonChanged();
         }
 
@@ -1582,6 +1820,60 @@ namespace AF.UI
         }
 
         // ============================================================================================ ganchos (tareas siguientes)
+
+        /// <summary>D-069, M2-1: al abrir, tras la geometría, el Mapa v2 o el de la 1.0 (RiverMapScreen.Live.cs).</summary>
+        partial void LiveOpen(RiverMap map);
+
+        /// <summary>D-069, M2-3: al final de la apertura, Capi al remo (RiverMapScreen.Capi.cs).</summary>
+        partial void CapiOpen(MapOpenSource source);
+
+        /// <summary>D-069, M2-3: cada fotograma, los gestos, la cámara y la luz.</summary>
+        partial void CapiTick(float dtMs, ref bool animating);
+
+        /// <summary>D-069, M2-3: al cerrar, suelta el rig.</summary>
+        partial void CapiClose();
+
+        /// <summary>D-069, M2-4: la tripulación al abrir (RiverMapScreen.Crew.cs).</summary>
+        partial void CrewOpen(MapOpenSource source);
+
+        /// <summary>D-069, M2-4: la tripulación cada fotograma.</summary>
+        partial void CrewTick(float dtMs, ref bool animating);
+
+        /// <summary>D-069, M2-4: suelta el atlas de la tripulación.</summary>
+        partial void CrewClose();
+
+        /// <summary>D-069, M2-4: el chip de la tripulación al recolocar la pantalla.</summary>
+        partial void CrewLayout();
+
+        /// <summary>D-069, M2-3: el pie del Mapa v2 en una fila.</summary>
+        partial void CapiFooter(float playTop, ref float samplesTop);
+
+        /// <summary>D-069, M2-3: «Faltan N» en el Mapa v2.</summary>
+        partial void CapiLayout(float frameTop);
+
+        /// <summary>D-069, M2-1: la vista cambió de escala.</summary>
+        partial void LiveSpace(MapSpace space);
+
+        /// <summary>D-069, M2-1: el contenido se movió (SetOffset).</summary>
+        partial void LiveOffset();
+
+        /// <summary>D-069, M2-1: cada fotograma con el Mapa abierto (no pide 60 fps).</summary>
+        partial void LiveTick(float dtMs);
+
+        /// <summary>D-069, M2-1: al cerrar.</summary>
+        partial void LiveClose();
+
+        /// <summary>D-069, M2-1: tras maquetar, con el alto de la zona del mapa.</summary>
+        partial void LiveLayout(float mapTop, float mapBottom);
+
+        /// <summary>D-069, M2-1: tras pintar los marcadores con <paramref name="max"/> niveles ganados.</summary>
+        partial void LiveMarkers(int max);
+
+        /// <summary>D-069, M2-2: al abrir, tras LiveOpen, las rutas con la excursión local si van los pueblos (RiverMapScreen.Towns.cs).</summary>
+        partial void TownsRoutes(ref RiverRoutes routes);
+
+        /// <summary>D-069, M2-2: al cerrar, suelta el arte de los pueblos.</summary>
+        partial void TownsClose();
 
         /// <summary>M3.4: al construir la geometría de un Mapa (una vez), sus capas del lleno y del frente.</summary>
         partial void ProgressBuild(RectTransform staticLayer, RectTransform dynamicLayer);

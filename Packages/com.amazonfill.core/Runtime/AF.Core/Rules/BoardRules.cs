@@ -25,8 +25,9 @@ namespace AF.Core.Rules
     /// está sellada ni vacía (R5, R12).</para>
     /// <para><b>R10 (anexo B).</b> Tras cada vertido: (a) revelado de la nueva cima de A (R7); (b) aperturas por recepción
     /// en B (Hoja, Brote; el Brote de dos hojas resta las dosis recibidas); (c) sellado (R5); (d) liberaciones por sellado
-    /// (Liana); (e) contadores (Lluvia, Piraña), una sola vez por vertido y solo si el vertido no es fútil (respuesta Q18 B);
-    /// (f) condiciones del tablero (la cuia de la Tinaja se suelta cuando la tinaja queda vacía, M13); (f′) se repiten
+    /// (Liana, Flor y, en la 1.1, el Aguapé, que suelta su grupo entero); (e) contadores (Lluvia, Piraña), una sola vez por vertido y solo si el vertido no es fútil (respuesta Q18 B);
+    /// (f) condiciones del tablero (la cuia de la Tinaja se suelta cuando la tinaja queda vacía, M13; en la 1.1, la Lancha atraca
+    /// con k cuias vacías); (f′) se repiten
     /// (c), (d) y (f) hasta que nada cambie; (g) victoria (R12); (h) bloqueo (R13-R15). El orden es contrato con el solver y
     /// con Marea, que restaura el estado anterior entero.</para>
     /// <para><b><c>futil</c> (anexo B).</b> No es fútil si <c>cambia_al_recibir(B)</c> (Hoja puesta, Hoja atada, Brote
@@ -316,6 +317,30 @@ namespace AF.Core.Rules
             }
         }
 
+        /// <summary>
+        /// R10 (d) y (f) con su punto fijo, sin vertido (<see cref="PourRules.Settle"/>): true si cambió alguna cuia. Sin
+        /// mecánicas no hace nada.
+        /// </summary>
+        internal static bool SettleInPlace(Cuia[] cuias, int offset, int count, int[] units, ref PourEvents events)
+        {
+            var board = new BoardSlice(cuias, offset, count, units);
+            if (!AnyMechanic(in board))
+            {
+                return false;
+            }
+
+            bool any = false;
+            bool changed = true;
+            for (int pass = 0; changed && pass < MaxFixedPointPasses; pass++)
+            {
+                changed = ReleaseBySeals(in board, ref events);
+                changed |= CheckConditions(in board, ref events);
+                any |= changed;
+            }
+
+            return any;
+        }
+
         /// <summary>(g)-(h).</summary>
         internal static LevelStatus Status(in BoardSlice board, bool futileRuleEnabled)
         {
@@ -403,18 +428,32 @@ namespace AF.Core.Rules
             return false;
         }
 
-        /// <summary>(d) Liberaciones por sellado: la cuia pasa a ser normal (02 R16 para D-007).</summary>
+        /// <summary>
+        /// (d) Liberaciones por sellado: la cuia pasa a ser normal (02 R16 para D-007). Primero se deciden todas las sueltas sobre
+        /// el tablero tal como está y después se aplican: el Aguapé (1.1, D-068) suelta su grupo entero y cada cuia del grupo cuenta
+        /// los sellos de las demás, así que soltar una antes de decidir las otras dejaría el grupo a medias. Para la Liana y la Flor
+        /// no cambia nada: deciden por cuias selladas, y soltar una mecánica no cambia ningún sellado (R5).
+        /// </summary>
         private static bool ReleaseBySeals(in BoardSlice board, ref PourEvents events)
         {
-            bool changed = false;
+            int released = 0;
             for (int i = 0; i < board.Count; i++)
             {
                 Cuia cuia = board[i];
                 if (cuia.HasMechanic && MechanicTable.Of(cuia).ReleasedBySeal(in board, i))
                 {
+                    released |= 1 << i;
+                }
+            }
+
+            bool changed = released != 0;
+            for (int i = 0; released != 0; i++, released >>= 1)
+            {
+                if ((released & 1) != 0)
+                {
+                    Cuia cuia = board[i];
                     board.Set(i, cuia.WithoutMechanic());
                     events.RecordReleased(i, cuia.Mechanic);
-                    changed = true;
                 }
             }
 

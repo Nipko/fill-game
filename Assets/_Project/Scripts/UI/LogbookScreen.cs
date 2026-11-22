@@ -47,7 +47,7 @@ namespace AF.UI
     /// </list>
     /// Gráficos provisionales por código (sin arte de libreta). Ningún texto fuera de la tabla (<see cref="LogbookText"/>).
     /// </summary>
-    public sealed class LogbookScreen
+    public sealed partial class LogbookScreen
     {
         /// <summary>Orden del lienzo (encima del calendario del Reto, 30; por debajo de Ajustes, 40, y el Mapa, 45).</summary>
         public const int SortingOrder = 32;
@@ -164,6 +164,7 @@ namespace AF.UI
 
             _extras = new ItemRow(_panel, art, 2, 14f);
             _received = new ItemRow(_panel, art, MaxItems + 2, 15f);
+            BuildFrameReveal(); // Q-M6 (añadido del 2026-11-08): el marco ganado, en el retrato (LogbookScreen.FrameReveal.cs)
             _button = ModalKit.Cta("Close", _panel, art.CtaLeafLarge, TextStyle.CtaLeaf, string.Empty, 20f, onClose, out _buttonLabel);
             _canvas.Canvas.gameObject.SetActive(false);
         }
@@ -252,6 +253,65 @@ namespace AF.UI
         /// <summary>Raíz del panel (sonda <c>AF_LAYOUT</c>).</summary>
         public RectTransform Panel => _panel;
 
+        /// <summary>
+        /// Se avisa cada vez que la libreta, a la vista, recoloca sus botones: al abrirse, al salir las tarjetas, al sellar, con el
+        /// marco ganado y al cambiar el tamaño del lienzo (observación 7 de la prueba r2b de la 1.1: <c>AF_LAYOUT logbook</c>,
+        /// <see cref="VisibleButtons"/>). Nunca por fotograma.
+        /// </summary>
+        public Action? LayoutChanged { get; set; }
+
+        /// <summary>
+        /// Botones a la vista para <c>AF_LAYOUT logbook</c> (sonda de desarrollo): <c>logbook_close</c> («Seguir» o «Cerrar»),
+        /// <c>logbook_today</c> (la casilla de hoy, si se puede sellar y no están las tarjetas), <c>logbook_choice_seeds</c>,
+        /// <c>logbook_choice_booster</c> y <c>logbook_choice_mix</c> (las tarjetas, al elegir) y <c>logbook_frame_view</c> («Ver tu
+        /// avatar», con el marco ganado). Nada si no se ve.
+        /// </summary>
+        public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+        {
+            if (!Visible)
+            {
+                return;
+            }
+
+            if (TodayPulsing && _snapshot!.NextDay >= 1 && _snapshot.NextDay <= LoginCalendarTable.Days)
+            {
+                ids.Add("logbook_today");
+                rects.Add(CellRect(_snapshot.NextDay));
+            }
+
+            if (_choosing)
+            {
+                for (int c = 0; c < _cards.Length; c++)
+                {
+                    ids.Add("logbook_choice_" + LoginCalendarTable.ChoiceId((LoginCalendarChoice)c));
+                    rects.Add((RectTransform)_cards[c].transform);
+                }
+            }
+
+            Button? view = FrameViewButton;
+            if (view != null)
+            {
+                ids.Add("logbook_frame_view");
+                rects.Add((RectTransform)view.transform);
+            }
+
+            ids.Add("logbook_close");
+            rects.Add((RectTransform)_button.Button.transform);
+        }
+
+        /// <summary>Id de <paramref name="source"/> en la sonda (<c>AF_LAYOUT logbook</c>).</summary>
+        public static string SourceId(LogbookOpenSource source)
+        {
+            switch (source)
+            {
+                case LogbookOpenSource.Takeover: return "takeover";
+                case LogbookOpenSource.L10: return "l10";
+                case LogbookOpenSource.Victory: return "victory";
+                case LogbookOpenSource.Push: return "push";
+                default: return "card";
+            }
+        }
+
         /// <summary>Abre la libreta con <paramref name="snapshot"/> desde <paramref name="source"/>.</summary>
         public void Show(LoginCalendarSnapshot snapshot, LogbookOpenSource source)
         {
@@ -262,9 +322,11 @@ namespace AF.UI
             _dropMs = -1f;
             _pulseMs = 0f;
             _received.Set(Array.Empty<Item>(), 0);
+            HideFrameReveal();
             _canvas.Measure();
             Render();
             _canvas.Canvas.gameObject.SetActive(true);
+            LayoutChanged?.Invoke(); // Render colocó con la libreta aún oculta: se avisa ya a la vista
         }
 
         /// <summary>
@@ -322,6 +384,7 @@ namespace AF.UI
         /// <summary>Oculta la libreta (la casilla, si no se eligió, queda pendiente).</summary>
         public void Hide()
         {
+            HideFrameReveal();
             _choosing = false;
             _dropMs = -1f;
             _canvas.Canvas.gameObject.SetActive(false);
@@ -518,6 +581,7 @@ namespace AF.UI
                 UiBuilder.Place(_received.Root, 16f, y, inner, h);
                 _received.Layout(0f, 0f, inner, h);
                 y += h + 8f;
+                y = LayoutFrameReveal(y, inner);
             }
 
             ModalKit.Place(_button, 36f, y, w - 72f);
@@ -525,6 +589,10 @@ namespace AF.UI
             float x = (_canvas.Width - w) * 0.5f;
             float top = Mathf.Max(48f, (_canvas.Height - y) * 0.5f);
             ModalKit.Size(_panel, _surface, _art, x, top, w, y);
+            if (Visible)
+            {
+                LayoutChanged?.Invoke();
+            }
         }
 
         // Las filas de un premio (semillas primero y después los comodines, en el orden de BoosterKind), desde from.
@@ -560,7 +628,8 @@ namespace AF.UI
 
             if (frame != null && n < into.Length)
             {
-                into[n++] = new Item(_art.Ring, LogbookText.Plain(LogbookText.Keys.ItemFrame));
+                // Q-M6: el icono es el marco de verdad (el del mundo), si quien abre la libreta lo da; si no, el aro de siempre.
+                into[n++] = new Item(FrameIconFor?.Invoke(frame) ?? _art.Ring, LogbookText.Plain(LogbookText.Keys.ItemFrame));
             }
 
             return n;

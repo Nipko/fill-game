@@ -470,9 +470,13 @@ namespace AF.UI
         // El vertido de source a target es el de la lección (el 2 o el estreno de la Hoja; el 1 toma el primero de la solución).
         private static bool IsLesson(FingerLesson lesson, BoardState state, int source, int target, PourMode mode)
         {
-            return lesson == FingerLesson.HojaKey
-                ? TutorialInstruction.IsHojaLesson(state, source, target)
-                : TutorialInstruction.IsPartialRunLesson(state, source, target, mode);
+            switch (lesson)
+            {
+                case FingerLesson.HojaKey: return TutorialInstruction.IsHojaLesson(state, source, target);
+                case FingerLesson.AguapeSeal: return TutorialInstruction.IsAguapeLesson(state, source, target); // D-068
+                case FingerLesson.LanchaEmpty: return TutorialInstruction.IsLanchaLesson(state, source, target, mode); // D-068
+                default: return TutorialInstruction.IsPartialRunLesson(state, source, target, mode);
+            }
         }
 
         private Image NewImage(string name, Sprite? sprite, Vector2 pivot)
