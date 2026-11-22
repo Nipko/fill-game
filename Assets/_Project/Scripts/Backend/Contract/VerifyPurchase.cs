@@ -12,7 +12,7 @@ namespace AF.Backend.Contract
     public sealed class VerifyPurchaseRequest
     {
         /// <exception cref="ArgumentException">Algún campo no cumple el contrato.</exception>
-        public VerifyPurchaseRequest(string token, string sku, string? obfuscatedAccountId = null)
+        public VerifyPurchaseRequest(string token, string sku, string? obfuscatedAccountId = null, string? store = null, string? signedTransaction = null)
         {
             if (!ContractRules.IsPurchaseToken(token))
             {
@@ -29,9 +29,28 @@ namespace AF.Backend.Contract
                 throw new ArgumentException("obfuscated_account_id fuera del contrato.", nameof(obfuscatedAccountId));
             }
 
+            if (store != null && !ContractRules.IsStore(store))
+            {
+                throw new ArgumentException("store fuera del contrato.", nameof(store));
+            }
+
+            // signed_transaction va si y solo si la compra es del App Store (fase M3 de mac-ios.md).
+            bool appStore = store == ContractRules.StoreAppStore;
+            if (appStore && !ContractRules.IsAppStoreTransactionId(token))
+            {
+                throw new ArgumentException("Con app_store, token es el id de la transacción (solo dígitos).", nameof(token));
+            }
+
+            if (appStore != (signedTransaction != null) || (signedTransaction != null && !ContractRules.IsSignedTransaction(signedTransaction)))
+            {
+                throw new ArgumentException("signed_transaction fuera del contrato.", nameof(signedTransaction));
+            }
+
             Token = token;
             Sku = sku;
             ObfuscatedAccountId = obfuscatedAccountId;
+            Store = store;
+            SignedTransaction = signedTransaction;
         }
 
         /// <summary><c>purchaseToken</c> de Play Billing, tal cual. No va a los logs.</summary>
@@ -43,6 +62,16 @@ namespace AF.Backend.Contract
         /// <summary>Lo que el cliente pasó a <c>setObfuscatedAccountId</c> (08 §10.1); opcional.</summary>
         public string? ObfuscatedAccountId { get; }
 
+        /// <summary><c>store</c>: null (Google Play, como siempre) o <see cref="ContractRules.StoreAppStore"/>.</summary>
+        public string? Store { get; }
+
+        /// <summary><c>signed_transaction</c>: el JWS de la transacción de StoreKit 2, solo con el App Store.</summary>
+        public string? SignedTransaction { get; }
+
+        /// <summary>La misma petición como compra del App Store, con su transacción firmada (la añade el cliente de iOS al enviar).</summary>
+        public VerifyPurchaseRequest WithAppStore(string signedTransaction) =>
+            new VerifyPurchaseRequest(Token, Sku, ObfuscatedAccountId, ContractRules.StoreAppStore, signedTransaction);
+
         public string ToJson() => BackendJson.Write(ToNode());
 
         internal JsonNode ToNode()
@@ -53,6 +82,16 @@ namespace AF.Backend.Contract
             if (ObfuscatedAccountId != null)
             {
                 node.Set("obfuscated_account_id", JsonNode.FromString(ObfuscatedAccountId));
+            }
+
+            if (Store != null)
+            {
+                node.Set("store", JsonNode.FromString(Store));
+            }
+
+            if (SignedTransaction != null)
+            {
+                node.Set("signed_transaction", JsonNode.FromString(SignedTransaction));
             }
 
             return node;
@@ -67,8 +106,20 @@ namespace AF.Backend.Contract
             string token = r.RequiredString("token", ContractRules.IsPurchaseToken);
             string sku = r.RequiredString("sku", ContractRules.IsSku);
             string? obfuscated = r.OptionalString("obfuscated_account_id", ContractRules.IsObfuscatedAccountId);
+            string? store = r.OptionalString("store", ContractRules.IsStore);
+            string? signed = r.OptionalString("signed_transaction", ContractRules.IsSignedTransaction);
             r.End();
-            return new VerifyPurchaseRequest(token, sku, obfuscated);
+            if ((store == ContractRules.StoreAppStore) != (signed != null))
+            {
+                throw new ContractException("verifyPurchase.request: signed_transaction va si y solo si store es app_store.");
+            }
+
+            if (store == ContractRules.StoreAppStore && !ContractRules.IsAppStoreTransactionId(token))
+            {
+                throw new ContractException("verifyPurchase.request: con app_store, token es el id de la transacción (solo dígitos).");
+            }
+
+            return new VerifyPurchaseRequest(token, sku, obfuscated, store, signed);
         }
     }
 

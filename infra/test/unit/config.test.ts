@@ -105,6 +105,24 @@ describe('loadConfig', () => {
     expect(() => loadConfig(ctx({ env: 'dev', packageName: 'no valido' }))).toThrow(/applicationId/);
   });
 
+  it('bundleId de iOS (StoreKit 2): provisional en dev, el packageName en prod por defecto y nunca el provisional en prod', () => {
+    expect(loadConfig(ctx({ env: 'dev' })).iosBundleIds).toEqual(['com.amazonfill.dev']);
+    expect(loadConfig(ctx({ env: 'prod' })).iosBundleIds).toEqual([]);
+    expect(loadConfig(ctx({ env: 'prod', packageName: 'com.estudio.juego' })).iosBundleIds).toEqual(['com.estudio.juego']);
+    expect(loadConfig(ctx({ env: 'prod', packageName: 'com.estudio.juego', iosBundleIds: 'com.Estudio.Juego-iOS, com.estudio.juego' })).iosBundleIds)
+      .toEqual(['com.Estudio.Juego-iOS', 'com.estudio.juego']);
+    expect(() => loadConfig(ctx({ env: 'prod', iosBundleIds: 'com.amazonfill.dev' }))).toThrow(/provisional/);
+    expect(() => loadConfig(ctx({ env: 'dev', iosBundleIds: 'sin_puntos' }))).toThrow(/bundleId/);
+  });
+
+  it('acepta ids de app de Firebase de iOS en firebaseAppIds (App Check de la app de iOS)', () => {
+    expect(loadConfig(ctx({ env: 'dev', firebaseAppIds: '1:123:android:abcdef, 1:528273757148:ios:919cc31a49e44c9dc93519' })).firebaseAppIds).toEqual([
+      '1:123:android:abcdef',
+      '1:528273757148:ios:919cc31a49e44c9dc93519',
+    ]);
+    expect(() => loadConfig(ctx({ env: 'dev', firebaseAppIds: '1:123:web:abcdef' }))).toThrow();
+  });
+
   it('ids de app de Firebase para App Check: obligatorios en prod, opcionales en dev y validados', () => {
     expect(() => loadConfig(ctx({ env: 'prod', firebaseAppIds: undefined }))).toThrow(/prod falta el contexto "firebaseAppIds"/);
     expect(() => loadConfig(ctx({ env: 'prod', firebaseAppIds: '' }))).toThrow(/firebaseAppIds/);

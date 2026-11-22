@@ -7,6 +7,8 @@ import { fakeVerifierEnabled, requireEnv } from './env.ts';
 import type { FirebaseAdmin } from './firebaseAdmin.ts';
 import { IDENTITY_TOOLKIT_SCOPE, IdentityToolkitAdmin } from './firebaseAdmin.ts';
 import { ServiceAccountTokenProvider } from './googleAuth.ts';
+import type { AppStoreVerifier } from './appStore.ts';
+import { JwsAppStoreVerifier } from './appStore.ts';
 import type { IntegrityVerifier } from './integrity.ts';
 import { createIntegrityVerifier } from './integrity.ts';
 import type { PlayApi } from './playApi.ts';
@@ -34,6 +36,15 @@ export function realPlayApi(env: Env): PlayApi {
     }),
   });
   return fake ? new DevPlayApi(new FakePlayApi(), real) : real;
+}
+
+/**
+ * Verificador del App Store (StoreKit 2) sin red ni credenciales: el JWS de la transacción contra Apple Root CA - G3.
+ * Sin AF_IOS_BUNDLE_IDS no acepta ninguna compra de iOS (falla cerrada: 400 en cada una), pero Play sigue funcionando.
+ */
+export function realAppStoreVerifier(env: Env): AppStoreVerifier {
+  const bundleIds = (env.AF_IOS_BUNDLE_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  return new JwsAppStoreVerifier({ bundleIds });
 }
 
 export function realFirebaseAdmin(env: Env): FirebaseAdmin {

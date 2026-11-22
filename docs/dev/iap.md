@@ -370,3 +370,34 @@ y en la cabecera del workflow, junto a `check-release-classes`, la compuerta nue
 - **EDM4U 1.2.189 se archiva el 26-10-2026** (08 §7 #7): `AfBillingDependencies.xml` sigue el formato que lee también `com.unity.external-dependency-manager` 2.1.0, así que la migración no lo toca.
 - **Builds de Android**: PBL 9 llega por Gradle desde Google Maven (necesita red en el build, como Firebase). Verificado en los builds locales (§6); la referencia es el CI Linux.
 - **El runtime de Unity 6.3** (Engine Diagnostics o Insights): **cerrado por Q-B13-9** (`docs/dev/decisiones.md`, añadido de D-040 del 2026-10-28). El AAB de release no lleva `UnityConnectSettings` ni hosts de datos de Unity, y lo vigila `ci/check-no-unity-telemetry.ps1` (en `ci.yml` y `release.yml`); `check-no-unity-iap` sigue vigilando solo el host de compras y las clases de Unity IAP. Quedan dos propuestas pendientes del dueño: apagar Engine Diagnostics y `submitAnalytics` con un método versionado de `ProjectSetup`, y quitar `com.unity.modules.unityanalytics` del manifiesto.
+
+## 8. iOS: StoreKit 2 (fase M3 de `docs/dev/traspaso/mac-ios.md`, 2026-11-03)
+
+I-3 de D-067: plugin propio de StoreKit 2, como el de Play de D-040. **Mismo camino que Android:** el plugin Swift `Assets/_Project/Plugins/iOS/AfStoreKit.swift` habla el protocolo del plugin Java (`IBillingBridge`/`IBillingBridgeListener`, códigos de `BillingCodes`, filas de `BillingRows`), y `IosBillingBridge` (con `StoreKitBridgeEvents`, que reparte los avisos) lo conecta a `NativePlayStorePort`. `PlayBillingClient`, `BillingReadyStoreService`, `VerifiedStoreService`, el libro mayor y `LedgerRestore` son los mismos. Lo crea `PlayBillingFactory` en el iPhone.
+
+**Decisiones [P]** (revisadas por code-reviewer, sin bloqueantes):
+- **Token = id de la transacción de StoreKit:** estable, para que el `token_hash` del libro mayor no cambie entre consultas (el JWS sí cambia). Cumple `ContractRules.IsPurchaseToken`.
+- **Consume = `finish()`. Acknowledge = `finish()` en los no consumibles**; en los consumibles (el `deferred_ack` de Play) solo marca, para no perder una compra que el servidor aún no acreditó.
+- **Sin `appAccountToken`:** StoreKit pide un UUID y el UID de Firebase no lo es; el servidor ata la compra al UID del ID token de Firebase de la llamada. Alternativa pendiente: un UUID derivado del UID.
+- **Ask to Buy:** fila pendiente con el token `pending.<sku>` (la hoja responde «pendiente»; la transacción aprobada llega luego por `Transaction.updates` con su id).
+- **No consumibles terminados** (Sin anuncios, skins): vuelven de `Transaction.currentEntitlements` como reconocidos (`Confirmed`). Los reembolsados (`revocationDate`) y los no verificados se ignoran.
+- **País de la cuenta:** `QueryBillingConfig` responde «no soportado»; el país de la tienda lo lee `AfStorefront.swift` (M2).
+
+**Verificación en el servidor (decisión del dueño, 2026-11-03: el JWS firmado, sin clave):**
+- **Contrato v1, compatible hacia atrás** (`infra/contracts/v1/verify-purchase.request.schema.json`): `store` (`google_play` si falta, o `app_store`) y `signed_transaction` (el `jwsRepresentation` de StoreKit 2, hasta 16384 caracteres), obligatorio si y solo si `store = app_store`; con `app_store`, `token` es el id de la transacción (solo dígitos) y el `token_hash` es su SHA-256, como con Play. La respuesta no cambia.
+- **Servidor** (`infra/functions/shared/appStore.ts`, `JwsAppStoreVerifier`): sin red ni credenciales. La cadena `x5c` (hoja ← intermedio ← raíz) termina en **Apple Root CA - G3** (embebida; huella SHA-256 `63:34:3A:BF:B8:9A:6A:03:EB:B5:7E:9B:3F:5F:A7:BE:7C:4F:5C:75:6F:30:17:B3:A8:C4:88:C3:65:3E:91:79`, igual byte a byte), con vigencias, `basicConstraints` y los OID de Apple; firma ES256 con `jose`; `bundleId` en `AF_IOS_BUNDLE_IDS` (dev `com.amazonfill.dev`; prod, el `-c packageName` o `-c iosBundleIds`), `productId` = `sku`, `transactionId` = `token`, sin reembolso, entorno Production o Sandbox (Xcode, nunca). Con `app_store` no se llama a Play ni a `acknowledge`; el resto del libro mayor es el mismo. Un JWS que no pasa: 400 genérico (en el log, solo un motivo corto). `lib/config.ts` admite ya ids de app de Firebase de iOS en `firebaseAppIds` (App Check). 422 tests de `infra/` en verde y `cdk synth` de dev y prod.
+- **Cliente:** `HttpBackendClient.PrepareVerify` en el iPhone añade a cada `verifyPurchase` el JWS que guarda `AfStoreKit.swift` (`AfSkSignedTransaction`). Si StoreKit aún no lo ha entregado en el proceso, la petición **no sale** (error de red: la cola la reintenta), nunca como de Play.
+- **Revisado por code-reviewer** (servidor sin hallazgos de seguridad: no pasa un JWS que no sea de Apple, de otra app, de otro SKU o transacción, de Xcode, ni reutilizado con otro UID).
+
+**Para encender las compras en el iPhone** (`GameBootstrap.ServerVerifiesAppStore` sigue en `false`):
+1. **El dueño comprueba a mano** la huella de Apple Root CA - G3 de arriba en https://www.apple.com/certificateauthority/ (el agente la escribió de memoria; el test solo la compara consigo misma).
+2. **El dueño despliega** `infra/` (dev y luego prod; en prod con el id de la app de iOS de Firebase en `-c firebaseAppIds`).
+3. Se pone `ServerVerifiesAppStore = true` y se prueba con un usuario *Sandbox* (cuenta de pago).
+
+**Decisiones abiertas para el dueño:**
+- **Sandbox en prod** se concede [P] (la revisión de Apple compra en Sandbox con la app de producción), marcado como prueba (`purchase_type` 0) y con métrica. Efecto: los probadores de TestFlight obtienen monedas y Sin anuncios gratis en prod. ¿Se acepta?
+- **`appAccountToken`** (un UUID derivado del UID) antes de abrir la tienda de iOS: sin él, una reinstalación con UID nuevo no recupera Sin anuncios (409) y un JWS robado lo reclama el primero que lo envíe.
+- **Reembolsos del App Store:** hoy no se retiran (`voidedPurchasesJob` solo mira Play); hace falta App Store Server Notifications v2 (otro endpoint, también con firma JWS).
+
+**Pruebas sin la cuenta de pago:** `af_storekit_local` (solo iPhone y `DEVELOPMENT_BUILD`; variable del arranque): StoreKit con el `.storekit` local que `BuildIos` genera del catálogo (`Tintalu.storekit`, añadido al proyecto y al esquema de Xcode) y el backend falso. Se lanza con ▶ desde Xcode. **En el iPhone 16 Pro Max (iOS 26.6) con Xcode 27.2, Xcode no activó el entorno local** (`AppTransaction` error `unknown`, 0 productos), así que la compra real queda para la prueba con un usuario *Sandbox* cuando exista la cuenta de Apple de Parallext (I-8). Tests: `StoreKitBridgeTests` (avisos y filas del Swift sobre `NativePlayStorePort`) y `LocalStoreKitTests` (el `.storekit` sale del catálogo).
+

@@ -48,6 +48,30 @@ namespace AF.UI
         /// <summary>Cada cuánto se reintenta la cola de verificación con el juego abierto (ms) [P].</summary>
         public const float PumpIntervalMs = 5000f;
 
+        /// <summary>
+        /// Extra de desarrollo (bool; en iOS, variable del arranque, <c>LaunchOptions</c>): StoreKit 2 con el <c>.storekit</c> local y el
+        /// backend falso (fase M3 de <c>mac-ios.md</c>). Nunca en release ni en Android.
+        /// </summary>
+        public const string IntentExtraStoreKitLocal = "af_storekit_local";
+
+        // af_storekit_local en esta sesión (CreateStore).
+        private static bool s_storeKitLocal;
+
+        /// <summary>
+        /// El servidor verifica las compras del App Store (fase M3 de <c>mac-ios.md</c>). Hasta entonces [P], el iPhone con el backend real
+        /// no vende: StoreKit cobraría y el servidor, que solo verifica Play, la rechazaría (sin acreditar). Se enciende con la rama del
+        /// App Store de <c>verifyPurchase</c>.
+        /// </summary>
+        internal const bool ServerVerifiesAppStore = false;
+
+        // En el iPhone, con el backend real, mientras el servidor no verifique el App Store: la tienda sin tienda (no vende, el Mercado no
+        // sale), como un teléfono sin Play. Con af_storekit_local o el backend falso, no aplica.
+        private static bool IosStoreWithoutServerCheck(IBackendClient client)
+        {
+            return !ServerVerifiesAppStore && Application.platform == RuntimePlatform.IPhonePlayer && !s_storeKitLocal
+                && client is HttpBackendClient;
+        }
+
         private IBackendClient? _backend;
         private VerifiedStoreService? _verifiedStore;
         private FakeBillingClient? _fakeBilling;
@@ -114,7 +138,16 @@ namespace AF.UI
         {
             // D-066 E1: una toma del modo de captura usa siempre la tienda simulada con el backend falso: nunca una compra real.
             bool fakeStore = LaunchOptions.ResolveFakeStore(Debug.isDebugBuild) || (Debug.isDebugBuild && _capture.Active);
-            BackendMode mode = StoreBackendMode(BackendModeOverride ?? BackendEndpoints.Mode, fakeStore);
+            // iOS, solo desarrollo (fase M3 de mac-ios.md): StoreKit 2 de verdad con un .storekit local y el backend falso, que acredita
+            // como el servidor; el servidor de dev aún solo verifica compras de Play.
+            s_storeKitLocal = !fakeStore && Debug.isDebugBuild && Application.platform == RuntimePlatform.IPhonePlayer
+                && PlayBillingFactory.Available && LaunchOptions.ReadIntentBool(IntentExtraStoreKitLocal);
+            BackendMode mode = StoreBackendMode(BackendModeOverride ?? BackendEndpoints.Mode, fakeStore || s_storeKitLocal);
+            if (s_storeKitLocal)
+            {
+                Debug.LogWarning("AF_STOREKIT_LOCAL " + IntentExtraStoreKitLocal + " (solo desarrollo): StoreKit con el .storekit local y "
+                    + "verificación del backend falso; las compras no tocan el App Store ni el servidor.");
+            }
             if (fakeStore)
             {
                 Debug.LogWarning("AF_FAKE_STORE " + LaunchOptions.IntentExtraFakeStore + " (solo desarrollo): tienda simulada y verificación del "
@@ -123,6 +156,22 @@ namespace AF.UI
 
             IBackendClient client = BackendClientOverride ?? CreateBackendClient(mode, deviceClock);
             _backend = client;
+            if (client is HttpBackendClient http && Application.platform == RuntimePlatform.IPhonePlayer)
+            {
+                // iOS (fase M3 de mac-ios.md): cada verifyPurchase lleva la transacción firmada de StoreKit 2 (store = app_store), que
+                // el servidor verifica contra la raíz de Apple. Sin ella (StoreKit aún no ha entregado esa transacción en este proceso),
+                // no se envía: error de red y la cola la reintenta (nunca como de Google Play).
+                http.PrepareVerify = r =>
+                {
+                    if (r.Store != null)
+                    {
+                        return r;
+                    }
+
+                    string? jws = PlayBillingFactory.AppStoreSignedTransaction(r.Token);
+                    return jws != null ? r.WithAppStore(jws) : null;
+                };
+            }
             if (client is FakeBackendClient fake)
             {
                 // Como el servidor (infra/functions/shared/catalog.ts, espejo de 05 §4.1 y 08 §9): el contenido del catálogo de esta sesión.
@@ -140,7 +189,8 @@ namespace AF.UI
             IPlayStorePort? portOverride = PlayStorePortOverride;
             _playBilling = portOverride != null
                 ? new PlayBillingClient(portOverride, ledger.Catalog, LaunchOptions.DefaultStoreCurrency)
-                : client is HttpBackendClient ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
+                : IosStoreWithoutServerCheck(client) ? PlayBillingClient.Create(() => new UnavailablePlayStorePort(), ledger.Catalog, LaunchOptions.DefaultStoreCurrency)
+                : client is HttpBackendClient || s_storeKitLocal ? PlayBillingFactory.TryCreate(ledger.Catalog, LaunchOptions.DefaultStoreCurrency) : null;
             if (_playBilling != null)
             {
                 _fakeBilling = null;
@@ -261,7 +311,8 @@ namespace AF.UI
 
             if (play.State == PlayBillingState.NotStarted)
             {
-                if (FirebaseAuthUid.Current != null)
+                // Con af_storekit_local no hay llamadas autenticadas (backend falso) ni hace falta el UID: StoreKit no lo usa.
+                if (FirebaseAuthUid.Current != null || s_storeKitLocal)
                 {
                     play.Start();
                 }

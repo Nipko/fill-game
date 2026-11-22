@@ -244,6 +244,7 @@ namespace AF.UI
             }
 
             TickPlatformScheduler();
+            TickTracking(); // M3: la tarjeta del aviso de rastreo de iOS (GameBootstrap.Tracking.cs)
             TickPushRoute(); // D-062 (GameBootstrap.PushRoute.cs): el aviso pendiente se descarta si la app va a otra pantalla
             TickPushUi(Mathf.Min(Time.unscaledDeltaTime, 1f) * 1000f);
             LevelFlow? flow = _flow;

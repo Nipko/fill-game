@@ -5,7 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using AF.Backend.Firebase;
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
 using Firebase.Extensions;
 using Firebase.RemoteConfig;
 #endif
@@ -154,7 +154,7 @@ namespace AF.RemoteConfig.Firebase
             return result;
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         private bool _defaultsSet;
 
         private void FetchFromFirebase(Action<IReadOnlyDictionary<string, string>?> onDone)
@@ -253,7 +253,7 @@ namespace AF.RemoteConfig.Firebase
 
         /// <summary>
         /// Firebase Remote Config en el teléfono con la configuración de Firebase; si no (editor, tests o un build sin
-        /// <c>google-services.json</c>), el falso vacío de siempre (<see cref="FakeRemoteConfigBackend"/>): defaults compilados.
+        /// <c>google-services.json</c> o, en iOS, sin <c>GoogleService-Info.plist</c>), el falso vacío de siempre (<see cref="FakeRemoteConfigBackend"/>): defaults compilados.
         /// </summary>
         public static IRemoteConfigBackend CreateDefault(RemoteConfigDefaults defaults)
         {

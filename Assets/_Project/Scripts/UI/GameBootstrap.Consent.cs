@@ -99,6 +99,7 @@ namespace AF.UI
             SimCountryOverride = null;
             PlayAccountCountryOverride = null;
             AdProviderOverride = null; // D-042: el proveedor de anuncios de los tests
+            TrackingPortOverride = null; // M3: el aviso de rastreo de iOS de los tests (GameBootstrap.Tracking.cs)
             ResetAgeSignals(); // T-L3: Play Age Signals de los tests (GameBootstrap.AgeSignals.cs)
         }
 
@@ -332,6 +333,7 @@ namespace AF.UI
             ProbeConsent();
             StartPlayBilling(false); // D-040: con la edad ya decidida (y no < 13), Play puede conectarse
             StartCloudAfterConsent(flow.Flags.PlayGamesAllowed); // D-042: primer arranque, Play Games tras declarar la edad (no < 13)
+            OfferTrackingAfterConsent(); // M3: iOS, 18+ con anuncios personalizados, el aviso de rastreo (GameBootstrap.Tracking.cs)
         }
 
         // <13 (en el arranque o al corregir la edad en Ajustes): el bloqueo a la vista y la escena se recarga, como al cambiar de idioma

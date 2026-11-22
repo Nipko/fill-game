@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
 using Firebase;
 using Firebase.AppCheck;
 using Firebase.Extensions;
@@ -29,18 +29,19 @@ namespace AF.Backend.Firebase
     /// <summary>
     /// Arranque único del Firebase Unity SDK 13.17.0 (D-039; 08 §2.3: <c>Firebase.InitAsync(analytics_collection=false)</c>), que
     /// comparten los proveedores de tokens (<see cref="FirebaseAuthTokenProvider"/>, <see cref="AppCheckIntegrityTokenProvider"/>),
-    /// el sumidero de analítica, Crashlytics y Remote Config. Solo existe de verdad en <c>UNITY_ANDROID &amp;&amp; !UNITY_EDITOR</c>
+    /// el sumidero de analítica, Crashlytics y Remote Config. Solo existe de verdad en <c>(UNITY_ANDROID || UNITY_IOS) &amp;&amp; !UNITY_EDITOR</c>
     /// (08 §2.1, principio 6): en el editor (ARM64 o x64) y en los tests, <see cref="IsConfigured"/> es false y nada toca el SDK.
     /// <para>
     /// <see cref="IsConfigured"/> mira, sin red y sin el SDK, si el build lleva la configuración que genera Firebase a partir de
-    /// <c>google-services.json</c> (el recurso <c>google_app_id</c>). Sin ella, el juego sigue con las implementaciones falsas (build de
+    /// <c>google-services.json</c> (el recurso <c>google_app_id</c>) o, en iOS, el <c>GoogleService-Info.plist</c> (su <c>GOOGLE_APP_ID</c>). Sin ella, el juego sigue con las implementaciones falsas (build de
     /// desarrollo) o sin backend (release). El archivo lo coloca el dueño (regla dura 5; <c>docs/dev/firebase-cliente.md</c>).
     /// </para>
     /// <para>
     /// App Check se configura <b>antes</b> de tocar Firebase (lo exige el SDK) y sin refresco automático: el cliente solo pide tokens
     /// de uso limitado (Q-AWS-4 (a)). Proveedor (D-039, añadido del 2026-10-21): el de depuración en <c>DEVELOPMENT_BUILD</c> y
-    /// Play Integrity en release. La recogida de Analytics no se enciende aquí: el manifiesto
-    /// (<c>Assets/Plugins/Android/LauncherManifest.xml</c>) la deja apagada hasta el consentimiento.
+    /// Play Integrity (Android) o App Attest (iOS; necesita la capacidad App Attest de la cuenta de pago, M3-M5) en release. La
+    /// recogida de Analytics no se enciende aquí: el manifiesto (<c>Assets/Plugins/Android/LauncherManifest.xml</c>) y, en iOS, el
+    /// <c>Info.plist</c> (<c>AF.EditorTools.BuildIos.ConsentDefaults</c>) la dejan apagada hasta el consentimiento.
     /// </para>
     /// Solo desde el hilo principal. Nunca escribe en los logs (UID y tokens).
     /// </summary>
@@ -51,6 +52,9 @@ namespace AF.Backend.Firebase
 
         /// <summary>App Android <c>com.amazonfill.dev</c> del proyecto de dev (D-035; identificador público).</summary>
         public const string DevAndroidAppId = "1:528273757148:android:45d5cf0ddb2e3021c93519";
+
+        /// <summary>App iOS <c>com.amazonfill.dev</c> del proyecto de dev (fase M2 de <c>mac-ios.md</c>; identificador público).</summary>
+        public const string DevIosAppId = "1:528273757148:ios:919cc31a49e44c9dc93519";
 
         private static readonly List<Action<bool>> s_waiting = new List<Action<bool>>();
         private static bool? s_configured;
@@ -63,8 +67,8 @@ namespace AF.Backend.Firebase
 
         /// <summary>
         /// El build lleva la configuración de Firebase y, en un build de desarrollo, es la del proyecto de dev
-        /// (<see cref="DevProjectId"/> y <see cref="DevAndroidAppId"/>; el API de dev solo acepta tokens de ese proyecto). Siempre false
-        /// en el editor y fuera de Android.
+        /// (<see cref="DevProjectId"/> y <see cref="DevAndroidAppId"/> o <see cref="DevIosAppId"/>; el API de dev solo acepta tokens de ese
+        /// proyecto). Siempre false en el editor y fuera de Android e iOS.
         /// </summary>
         public static bool IsConfigured
         {
@@ -144,19 +148,22 @@ namespace AF.Backend.Firebase
             }
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         private static void StartSdk()
         {
             try
             {
                 // Antes que cualquier otra llamada a Firebase (lo exige App Check; D-039, añadido del 2026-10-21): en los builds de
-                // desarrollo, el proveedor de depuración (el SDK de Android escribe en logcat el secreto que el dueño registra en la
-                // consola; docs/dev/firebase-cliente.md §4); en release, Play Integrity (Q-AWS-4 (a)), que no escribe nada.
-                // La fábrica de depuración solo puede ir bajo DEVELOPMENT_BUILD: sin Development Build, Gradle quita
+                // desarrollo, el proveedor de depuración (el SDK escribe en logcat, o en la consola de Xcode en iOS, el secreto que el
+                // dueño registra en la consola; docs/dev/firebase-cliente.md §4); en release, Play Integrity (Q-AWS-4 (a)) en Android
+                // y App Attest en iOS (fase M2 de mac-ios.md; necesita la capacidad App Attest de la cuenta de pago, M3-M5).
+                // En Android la fábrica de depuración solo puede ir bajo DEVELOPMENT_BUILD: sin Development Build, Gradle quita
                 // firebase-appcheck-debug del APK/AAB (settingsTemplate.gradle; D-033, añadido del 2026-10-22, punto 9) y
                 // usarla sería JNI a una clase ausente. Lo vigila ci/check-release-classes.ps1.
 #if DEVELOPMENT_BUILD
                 FirebaseAppCheck.SetAppCheckProviderFactory(DebugAppCheckProviderFactory.Instance);
+#elif UNITY_IOS
+                FirebaseAppCheck.SetAppCheckProviderFactory(AppAttestProviderFactory.Instance);
 #else
                 FirebaseAppCheck.SetAppCheckProviderFactory(PlayIntegrityProviderFactory.Instance);
 #endif
@@ -201,6 +208,47 @@ namespace AF.Backend.Firebase
             }
         }
 
+#if UNITY_IOS
+        // iOS (fase M2 de mac-ios.md): el GoogleService-Info.plist que el editor de Firebase copia al proyecto de Xcode va en el
+        // paquete de la app, y Xcode lo copia en binario: se lee con NSBundle y NSDictionary (Plugins/iOS/AfPlatform.mm). Lo coloca el
+        // dueño en Assets/_LocalSecrets (regla dura 5); aquí solo se leen los identificadores públicos GOOGLE_APP_ID y PROJECT_ID.
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern string? AfBundlePlistString(string resource, string key);
+
+        private const string PlistResource = "GoogleService-Info";
+
+        private static bool ReadConfigured(out string? why)
+        {
+            why = null;
+            try
+            {
+                string? appId = AfBundlePlistString(PlistResource, "GOOGLE_APP_ID");
+                if (string.IsNullOrEmpty(appId))
+                {
+                    why = "not_configured"; // sin GoogleService-Info.plist en el build
+                    return false;
+                }
+
+                if (UnityEngine.Debug.isDebugBuild)
+                {
+                    // El API de dev solo acepta tokens del proyecto de dev: otra configuración fallaría en cada llamada.
+                    if (!string.Equals(appId, DevIosAppId, StringComparison.Ordinal)
+                        || !string.Equals(AfBundlePlistString(PlistResource, "PROJECT_ID"), DevProjectId, StringComparison.Ordinal))
+                    {
+                        why = "config_mismatch";
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception)
+            {
+                why = "config_unreadable";
+                return false;
+            }
+        }
+#else
         private static bool ReadConfigured(out string? why)
         {
             why = null;
@@ -244,6 +292,7 @@ namespace AF.Backend.Firebase
             int id = resources.Call<int>("getIdentifier", name, "string", package);
             return id == 0 ? null : resources.Call<string>("getString", id);
         }
+#endif
 #else
         private static void StartSdk()
         {

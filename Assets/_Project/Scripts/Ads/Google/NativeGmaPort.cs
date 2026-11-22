@@ -1,4 +1,4 @@
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ namespace AF.Ads.Google
 {
     /// <summary>
     /// <see cref="IGmaPort"/> sobre el plugin Google Mobile Ads 11.5.0 (<c>play-services-ads</c> 25.4.0 y UMP 4.0.0; D-049). Solo en un
-    /// teléfono Android: el editor y los tests usan <see cref="FakeGmaPort"/>. Los avisos del SDK (que pueden llegar en otro hilo) se
+    /// teléfono Android o en el iPhone (el mismo API de C#; fase M3 de <c>mac-ios.md</c>): el editor y los tests usan <see cref="FakeGmaPort"/>. Los avisos del SDK (que pueden llegar en otro hilo) se
     /// encolan y se entregan en <see cref="Pump"/>, en el hilo principal. Nunca escribe el UID ni los bloques en los logs.
     /// </summary>
     public sealed class NativeGmaPort : IGmaPort

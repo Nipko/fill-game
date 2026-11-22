@@ -2,6 +2,7 @@
 // fuente única; Q-AWS-12). Sin ajv en tiempo de ejecución: validadores pequeños que los tests de contrato
 // contrastan con los ejemplos válidos e inválidos de contracts/v1/examples.
 import common from '../../contracts/v1/common.schema.json' with { type: 'json' };
+import verifyPurchaseRequest from '../../contracts/v1/verify-purchase.request.schema.json' with { type: 'json' };
 import { badRequest } from './errors.ts';
 
 type Defs = typeof common.$defs;
@@ -28,21 +29,50 @@ function matches(value: unknown, re: RegExp, maxLength = 4096): value is string 
   return typeof value === 'string' && value.length <= maxLength && re.test(value);
 }
 
+/** Tienda de la compra (`store` del contrato; si falta, Google Play). */
+export type PurchaseStore = 'google_play' | 'app_store';
+
 export interface VerifyPurchaseRequest {
   readonly token: string;
   readonly sku: string;
   readonly obfuscatedAccountId?: string;
+  readonly store: PurchaseStore;
+  /** JWS de la transacción de StoreKit 2: presente si y solo si `store` es `app_store`. */
+  readonly signedTransaction?: string;
 }
 
+const VP_PROPS = verifyPurchaseRequest.properties;
+const VP_THEN = verifyPurchaseRequest.then.properties;
+const SIGNED_TRANSACTION = {
+  re: new RegExp(VP_PROPS.signed_transaction.pattern),
+  min: VP_PROPS.signed_transaction.minLength,
+  max: VP_PROPS.signed_transaction.maxLength,
+};
+/** Con `app_store`, `token` es el transactionId de StoreKit (solo dígitos). */
+const APP_STORE_TOKEN_RE = new RegExp(VP_THEN.token.pattern);
+const STORES: readonly string[] = VP_PROPS.store.enum;
+
 export function parseVerifyPurchase(body: Record<string, unknown>): VerifyPurchaseRequest {
-  onlyKeys(body, ['token', 'sku', 'obfuscated_account_id']);
+  onlyKeys(body, ['token', 'sku', 'obfuscated_account_id', 'store', 'signed_transaction']);
   if (!matches(body.token, PATTERNS.purchaseToken, PURCHASE_TOKEN_MAX) || body.token.length < 1) throw badRequest('token no válido.');
   if (!matches(body.sku, PATTERNS.sku)) throw badRequest('sku no válido.');
   const oa = body.obfuscated_account_id;
   if (oa !== undefined && (typeof oa !== 'string' || oa.length < 1 || oa.length > 64)) {
     throw badRequest('obfuscated_account_id no válido.');
   }
-  return { token: body.token, sku: body.sku, obfuscatedAccountId: oa };
+  const storeRaw = body.store;
+  if (storeRaw !== undefined && (typeof storeRaw !== 'string' || !STORES.includes(storeRaw))) throw badRequest('store no válido.');
+  const store: PurchaseStore = storeRaw === 'app_store' ? 'app_store' : 'google_play';
+  const st = body.signed_transaction;
+  if (store === 'app_store') {
+    if (!matches(st, SIGNED_TRANSACTION.re, SIGNED_TRANSACTION.max) || st.length < SIGNED_TRANSACTION.min) {
+      throw badRequest('signed_transaction no válido.');
+    }
+    if (!APP_STORE_TOKEN_RE.test(body.token)) throw badRequest('token no válido.');
+    return { token: body.token, sku: body.sku, obfuscatedAccountId: oa, store, signedTransaction: st };
+  }
+  if (st !== undefined) throw badRequest('signed_transaction solo va con store app_store.');
+  return { token: body.token, sku: body.sku, obfuscatedAccountId: oa, store };
 }
 
 export function parseRestoreLedger(body: Record<string, unknown>): { pendingNonces: string[] } {

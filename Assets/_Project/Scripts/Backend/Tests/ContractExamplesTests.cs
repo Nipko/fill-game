@@ -181,7 +181,9 @@ namespace AF.Backend.Tests
             }
 
             Assert.That(accepted, Is.Empty, "ejemplos inválidos que el cliente acepta");
-            Assert.That(checkedCount, Is.EqualTo(8), "con league-wins.request.invalid-too-many (D-046) y league-avatar.request.invalid-out-of-range (D-056)");
+            Assert.That(checkedCount, Is.EqualTo(9),
+                "con league-wins.request.invalid-too-many (D-046), league-avatar.request.invalid-out-of-range (D-056) y "
+                + "verify-purchase.request.invalid-app-store-no-jws (fase M3 de mac-ios.md)");
         }
 
         [Test]

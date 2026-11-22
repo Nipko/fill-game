@@ -23,7 +23,8 @@
       "response": "verify-purchase.response.schema.json",
       "examples": {
         "request": [
-          "verify-purchase.request.json"
+          "verify-purchase.request.json",
+          "verify-purchase.request.app-store.json"
         ],
         "response": [
           "verify-purchase.response.ok.json",
@@ -31,7 +32,8 @@
           "verify-purchase.response.duplicate.json"
         ],
         "invalidRequest": [
-          "verify-purchase.request.invalid-missing-token.json"
+          "verify-purchase.request.invalid-missing-token.json",
+          "verify-purchase.request.invalid-app-store-no-jws.json"
         ]
       },
       "errors": {
@@ -57,7 +59,7 @@
           "upstream_error"
         ]
       },
-      "source": "08 §10.3; plan §2 (tabla purchases) y F2-4"
+      "source": "08 §10.3; plan §2 (tabla purchases) y F2-4. Con store = app_store (StoreKit 2; mac-ios.md, M3), token es el transactionId y signed_transaction su JWS: se verifica sin red contra Apple Root CA - G3, sin llamar a Play ni reconocer; un JWS inválido, de otra app, de otro SKU o transacción, revocado o del entorno Xcode → 400 bad_request."
     },
     {
       "operation": "restoreLedger",

@@ -1,6 +1,6 @@
 #nullable enable
 using AF.Backend.Firebase;
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
 using System.Collections.Generic;
 using Firebase.Analytics;
 #endif
@@ -39,7 +39,7 @@ namespace AF.Analytics.Firebase
         /// <inheritdoc />
         public bool RequiresConsent => true;
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         /// <inheritdoc />
         public void Send(AnalyticsEvent e)
         {
@@ -190,7 +190,7 @@ namespace AF.Analytics.Firebase
             }
 
             s_intent.Request(true);
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
             FirebaseBoot.WhenReady(ApplyWanted);
 #endif
             return true;
@@ -211,7 +211,7 @@ namespace AF.Analytics.Firebase
             }
 
             s_intent.Request(false);
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
             if (s_intent.OnStop(FirebaseBoot.State != FirebaseBootState.NotStarted) == CrashReportingAction.DisableNative)
             {
                 StopNative();
@@ -224,7 +224,7 @@ namespace AF.Analytics.Firebase
             return true;
         }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
         private static void ApplyWanted(bool ok)
         {
             switch (s_intent.WhenBooted(ok))
@@ -242,6 +242,40 @@ namespace AF.Analytics.Firebase
             }
         }
 
+#if UNITY_IOS
+        // iOS (fase M2 de mac-ios.md): lo mismo con el SDK nativo de Crashlytics por el plugin propio Plugins/iOS/AfCrashlytics.m. En
+        // iOS Firebase no arranca solo (no hay FirebaseInitProvider): sin el FirebaseApp que crea el de C#, Crashlytics no corre y el
+        // plugin no hace nada.
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void AfCrashlyticsStop();
+
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void AfCrashlyticsDeleteUnsent();
+
+        private static void StopNative()
+        {
+            try
+            {
+                AfCrashlyticsStop();
+            }
+            catch (System.Exception)
+            {
+                // Por si el SDK nativo falla: nunca rompe el juego (sin el símbolo, IL2CPP no enlaza).
+            }
+        }
+
+        private static void DeleteUnsentNative()
+        {
+            try
+            {
+                AfCrashlyticsDeleteUnsent();
+            }
+            catch (System.Exception)
+            {
+                // Por si el SDK nativo falla: nunca rompe el juego.
+            }
+        }
+#else
         // FirebaseCrashlytics de Android sin pasar por el Firebase de C#: la recogida apagada (persiste) y los informes que hubiera
         // en el disco, borrados para que nunca salgan. Sin FirebaseApp (no hay FirebaseInitProvider) Crashlytics no corre: nada que hacer.
         private static void StopNative()
@@ -278,6 +312,7 @@ namespace AF.Analytics.Firebase
                 // Sin FirebaseApp o sin la clase: nada que borrar.
             }
         }
+#endif
 #endif
     }
 

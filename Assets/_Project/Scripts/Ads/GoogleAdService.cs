@@ -137,6 +137,28 @@ namespace AF.Ads
         /// <summary>Bloque intersticial de prueba de Google (Android).</summary>
         public const string TestInterstitial = "ca-app-pub-3940256099942544/1033173712";
 
+        /// <summary>
+        /// App ID de AdMob para iOS: el de EJEMPLO de Google (público) hasta que exista la app de iOS en AdMob con la cuenta de Apple de
+        /// Parallext (M5). Lo escribe <c>GoogleAdsProjectSetup.ApplyIos</c> en el asset del plugin, que lo pasa al <c>Info.plist</c>
+        /// junto con la lista de SKAdNetwork; sin App ID, el post-proceso del plugin se para antes de escribirla.
+        /// </summary>
+        public const string IosAppId = "ca-app-pub-3940256099942544~1458002511";
+
+        /// <summary>Bloque recompensado de prueba de Google para iOS (fase M3 de <c>mac-ios.md</c>).</summary>
+        public const string IosTestRewarded = "ca-app-pub-3940256099942544/1712485313";
+
+        /// <summary>Bloque intersticial de prueba de Google para iOS.</summary>
+        public const string IosTestInterstitial = "ca-app-pub-3940256099942544/4411468910";
+
+        /// <summary>
+        /// Bloques de producción de iOS: aún no existen (la app de iOS se crea en AdMob con la cuenta de Apple de Parallext, M5). Mientras
+        /// sean null, iOS usa los de prueba también en release (nunca los anuncios simulados, que concederían recompensas gratis).
+        /// </summary>
+        public const string? IosProductionRewarded = null;
+
+        /// <summary>Bloque intersticial de producción de iOS (null hasta M5; ver <see cref="IosProductionRewarded"/>).</summary>
+        public const string? IosProductionInterstitial = null;
+
         /// <summary>El <c>applicationId</c> provisional de los builds de prueba (regla dura 6).</summary>
         public const string ProvisionalApplicationId = "com.amazonfill.dev";
 
@@ -161,13 +183,23 @@ namespace AF.Ads
 
         /// <summary>
         /// Producción solo con un build que no es de desarrollo y con un <paramref name="applicationId"/> distinto del provisional;
-        /// en cualquier otro caso (o sin ID), los de prueba.
+        /// en cualquier otro caso (o sin ID), los de prueba. Con <paramref name="ios"/>, los de iOS (de prueba mientras no haya de producción).
         /// </summary>
-        public static GoogleAdUnits Choose(bool developmentBuild, string? applicationId)
+        public static GoogleAdUnits Choose(bool developmentBuild, string? applicationId, bool ios = false)
         {
             bool production = !developmentBuild
                 && !string.IsNullOrEmpty(applicationId)
                 && !string.Equals(applicationId, ProvisionalApplicationId, StringComparison.Ordinal);
+            if (ios)
+            {
+                // iOS (fase M3 de mac-ios.md): los de prueba de Google para iOS hasta que existan los de producción.
+                string? rewarded = IosProductionRewarded;
+                string? interstitial = IosProductionInterstitial;
+                return production && rewarded != null && interstitial != null
+                    ? new GoogleAdUnits(rewarded, interstitial, true)
+                    : new GoogleAdUnits(IosTestRewarded, IosTestInterstitial, false);
+            }
+
             return production
                 ? new GoogleAdUnits(ProductionRewarded, ProductionInterstitial, true)
                 : new GoogleAdUnits(TestRewarded, TestInterstitial, false);

@@ -51,18 +51,34 @@ describe('validadores de las Lambdas frente al contrato v1', () => {
 
   it('lo que el validador acepta también lo acepta el esquema (casos límite)', () => {
     const vp = validator('verify-purchase.request.schema.json');
-    const cases = [
+    // App Store (StoreKit 2): signed_transaction si y solo si store = app_store, y entonces token solo dígitos.
+    const jws = 'aGVhZA.cGF5bG9hZA.c2ln';
+    const cases: Record<string, unknown>[] = [
       { token: 'a', sku: 'af_noads' },
       { token: 'a'.repeat(4096), sku: 'af_coins_2', obfuscated_account_id: 'x' },
+      { token: '2000000123456789', sku: 'af_noads', store: 'app_store', signed_transaction: jws },
+      { token: 'a', sku: 'af_noads', store: 'google_play' },
+      { token: '1', sku: 'af_noads', store: 'app_store', signed_transaction: `a.b.${'c'.repeat(16384 - 4)}` },
     ];
     for (const c of cases) {
-      expect(() => parseVerifyPurchase(c)).not.toThrow();
-      expect(vp(c)).toBe(true);
+      expect(() => parseVerifyPurchase(c), JSON.stringify(c).slice(0, 80)).not.toThrow();
+      expect(vp(c), JSON.stringify(c).slice(0, 80)).toBe(true);
     }
-    const bad = [{ token: 'a'.repeat(4097), sku: 'af_noads' }, { token: '', sku: 'af_noads' }, { token: 'a', sku: 'af_noads', obfuscated_account_id: '' }];
+    const bad: Record<string, unknown>[] = [
+      { token: 'a'.repeat(4097), sku: 'af_noads' },
+      { token: '', sku: 'af_noads' },
+      { token: 'a', sku: 'af_noads', obfuscated_account_id: '' },
+      { token: '2000000123456789', sku: 'af_noads', store: 'app_store' },
+      { token: 'tok.abc', sku: 'af_noads', store: 'app_store', signed_transaction: jws },
+      { token: 'a', sku: 'af_noads', signed_transaction: jws },
+      { token: 'a', sku: 'af_noads', store: 'google_play', signed_transaction: jws },
+      { token: '1', sku: 'af_noads', store: 'app_store', signed_transaction: 'a.b' },
+      { token: '1', sku: 'af_noads', store: 'app_store', signed_transaction: `a.b.${'c'.repeat(16384 - 3)}` },
+      { token: 'a', sku: 'af_noads', store: 'itunes' },
+    ];
     for (const c of bad) {
-      expect(() => parseVerifyPurchase(c)).toThrow(HttpError);
-      expect(vp(c)).toBe(false);
+      expect(() => parseVerifyPurchase(c), JSON.stringify(c).slice(0, 80)).toThrow(HttpError);
+      expect(vp(c), JSON.stringify(c).slice(0, 80)).toBe(false);
     }
   });
 

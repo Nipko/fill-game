@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/verify-purchase.request.schema.json",
   "title": "verifyPurchase: petición",
-  "description": "08 §10.3. El UID sale del ID token; el token de integridad va en la cabecera X-Firebase-AppCheck.",
+  "description": "08 §10.3. El UID sale del ID token; el token de integridad va en la cabecera X-Firebase-AppCheck. Con store = app_store (StoreKit 2, fase M3 de mac-ios.md), token es el id de la transacción (solo dígitos) y signed_transaction, su JWS firmado por Apple; el servidor lo verifica sin red contra Apple Root CA - G3. Sin store, Google Play como siempre (compatible hacia atrás).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,10 +17,52 @@
       "$ref": "common.schema.json#/$defs/sku"
     },
     "obfuscated_account_id": {
-      "description": "Lo que el cliente pasó a setObfuscatedAccountId (08 §10.1). Opcional: el servidor lo contrasta con el de Play.",
+      "description": "Lo que el cliente pasó a setObfuscatedAccountId (08 §10.1). Opcional: el servidor lo contrasta con el de Play. Con app_store se ignora.",
       "type": "string",
       "minLength": 1,
       "maxLength": 64
+    },
+    "store": {
+      "description": "Tienda de la compra. Si falta, google_play.",
+      "enum": [
+        "google_play",
+        "app_store"
+      ]
+    },
+    "signed_transaction": {
+      "description": "JWS compacto (jwsRepresentation) de la transacción de StoreKit 2. Obligatorio si y solo si store = app_store; su transactionId debe ser token y su productId, sku.",
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 16384,
+      "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$"
+    }
+  },
+  "if": {
+    "required": [
+      "store"
+    ],
+    "properties": {
+      "store": {
+        "const": "app_store"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "signed_transaction"
+    ],
+    "properties": {
+      "signed_transaction": true,
+      "token": {
+        "description": "Con app_store: el transactionId de StoreKit (entero decimal).",
+        "type": "string",
+        "pattern": "^[0-9]{1,20}$"
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "signed_transaction": false
     }
   }
 }

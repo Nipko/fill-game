@@ -655,6 +655,25 @@ namespace AF.Ads.Tests
             StringAssert.StartsWith("ca-app-pub-2916158449453694~", GoogleAdUnits.AndroidAppId);
         }
 
+        [Test]
+        public void Units_OnIos_AreGoogleIosTestUnits_UntilTheProductionOnesExist()
+        {
+            // Fase M3 de mac-ios.md: sin bloques de producción de iOS, también el release usa los de prueba (nunca los simulados).
+            foreach (GoogleAdUnits u in new[]
+                     {
+                         GoogleAdUnits.Choose(developmentBuild: true, "com.amazonfill.dev", ios: true),
+                         GoogleAdUnits.Choose(developmentBuild: false, "com.parallext.tintalu", ios: true),
+                     })
+            {
+                Assert.That(u.Production, Is.False);
+                Assert.That(u.Rewarded, Is.EqualTo("ca-app-pub-3940256099942544/1712485313"), "recompensado de prueba de Google para iOS");
+                Assert.That(u.Interstitial, Is.EqualTo("ca-app-pub-3940256099942544/4411468910"), "intersticial de prueba de Google para iOS");
+            }
+
+            Assert.That(GoogleAdUnits.IosProductionRewarded, Is.Null, "cuando existan, este test cambia con ellos");
+            StringAssert.StartsWith("ca-app-pub-3940256099942544~", GoogleAdUnits.IosAppId, "el App ID de ejemplo de Google, hasta M5");
+        }
+
         // ---- T-L5: rdp=1 con 13-17 en EE. UU. ([F28]) ----
 
         private static void ApplyAndStart(Rig rig, ConsentFlags flags, string? country)

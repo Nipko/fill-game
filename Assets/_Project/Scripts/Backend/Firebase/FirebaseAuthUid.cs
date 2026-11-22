@@ -1,5 +1,5 @@
 #nullable enable
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
 using System;
 using Firebase.Auth;
 #endif
@@ -19,7 +19,7 @@ namespace AF.Backend.Firebase
         {
             get
             {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
                 if (FirebaseBoot.State != FirebaseBootState.Ready)
                 {
                     return null;

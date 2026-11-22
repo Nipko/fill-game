@@ -9,7 +9,8 @@
     "AF.Audio.Unity",
     "AF.Ads.Google.Editor",
     "Google.Play.Games.Editor",
-    "Unity.Notifications"
+    "Unity.Notifications",
+    "AF.IAP"
   ],
   "includePlatforms": [
     "Editor"

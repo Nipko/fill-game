@@ -104,12 +104,14 @@ export class ApiStack extends Stack {
       config,
       name: 'verify-purchase',
       usesPlayVerifier: true,
-      description: 'verifyPurchase (08 §10.3): verifica la compra en Play y la anota en el libro mayor.',
+      description: 'verifyPurchase (08 §10.3): verifica la compra en Play o el App Store y la anota en el libro mayor.',
       environment: {
         ...tableEnv({ PURCHASES: tables.purchases, INTEGRITY: tables.integrity, RATE_LIMITS: tables.rateLimits }),
         ...secretEnv({ PLAY: this.secrets.playServiceAccount }),
         ...playEnv,
         ...appCheckEnv,
+        // bundleId de iOS admitidos en el JWS de StoreKit 2 (verificación sin red contra Apple Root CA - G3; M3).
+        ...(config.iosBundleIds.length > 0 ? { AF_IOS_BUNDLE_IDS: config.iosBundleIds.join(',') } : {}),
       },
     });
     // Q-IAP-4 ya integrado: reasignación condicional de no consumibles, además del alta original.

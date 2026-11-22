@@ -217,6 +217,16 @@ describe.each([
     if (envName === 'prod') expect(JSON.stringify(json)).not.toContain('com.amazonfill.dev');
   });
 
+  it(`bundleId de iOS: ${envName === 'prod' ? 'el packageName de prod' : 'el provisional en dev'}, solo en verify-purchase`, () => {
+    for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
+      const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
+      if (p.FunctionName === `af-${envName}-verify-purchase`) {
+        if (envName === 'dev') expect(vars.AF_IOS_BUNDLE_IDS).toBe('com.amazonfill.dev');
+        else expect(vars.AF_IOS_BUNDLE_IDS ?? '').not.toContain('com.amazonfill.dev');
+      } else expect(vars).not.toHaveProperty('AF_IOS_BUNDLE_IDS');
+    }
+  });
+
   it(`App Check: ${envName === 'prod' ? 'las Lambdas con integridad solo admiten las apps de -c firebaseAppIds' : 'sin lista de apps en dev'}`, () => {
     for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
       const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
