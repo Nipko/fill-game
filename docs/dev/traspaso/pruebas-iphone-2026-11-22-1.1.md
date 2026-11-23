@@ -59,8 +59,8 @@ Prueba de la 1.1 en el iPhone 16 Pro Max (iOS 26.6) según `encargo-mac-prueba-1
 1. **ATT: ¿se abrió el aviso de Apple sin «Continuar»?**
    - Tras «Aceptar todo» (18+), la sonda dio `att_preprompt`. Seis segundos después, la captura muestra el aviso de Apple encima del aviso previo, que seguía visible.
    - El agente solo tocó «Aceptar todo». `AttPrePromptCard.Continue` oculta la tarjeta antes de pedir el permiso, así que con «Continuar» la tarjeta no se vería debajo.
-   - Después llegó `AF_ATT respuesta=Authorized`. Ese toque no fue del agente.
-   - **Pendiente:** el dueño confirma si tocó algo. Si no, es un fallo de M3: el aviso de Apple se abre solo. Volver a probarlo exige reinstalar, porque iOS no deja borrar la respuesta del ATT.
+   - Después llegó `AF_ATT respuesta=Authorized`. **«Permitir» lo tocó el dueño** (lo confirmó en el chat el 2026-11-22).
+   - **Pendiente:** saber si el dueño tocó también «Continuar» en el aviso previo. Si no, es un fallo de M3: el aviso de Apple se abre solo. Volver a probarlo exige reinstalar, porque iOS no deja borrar la respuesta del ATT.
 2. **El borrado de cuenta falla en iOS de desarrollo.**
    - `deleteAccount: BackendError(IntegrityUnavailable)` y «el servidor no confirmó el borrado de la cuenta: no se borra nada».
    - El juego se porta bien: no borra nada y lo dice.
@@ -97,7 +97,7 @@ Desde el nivel 67 (perfil normal): pausa › «Mapa», 9 s en el Mapa y la flech
 
 ## Lo que queda para el dueño
 
-1. **ATT** (obs. 1): ¿tocaste algo en el teléfono cuando salió el aviso de Apple?
+1. **ATT** (obs. 1): «Permitir» lo tocaste tú. Falta saber si antes tocaste «Continuar» en el aviso previo del juego.
 2. **Hápticos:** en un nivel, al sellar una cuia, ¿se nota el toque?
 3. **Dynamic Type:** con Ajustes › Pantalla y brillo › Tamaño del texto al máximo, ¿se lee bien el inicio, la pausa y el Mapa, sin cortes?
 4. **«Reducir movimiento»** (Ajustes › Accesibilidad › Movimiento): al ganar el 40, ¿el viaje de Capi va sin zoom ni acercamiento?
