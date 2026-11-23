@@ -48,7 +48,7 @@ Prueba de la 1.1 en el iPhone 16 Pro Max (iOS 26.6) según `encargo-mac-prueba-1
 | **Zona segura** (Mapa v2 y estreno de la Liga) | **cumple** en todas las capturas | — |
 | **60 fps en el 386** (3 filas, 11 cuias) | **cumple**: con `af_bench_morpho 1`, tandas de 600 fotogramas a 58,6-60,0 fps, p95 16,69-16,99 ms. Picos sueltos de 114-247 ms (uno por tanda, como mucho) | — |
 | **Memoria del Mapa, 3 vueltas** | **cumple**: `sys_mib` tras cada vuelta 393,5 / 392,3 / 392,5; `unity_reserved_mib` 137,1 las tres veces. No crece tras la primera (tabla abajo) | — |
-| **ATT y aviso previo** | **a revisar**: el aviso de Apple salió y alguien tocó «Permitir» (`AF_ATT respuesta=Authorized`). El aviso previo propio seguía visible debajo y el agente no tocó «Continuar» | 1 |
+| **ATT y aviso previo** | **cumple**: tras «Aceptar todo» (18+) sale el aviso previo; el dueño tocó «Continuar» y luego «Permitir» en el aviso de Apple (`AF_ATT respuesta=Authorized`) | 1 |
 | **Anuncios de prueba** | **sin probar** en esta ronda (en M3 se probaron) | — |
 | **Compra de prueba** | **sin probar**: el `.storekit` local no se activa en el iPhone y Sandbox necesita la cuenta de pago (encargo §3) | — |
 | **Hápticos, Dynamic Type y «Reducir movimiento»** | **para el dueño**: son ajustes del sistema o se notan con la mano. El agente no puede cambiarlos en el iPhone físico | — |
@@ -56,11 +56,9 @@ Prueba de la 1.1 en el iPhone 16 Pro Max (iOS 26.6) según `encargo-mac-prueba-1
 
 ## Observaciones
 
-1. **ATT: ¿se abrió el aviso de Apple sin «Continuar»?**
-   - Tras «Aceptar todo» (18+), la sonda dio `att_preprompt`. Seis segundos después, la captura muestra el aviso de Apple encima del aviso previo, que seguía visible.
-   - El agente solo tocó «Aceptar todo». `AttPrePromptCard.Continue` oculta la tarjeta antes de pedir el permiso, así que con «Continuar» la tarjeta no se vería debajo.
-   - Después llegó `AF_ATT respuesta=Authorized`. **«Permitir» lo tocó el dueño** (lo confirmó en el chat el 2026-11-22).
-   - **Pendiente:** saber si el dueño tocó también «Continuar» en el aviso previo. Si no, es un fallo de M3: el aviso de Apple se abre solo. Volver a probarlo exige reinstalar, porque iOS no deja borrar la respuesta del ATT.
+1. **ATT: resuelto.**
+   - El dueño tocó «Continuar» en el aviso previo y después «Permitir» en el de Apple (confirmado en el chat el 2026-11-22). El flujo es el esperado.
+   - Queda sin explicar un detalle menor: en la captura, a los 6 s, se ve una tarjeta debajo del aviso de Apple, y `AttPrePromptCard.Continue` debería haberla ocultado. Puede ser la captura en mitad de la transición. Si se repite en otra instalación nueva, conviene mirarlo.
 2. **El borrado de cuenta falla en iOS de desarrollo.**
    - `deleteAccount: BackendError(IntegrityUnavailable)` y «el servidor no confirmó el borrado de la cuenta: no se borra nada».
    - El juego se porta bien: no borra nada y lo dice.
@@ -97,10 +95,9 @@ Desde el nivel 67 (perfil normal): pausa › «Mapa», 9 s en el Mapa y la flech
 
 ## Lo que queda para el dueño
 
-1. **ATT** (obs. 1): «Permitir» lo tocaste tú. Falta saber si antes tocaste «Continuar» en el aviso previo del juego.
-2. **Hápticos:** en un nivel, al sellar una cuia, ¿se nota el toque?
-3. **Dynamic Type:** con Ajustes › Pantalla y brillo › Tamaño del texto al máximo, ¿se lee bien el inicio, la pausa y el Mapa, sin cortes?
-4. **«Reducir movimiento»** (Ajustes › Accesibilidad › Movimiento): al ganar el 40, ¿el viaje de Capi va sin zoom ni acercamiento?
-5. **Orientación** (pendiente de la integración del 2026-11-07): abriendo con el iPhone tumbado, ¿el juego sigue en vertical?
-6. **App Check** (obs. 2): dar de alta el token de depuración de iOS en Firebase. Hace falta para el borrado de cuenta, la Liga real y las compras.
-7. **Cuenta de pago:** con ella, la compra en Sandbox y el tucuxi con un perfil nuevo.
+1. **Hápticos:** en un nivel, al sellar una cuia, ¿se nota el toque?
+2. **Dynamic Type:** con Ajustes › Pantalla y brillo › Tamaño del texto al máximo, ¿se lee bien el inicio, la pausa y el Mapa, sin cortes?
+3. **«Reducir movimiento»** (Ajustes › Accesibilidad › Movimiento): al ganar el 40, ¿el viaje de Capi va sin zoom ni acercamiento?
+4. **Orientación** (pendiente de la integración del 2026-11-07): abriendo con el iPhone tumbado, ¿el juego sigue en vertical?
+5. **App Check** (obs. 2): dar de alta el token de depuración de iOS en Firebase. Hace falta para el borrado de cuenta, la Liga real y las compras.
+6. **Cuenta de pago:** con ella, la compra en Sandbox y el tucuxi con un perfil nuevo.

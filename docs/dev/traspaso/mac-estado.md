@@ -11,7 +11,7 @@ Encargo: `docs/dev/traspaso/mac-ios.md` (D-067). La Mac mini (Apple silicon, 24 
 - **M3 en curso** (rama `mac/m3-storekit`, sobre `mac/m2-sistema`): el cliente de compras con StoreKit 2 por el mismo camino que Play (`docs/dev/iap.md` §8). Compila y conecta en el iPhone; la compra real espera a un usuario *Sandbox* (cuenta de pago) porque Xcode no activa el `.storekit` local en el iPhone. La verificación en el servidor (JWS firmado contra Apple Root CA - G3, sin clave; decisión del dueño) está hecha en `infra/` y revisada, **sin desplegar**: el iPhone con el backend real no vende hasta que el dueño compruebe la huella de la raíz, despliegue y se encienda `ServerVerifiesAppStore` (`iap.md` §8). **Anuncios en iOS** con el mismo código que Android, los bloques de prueba de iOS y la lista de SKAdNetwork de Google en el `Info.plist`, probados en el iPhone (`docs/dev/anuncios-admob.md`, «iOS»). **ATT** con su aviso previo propio (plugin `AfAtt.m`, regla del dueño: una vez, tras el consentimiento, solo 18+ con anuncios personalizados), probado en el iPhone (`anuncios-admob.md`, «iOS»).
 - **M2 hecha** (rama `mac/m2-sistema`, sobre `mac/m1-hola-iphone`): hápticos, escala de texto, «Reducir movimiento», ajustes de la app, notificaciones locales, país desde el App Store, icono con sus apariencias de iOS y Firebase, todo probado en el iPhone.
 
-- **Prueba de la 1.1 en el iPhone hecha** (2026-11-22, rama `mac/prueba-1.1`, desde la integración en `dadcf7e4`, con M2 y M3 ya integrados). Tests en verde; Marea, audios, Liga, Mapa v2, marco de país, 60 fps y memoria cumplen. Quedan para el dueño: el ATT, los hápticos, Dynamic Type, «Reducir movimiento», la orientación y el token de App Check. Hoja: `docs/dev/traspaso/pruebas-iphone-2026-11-22-1.1.md`. Los toques en el iPhone los hace el agente con `DevRemoteTaps`.
+- **Prueba de la 1.1 en el iPhone hecha** (2026-11-22, rama `mac/prueba-1.1`, desde la integración en `dadcf7e4`, con M2 y M3 ya integrados). Tests en verde; Marea, audios, Liga, Mapa v2, marco de país, 60 fps y memoria cumplen. Cumple también el ATT, con el aviso previo. Quedan para el dueño: los hápticos, Dynamic Type, «Reducir movimiento», la orientación y el token de App Check. Hoja: `docs/dev/traspaso/pruebas-iphone-2026-11-22-1.1.md`. Los toques en el iPhone los hace el agente con `DevRemoteTaps`.
 
 ## Para retomar (2026-11-01)
 
@@ -33,7 +33,6 @@ Encargo: `encargo-mac-prueba-1.1.md`. Rama `mac/prueba-1.1` desde `origin/integr
 - **`BuildIos.ExportXcodeSimulator`:** hoy no sirve. Firebase C++ solo trae simulador x86_64 y el simulador de iOS 27.2 es solo arm64.
 - **Resultados:** cumplen la Marea, el Aguapé, la Lancha, la fanfarria de la Liga, los viajes del 40 y del 80 (zoom 6), los rótulos del 71, el 79 y el 521, «Mundo» tras el viaje del 10, el marco de país, la zona segura, 60 fps en el 386 y la memoria del Mapa sin crecer.
 - **Abierto:**
-  - el ATT: ¿se abrió el aviso de Apple sin «Continuar»? (obs. 1);
   - el borrado de cuenta por App Check (obs. 2);
   - el primer plano del tucán, que no se vio en las capturas;
   - el tucuxi, sin probar por falta de un perfil nuevo;
