@@ -11,12 +11,34 @@ Encargo: `docs/dev/traspaso/mac-ios.md` (D-067). La Mac mini (Apple silicon, 24 
 - **M3 en curso** (rama `mac/m3-storekit`, sobre `mac/m2-sistema`): el cliente de compras con StoreKit 2 por el mismo camino que Play (`docs/dev/iap.md` §8). Compila y conecta en el iPhone; la compra real espera a un usuario *Sandbox* (cuenta de pago) porque Xcode no activa el `.storekit` local en el iPhone. La verificación en el servidor (JWS firmado contra Apple Root CA - G3, sin clave; decisión del dueño) está hecha en `infra/` y revisada, **sin desplegar**: el iPhone con el backend real no vende hasta que el dueño compruebe la huella de la raíz, despliegue y se encienda `ServerVerifiesAppStore` (`iap.md` §8). **Anuncios en iOS** con el mismo código que Android, los bloques de prueba de iOS y la lista de SKAdNetwork de Google en el `Info.plist`, probados en el iPhone (`docs/dev/anuncios-admob.md`, «iOS»). **ATT** con su aviso previo propio (plugin `AfAtt.m`, regla del dueño: una vez, tras el consentimiento, solo 18+ con anuncios personalizados), probado en el iPhone (`anuncios-admob.md`, «iOS»).
 - **M2 hecha** (rama `mac/m2-sistema`, sobre `mac/m1-hola-iphone`): hápticos, escala de texto, «Reducir movimiento», ajustes de la app, notificaciones locales, país desde el App Store, icono con sus apariencias de iOS y Firebase, todo probado en el iPhone.
 
+- **Prueba de la 1.1 en el iPhone hecha** (2026-11-22, rama `mac/prueba-1.1`, desde la integración en `dadcf7e4`, con M2 y M3 ya integrados). Tests en verde; Marea, audios, Liga, Mapa v2, marco de país, 60 fps y memoria cumplen. Quedan para el dueño: el ATT, los hápticos, Dynamic Type, «Reducir movimiento», la orientación y el token de App Check. Hoja: `docs/dev/traspaso/pruebas-iphone-2026-11-22-1.1.md`. Los toques en el iPhone los hace el agente con `DevRemoteTaps`.
+
 ## Para retomar (2026-11-01)
 
 1. **Siguiente en M3:** la app de iOS en AdMob, con la cuenta de pago (el ATT ya está hecho, el 2026-11-04).
    - **Cuenta de Apple (I-8), 2026-11-05:** el dueño ya tiene el D-U-N-S y confirmó que la cuenta de Apple Developer se abre como organización a nombre de **Parallext, LLC**. La inscripción, el pago y los acuerdos los hace el dueño. Cuando Apple apruebe: acuerdo de apps de pago con los datos fiscales y bancarios, Small Business Program, estatus de comerciante de la DSA, Bundle ID `com.parallext.tintalu` y un usuario Sandbox. Después, los agentes pasan los builds al equipo de pago, prueban las compras en Sandbox y ponen App Attest. Pendiente del dueño: la huella de Apple Root CA - G3, el despliegue de `infra/` y las decisiones abiertas de `iap.md` §8. Guiones para compilar e instalar (locales, ignorados): `Logs/ios-scripts/ios-setup.sh` y `ios-all.sh <equipo> <udid> ['{"af_dev_push":"2"}']`.
 2. **La firma del Apple ID gratuito caduca a los 7 días** (instalado el 2026-11-01). Para reinstalar: `mac-setup.md` §6 (exportar con `BuildIos.ExportXcode` y `xcodebuild` + `devicectl` desde una terminal normal, con el equipo de firma del dueño).
 3. **En la Mac, solo local:** la rama `mac/prueba-rosa` (M1 + el arreglo de Rosa, solo para probar en el iPhone) y dos `stash`: el checkout a medias de cuando `git-lfs` no estaba en el PATH (sin valor) y los huecos de iconos de iOS que Unity añade a `ProjectSettings.asset`. Se pueden borrar.
+
+## Prueba de la 1.1 en el iPhone — 2026-11-22
+
+Encargo: `encargo-mac-prueba-1.1.md`. Rama `mac/prueba-1.1` desde `origin/integracion-fase1-fase2` (`dadcf7e4`). Hoja: `pruebas-iphone-2026-11-22-1.1.md`.
+
+- **Tests:**
+  - `dotnet build -warnaserror`: 0 avisos. `dotnet test`: 1.114 pasan y 6 omitidos.
+  - `ApplyIosDefaults`: `OK (iOS)`.
+  - EditMode: 5.304, 5.296 pasan, 8 omitidos.
+  - PlayMode: 2.861, 2.446 pasan, 415 omitidos, 0 fallan.
+- **`DevRemoteTaps`:** toques remotos en el iPhone físico, el `adb shell input tap` de iOS. Solo en builds de desarrollo. Órdenes en `Documents/af_taps.txt`, que se copian con `devicectl device copy to`; detalle en la hoja.
+- **`BuildIos.ExportXcodeSimulator`:** hoy no sirve. Firebase C++ solo trae simulador x86_64 y el simulador de iOS 27.2 es solo arm64.
+- **Resultados:** cumplen la Marea, el Aguapé, la Lancha, la fanfarria de la Liga, los viajes del 40 y del 80 (zoom 6), los rótulos del 71, el 79 y el 521, «Mundo» tras el viaje del 10, el marco de país, la zona segura, 60 fps en el 386 y la memoria del Mapa sin crecer.
+- **Abierto:**
+  - el ATT: ¿se abrió el aviso de Apple sin «Continuar»? (obs. 1);
+  - el borrado de cuenta por App Check (obs. 2);
+  - el primer plano del tucán, que no se vio en las capturas;
+  - el tucuxi, sin probar por falta de un perfil nuevo;
+  - el consentimiento, que sale dos veces cuando la región no coincide con la tienda (obs. 5).
+- **iPhone de pruebas casi lleno:** con unos 160 MB libres, una actualización de la app no cabe. Borrarla obliga a que el dueño vuelva a confiar en el perfil (Ajustes › General › VPN y gestión de dispositivos).
 
 ## M2: plataforma (en curso) — 2026-11-01
 
@@ -103,6 +125,10 @@ Rama `mac/m0-setup` desde `origin/integracion-fase1-fase2` (`f10cba52`).
   3. Actualiza el comentario de `ProjectSetup.Ios.cs` (`IosTargetDevice`), que todavía dice que el juego es vertical en el manifiesto.
 
 ## Enganches para el integrador
+
+- **`mac/prueba-1.1` (2026-11-22):**
+  - fusionar la hoja `pruebas-iphone-2026-11-22-1.1.md`, `DevRemoteTaps.cs` (solo `DEVELOPMENT_BUILD`, solo iOS) y `BuildIos.ExportXcodeSimulator`. El segundo se puede descartar si no se quiere;
+  - decidir la observación 5 (el consentimiento dos veces) y si la 4 («Mundo 3 ·» cortado en «Tu avatar») pasa también en Android.
 
 - Fusionar `mac/m1-hola-iphone` (incluye `mac/m0-setup`): `ProjectSetup.Ios.cs`, `BuildIos.cs` (con sus `.meta`), `ProjectSetup` como `partial` y las claves de iPhone de `ProjectSettings.asset`. En Windows sin el módulo iOS compila igual: no usa `UnityEditor.iOS.Xcode`.
 - **Decidir el arreglo de Rosa en blanco** (M1, observación 1): es del código común y afecta a Android.

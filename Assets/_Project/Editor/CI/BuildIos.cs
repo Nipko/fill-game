@@ -40,6 +40,13 @@ namespace AF.EditorTools
         public const string XcodeDir = OutputDir + "/Xcode";
 
         /// <summary>
+        /// El proyecto de Xcode para el simulador de iOS (<see cref="ExportXcodeSimulator"/>): el mismo build de desarrollo con el SDK
+        /// del simulador en x86_64 (con Rosetta: las librerías C++ de Firebase solo traen esa porción de simulador; su arm64 es la del
+        /// dispositivo), para probar la interfaz con toques automáticos, que en el iPhone físico no hay.
+        /// </summary>
+        public const string XcodeSimulatorDir = OutputDir + "/XcodeSim";
+
+        /// <summary>
         /// Icono de iOS, apariencia clara: el de App Store de la identidad v2 (D-045), 1024 × 1024 sin alfa (mac-ios.md, M2).
         /// </summary>
         public const string IconPath = "docs/art/marca-oficial/v2/out/png/app-store-1024.png";
@@ -70,10 +77,26 @@ namespace AF.EditorTools
         [MenuItem("Amazon Fill/CI/Exportar el proyecto de Xcode (dev)")]
         public static void ExportXcode()
         {
+            Export(XcodeDir, simulator: false);
+        }
+
+        /// <summary>
+        /// Como <see cref="ExportXcode"/>, pero para el simulador de iOS, en <see cref="XcodeSimulatorDir"/>. Cambia el SDK de
+        /// <c>DeviceSDK</c> a <c>SimulatorSDK</c> (x86_64) solo mientras construye y lo devuelve al terminar, también si falla: los
+        /// Player Settings fijados (<c>ProjectSetup.ApplyIosDefaults</c>) no cambian. Mismos códigos de salida.
+        /// </summary>
+        [MenuItem("Amazon Fill/CI/Exportar el proyecto de Xcode para el simulador (dev)")]
+        public static void ExportXcodeSimulator()
+        {
+            Export(XcodeSimulatorDir, simulator: true);
+        }
+
+        private static void Export(string dir, bool simulator)
+        {
             int code;
             try
             {
-                code = Run();
+                code = Run(dir, simulator);
             }
             catch (Exception e)
             {
@@ -83,7 +106,7 @@ namespace AF.EditorTools
 
             if (code == ExitOk)
             {
-                Debug.Log(LogPrefix + "OK: " + XcodeDir);
+                Debug.Log(LogPrefix + "OK: " + dir);
             }
             else
             {
@@ -96,7 +119,7 @@ namespace AF.EditorTools
             }
         }
 
-        private static int Run()
+        private static int Run(string dir, bool simulator)
         {
             if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.iOS, BuildTarget.iOS))
             {
@@ -148,33 +171,43 @@ namespace AF.EditorTools
             var options = new BuildPlayerOptions
             {
                 scenes = scenes.ToArray(),
-                locationPathName = XcodeDir,
+                locationPathName = dir,
                 target = BuildTarget.iOS,
                 targetGroup = BuildTargetGroup.iOS,
                 options = BuildOptions.Development,
             };
 
-            Debug.Log(LogPrefix + "exportando " + XcodeDir + " (Development) ...");
+            Debug.Log(LogPrefix + "exportando " + dir + " (Development" + (simulator ? ", simulador" : string.Empty) + ") ...");
             Stopwatch watch = Stopwatch.StartNew();
             BuildReport report;
+            iOSSdkVersion sdk = PlayerSettings.iOS.sdkVersion;
+            AppleMobileArchitectureSimulator simulatorArch = PlayerSettings.iOS.simulatorSdkArchitecture;
             s_development = true; // el post-proceso añade el .storekit local (solo desarrollo)
             try
             {
+                if (simulator)
+                {
+                    PlayerSettings.iOS.sdkVersion = iOSSdkVersion.SimulatorSDK;
+                    PlayerSettings.iOS.simulatorSdkArchitecture = AppleMobileArchitectureSimulator.X86_64; // Firebase C++ solo trae x86_64 para el simulador
+                }
+
                 report = BuildPipeline.BuildPlayer(options);
             }
             finally
             {
                 s_development = false;
+                PlayerSettings.iOS.sdkVersion = sdk;
+                PlayerSettings.iOS.simulatorSdkArchitecture = simulatorArch;
             }
 
             watch.Stop();
 
             BuildSummary summary = report.summary;
-            bool ok = summary.result == BuildResult.Succeeded && Directory.Exists(Path.Combine(XcodeDir, "Unity-iPhone.xcodeproj"));
+            bool ok = summary.result == BuildResult.Succeeded && Directory.Exists(Path.Combine(dir, "Unity-iPhone.xcodeproj"));
             string line = string.Format(
                 CultureInfo.InvariantCulture,
                 "{0}Xcode {1}: resultado={2}, errores={3}, avisos={4}, tiempo={5:F1} s",
-                LogPrefix, XcodeDir, summary.result, summary.totalErrors, summary.totalWarnings, watch.Elapsed.TotalSeconds);
+                LogPrefix, dir, summary.result, summary.totalErrors, summary.totalWarnings, watch.Elapsed.TotalSeconds);
             if (ok)
             {
                 Debug.Log(line);
