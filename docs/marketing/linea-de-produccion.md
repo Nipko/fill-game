@@ -63,6 +63,8 @@ Cada formato tiene su referencia medida, su eje y su material del banco de tomas
 | F9 | **El nivel enorme** (una toma sin cortes; semana 46) | Magic Sort 2,91 M, 2,04 M y 1,98 M en la UE (el más visto del género) | medidor | `s2-grande-l303` (90 s, 22 vertidos) sin la intro y con H1 en «quedan»; plantilla 6 de `guiones-que-funcionan.md` | 40-60 s | Satisfying · domingo (sustituye a «F1 lento») |
 | F10 | **El espejo del juego** (antegancho de una sola cuia y corte al nivel enorme; semana 47) | Magic Sort 4,33 M y 3,45 M en la UE (su espejo es una estantería física con gente: nosotros, la cuia del propio juego) | medidor | `s2-sellado-lento-l42` (0-3 s) + `s2-grande-l303`; plantilla 8 | 40-60 s | Satisfying · domingo, alterna con F9 |
 | F11 | **Solución del nivel N** (serie numerada para la búsqueda de YouTube; semana 47) | «Magic Sort Level 359 Solution» 24 k; series numeradas de bloques hasta 14,5 M | reto | `director.py` con la secuencia de `resolver.py`, toques (H8) y H1; plantilla 9 | 20-40 s | Reto · solo YouTube, sin día fijo (1-2 por semana) |
+| F12 | **Tres niveles, medio minuto** (el ciclo completo que se repite; semana 48) | Merge and Dig 404 k y 278 k «me gusta» en TikTok (un bucle de 12 s, dos veces) | progreso | `s1-llegada-l30`, `l40` y `l50` enteros, con la marea H2 entre ellos y H1 en «quedan»; plantilla 10 | 28-30 s | Satisfying · lunes, alterna con F1 |
+| F13 | **El Reto del río de hoy** (serie diaria de plano fijo; semana 48) | Serie diaria de tetris físico en YouTube: 1,40 M en 2 días y 723 k en 14 horas | reto | la pantalla del Reto (`af_capture_screen daily`) y los tres primeros vertidos del día; plantilla 12 | 10-12 s | Comunidad · diario, cuando exista H15 |
 
 **Antegancho de revelado (semana 46), variante de F2:**
 - Royal Match (1,25 M) y Block Blast P07 (790 k) abren con 2-4 s de algo que se revela o se limpia.
@@ -70,6 +72,10 @@ Cada formato tiene su referencia medida, su eje y su material del banco de tomas
 - Es la plantilla 7. Para probar, se cambia solo el antegancho.
 
 **El antegancho decide el público (semana 47):** con la misma toma, Magic Sort llega a un 69-87 % de mujeres con el antegancho de la calle y a un 73 % de hombres sin antegancho y en paleta oscura (386 k). Para el público de hombres, F9 puede ir con un mundo de paleta oscura y sin antegancho.
+
+**El tablero apagado que se despeja (semana 48), variante de F2 para el público de hombres:** Candy Crush en gris llega a un 65 % de hombres (622 k en la UE) y Block Blast en gris a 764 k «me gusta». Nosotros: el Barro (`s2-mec-barro-l123`) desde el fotograma 0, sin antegancho, hasta que vuelve el color.
+
+**La rotación (semana 48):** Magic Sort apagó a los 40 días su anuncio de 4,69 M y lo relanzó con el mismo antegancho sobre otro nivel. Cada formato nuestro que funcione se refresca cada 5 o 6 semanas con otra toma (para F9 y F10, H14).
 
 **Público:** el agua llega a mujeres de 35-64; el flujo y los rescates, a hombres de 25-44.
 - Para el público de mujeres: F1, F2 y F3.
@@ -94,6 +100,9 @@ Orden pensado para salir con lo que ya existe y sumar formatos según lleguen la
 | 9 | **«Se aclara el río»**: la Luciérnaga ilumina la cuia turbia (0-3 s) y corte seco a los vertidos del nivel 100; 20-25 s (semana 46) | F2 (antegancho de revelado) | por montar | `montar_himno.py`; la toma `s3-luciernaga-l100` ya existe en los tres idiomas |
 | 10 | **«Una cuia, cuarenta»**: la cuia del nivel 42 sellándose a cámara lenta (0-3 s) y corte seco al nivel 303 entero con «Quedan»; 45-60 s (semana 47) | F10 | por montar (las dos tomas existen en es; l303 falta en en y pt, H11) | `montar_himno.py` con dos planos y `contador` en «quedan» |
 | 11 | **«Solución del nivel 46»**: el reto del 46 resuelto por el solver con toques y contador; 20-30 s, solo YouTube (semana 47) | F11 | por grabar (`director.py` con la secuencia de `resolver.py`) | ya existe; es la parte 2 del vídeo 3 |
+| 12 | **«Tres niveles, medio minuto»**: los niveles 30, 40 y 50 enteros, uno tras otro, con la marea y «Quedan»; 28-30 s (semana 48) | F12 | por montar (las tres tomas existen en los tres idiomas) | `montar_himno.py` con tres planos, `contador` en «quedan» y `entrada` de marea |
+| 13 | **«El barro se va»**: el nivel 123 del Barro desde el fotograma 0 hasta que queda limpio; sin antegancho ni rótulo; 20-25 s (semana 48) | F2 (tablero apagado) | por montar (`s2-mec-barro-l123` existe) | `montar_himno.py` |
+| 14 | **«El nivel 39, en tres partes»**: el atasco, el rescate y la solución, en tres días seguidos; 12-25 s cada uno (semana 48) | F5 + F11 | partes 1 y 2 por montar (`s4-atasco-marea-l39` y `s4-atasco-rescate-l39` existen); la parte 3, por grabar con `director.py` | `montar_himno.py`; `resolver.py` |
 
 pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada vídeo, una vez montado, pasa por tu visto bueno antes de ir a la cola. Nada se publica sin él.
 
@@ -133,6 +142,14 @@ pt-BR y en, cuando apruebes los de español (decisión del 2026-11-04). Cada ví
 | **H11. Toma larga del nivel grande en los tres idiomas** (F9, semana 46) | solo `s2-grande-l303-es` | sí | Grabar `l303` en en y pt con `tomar.py`/`director.py` (las mismas opciones que la de es); `calidad.py` exige una toma por idioma | pequeño |
 | **H12. Elegir los niveles de «Solución del nivel N»** (F11, semana 47) | no | sí | Mientras no haya analítica, los retos 46 y 60 y el primer nivel de cada mecánica; después, los niveles con más abandonos (evento de la analítica del juego, 08 §8) | pequeño |
 | **H13. Toma del nivel grande en un mundo de paleta oscura** (F9 para el público de hombres, semana 47) | no | sí | Grabar un nivel grande de un mundo oscuro (noche o aguas turbias) con `tomar.py`; si no hay nivel grande en ese mundo, se queda en F9 normal | pequeño |
+| **H14. Segundo nivel grande** para refrescar F9 y F10 (semana 48) | solo `l303` | sí | Grabar otro nivel de 3 filas (por ejemplo, el mayor del último mundo) con `tomar.py`, en los tres idiomas; se alterna con `l303` cada 5 o 6 semanas | pequeño |
+| **H15. Toma diaria del Reto del río** (F13, semana 48) | `s3-reto` y `s4-reto`, grabadas a mano | sí | Tarea diaria que lance `tomar.py` con `af_capture_screen daily` y los tres primeros vertidos de la solución de `resolver.py`, y deje la pieza en la cola (`cola.py`) para tu visto bueno. Depende de H10 para saber si la serie rinde | medio |
+
+**Revisión del 2026-11-23:**
+- **Hechas** (están en `C:\AI\marketing\fill-game-marketing\fabrica`): H1, H2, H5 y H8 (`efectos.py`), H4 (`montar_hf.py`) y la detección de atascos (`atasco.py`, con las tomas `s4-atasco-marea-l39` y `s4-atasco-rescate-l39` ya grabadas).
+- **H3 (pantalla partida):** sigue sin hacer; no hay modo `partida` en `montar.py` ni en `montar_himno.py`.
+- **H11:** sigue faltando `s2-grande-l303` en en y pt.
+- **Nuevas:** H14 (segundo nivel grande) y H15 (toma diaria del Reto del río).
 
 **Revisión del 2026-11-16:**
 - **H4 (bucle sin costura):** hecho en `montar_hf.py` (`cerrar_bucle`); el vídeo 2 ya no espera herramienta.

@@ -279,6 +279,90 @@ Es el «pequeño frente a grande» de L con premio antes del primer segundo.
 - **El antegancho de ASMR físico sigue subiendo** (T: 790 k → 1,56 M en una semana).
 - **En orgánico, las series numeradas y las soluciones por número de nivel** traen vistas sostenidas (Y).
 
+### Semana 2026-48 (2026-11-23): los que más alcanzan, vistos fotograma a fotograma
+
+Se vieron sin sonido con el visor de fotogramas (0,1, 0,7, 1,5, 2,5, 4, 7, 12, 20, 30 s y el final). Notas completas en `C:\AI\marketing\tendencias\notas-2026-48.md`.
+
+#### Z. Magic Sort, el relevo: el espejo en la calle cierra con 4,69 M y 3,93 M y vuelve con otra toma (614 k y 116 k), 60 s
+- Los dos grupos de Q (M06 y M09) se **apagaron el 23 de noviembre, a los 40 días** de empezar. También se apagaron el «1 %» antiguo (2,31 M en 83 días) y el nivel enorme claro de J (2,96 M en 78 días).
+- Las tandas nuevas (21 de octubre y 16 de noviembre) repiten el antegancho con **otra toma de juego**:
+
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-4 s | La misma calle con la estantería física, la gente y el cartel | «Only 1% can solve this puzzle.» | — |
+| 7 s | **Otro nivel enorme**, de fondo oscuro y botellas rosas, amarillas y moradas | ninguno | corte seco |
+| 7-58 s | Toma continua; el tubo central se llena | ninguno | sin cortes |
+| 59 s | «SORT» y «Play Now!» | — | corte |
+
+Lo que se aprende: **el guion ganador no se cambia, se le cambia la toma**. Sigue siendo ✗ por las personas y la cifra.
+
+#### AA. Magic Sort, el nivel oscuro (M21): 535 k en la UE (386 k hace una semana), 69 % hombres, 60 s
+Mismo guion que S. Es ahora **el primero de Magic Sort por impresiones** entre los activos: nivel desde el fotograma 0, azul y naranja, el tubo central se llena de naranja, logotipo a los 59 s. Sin antegancho, sin texto.
+
+#### AB. Magic Sort, el medidor a la izquierda (M23, nuevo): 121 k en la UE, 81 % mujeres, 60 s
+| Tramo | Plano | Medidor |
+|---|---|---|
+| 0-58 s | Nivel enorme morado y rosa desde el fotograma 0, 4 estantes | **una columna a la izquierda** que se llena de rosa (a los 30 s va por la mitad) |
+| 59 s | Sigue jugando; no hay tarjeta | — |
+
+La misma idea de J con el medidor fuera del tablero: se lee mejor en vertical.
+
+#### AC. Candy Crush, juego puro: 935 k y 906 k en la UE (558 k y 744 k hace una semana), 59-60 s
+| Tramo | Plano | Texto |
+|---|---|---|
+| 0-58 s | El tablero real, en cuadrado con bandas negras, desde el fotograma 0; una sola toma | solo los del juego; el reto va en el pie («Can you complete all the moves?») |
+| 59 s | Logotipo y «Play Now» | — |
+
+Sin antegancho, sin mano y sin rótulos. Público: 56-70 % mujeres, 25-44, Francia e Italia.
+
+#### AD. Candy Crush, el tablero gris (C03, nuevo): 622 k en la UE, **65 % hombres**, 60 s
+| Tramo | Plano | Primer premio |
+|---|---|---|
+| 0,1 s | Tablero **casi entero de cajas metálicas grises**, con una franja de caramelos arriba; una mano | — |
+| 1,5 s | Explosión blanca que limpia la fila de arriba | 1,5 s |
+| 2,5-30 s | El gris se vacía columna a columna y entra el color | continuo |
+| 55-60 s | Mosaico de 4 pantallas y botón | cierre |
+
+El medidor es el propio tablero: cuánto gris queda. Con el mismo juego que AC, cambia el público.
+
+#### AE. Block Blast en TikTok, también en gris (T02): 764 k «me gusta», 44 s
+- Tablero **sin color** (bloques blancos y grises en 3D) lleno hasta arriba desde el fotograma 0; marcador de 900 a 3.400.
+- Se vacía de arriba abajo; a los 28 s queda casi limpio. Sin texto en el vídeo.
+- Con AD: **un tablero apagado que se despeja** es un gancho propio, distinto del «relax de colores».
+
+#### AF. Bucles cortos en TikTok: Merge and Dig (404 k y 278 k «me gusta», 24-25 s) y Woodturning 3D (160 k, 30 s)
+| Tramo | Merge and Dig | Woodturning 3D |
+|---|---|---|
+| 0-1 s | Mesa de fabricar 3 × 3 y el botón «DROP» | Un tronco en el torno y una silueta punteada |
+| 1,5-4 s | Cae el pico, cava una columna y explota el TNT | La gubia talla; a los 4 s ya se ve la forma |
+| 7 s | Aparecen los cofres (el premio) | Sigue la talla |
+| 12 s | **Vuelve a la mesa** con más picos: segundo ciclo | La pieza **pulida y dorada** (el premio); a los 20 s empieza otra |
+
+Un ciclo completo de «preparo, suelto, cobro» dura 12 s y se ve dos veces. Ninguno tiene tarjeta final.
+
+#### AG. Coloring Match en TikTok (T05): 320 k «me gusta», 22 s («Harder than you think»)
+| Tramo | Plano | Texto |
+|---|---|---|
+| 0-2 s | Arriba, el objeto (una berenjena); abajo, una brocha mezcla morado y negro en la paleta | ninguno |
+| 2,5-4 s | Se pinta la muestra | rótulo del juego: **«98 % ACCURATE»** en azul |
+| 12-20 s | Otra mezcla, mal a propósito | «43 % ACCURATE» en rojo |
+
+El eje es la **transformación de color con un objetivo a la vista**; el medidor es del propio juego. Nosotros tenemos el objetivo (la fruta) y el tinte, pero no un medidor de acierto: no se inventa.
+
+Vistos además, sin tabla: Stacky Dash T23 (717 k: una pista rosa en laberinto, la torre de losas crece y la cámara sube con ella; sin texto ni cierre), Basket Battle T22 (514 k: juego bruto en 2D), Hide 'N Seek T15 (620 k: un tigre gigante busca a un personaje diminuto en un laberinto) y Wood Crush P08 (1,93 M: 0-7 s de sketch con personas en un andén, ✗, y luego un tablero enorme con un **marcador que se multiplica**: 5.302 → 14.006 → 34.073 → 61.934).
+
+#### AH. Orgánico de la semana (YouTube)
+- **Serie diaria con el mismo plano** (tetris físico de acrílico, canal «Live Puzzle Fun»): 1,40 M en 2 días, 812 k en 6 días, 723 k en 14 horas, 661 k en 3 días y 305 k en 1 día. El título solo cambia un adjetivo («Sensational», «Masterful», «Insane»… «3D Tetris Magic Trick»). Es físico y con manos (✗); la estructura es la serie.
+- **Un nivel difícil, tres vídeos** (Magic Sort, nivel 99): «SUPER HARD Level 99» 12 k, «Level 99 failed» 6,3 k y «Level 99 SOLVED! Correct Solution» 21 k (con el sello «SOLVED» en la miniatura).
+- **Juego sin edición titulado por el nivel:** «Satisfying Sorts Only | Magic Sort Level 229», 24 k.
+- Ya se sube un «Magic Sort Daily Challenge … Walkthrough» cada día (176 vistas el del 17 de noviembre).
+
+**Lo nuevo de la semana 48:**
+- **El ganador se relanza con otra toma, no con otro guion** (Z): 40 días de vida para el mejor anuncio de Magic Sort y dos tandas nuevas con el mismo antegancho.
+- **El tablero apagado que se despeja llega a hombres** (AD, AE y AA): gris u oscuro, sin antegancho, 65-69 % hombres.
+- **El bucle de 12 s que se repite** (AF) y **la transformación de color con el objetivo a la vista** (AG) son los dos ejes de TikTok que no teníamos.
+- **En orgánico, la serie diaria de plano fijo y los tres vídeos de un nivel difícil** (AH).
+
 ## 2. Lo que se repite en los que más alcanzan
 
 1. **El primer premio visible llega antes de 1-4 s**: un vertido, una explosión o un combo. Ninguno empieza con un logotipo ni con una pantalla de título.
@@ -299,6 +383,9 @@ Es el «pequeño frente a grande» de L con premio antes del primer segundo.
     - Semana 47, Magic Sort con el mismo nivel enorme: calle con estantería física 4,33 M; pinzas con cuentas 344 k; sin antegancho y en paleta oscura 386 k. El antegancho multiplica el alcance hasta por 12.
 13. **El antegancho y la paleta deciden el público** (semana 47): la misma toma de Magic Sort llega a un 69-87 % de mujeres con el antegancho de la calle y a un 73 % de hombres en paleta oscura y sin antegancho.
 14. **En orgánico, lo que se busca y lo que se repite** (semana 47): las soluciones por número de nivel (Magic Sort 359: 24 k) y las series numeradas («PART 138»: 14,5 M) traen vistas que el vídeo suelto no trae.
+14. **El guion que gana se relanza con otra toma** (semana 48): Magic Sort apagó a los 40 días su anuncio de 4,69 M y ya tenía en marcha dos tandas con el mismo antegancho sobre otro nivel. Para nosotros: cada formato que funcione se refresca cada 5 o 6 semanas con otra toma, sin tocar la estructura.
+15. **Un tablero apagado que se despeja llega al público de hombres** (semana 48): Candy Crush en gris, 65 % hombres (622 k); Block Blast en gris, 764 k «me gusta»; Magic Sort oscuro, 69 % hombres (535 k).
+16. **En TikTok el ciclo completo cabe en 12 s y se repite** (semana 48): Merge and Dig y Woodturning enseñan «preparo, suelto, cobro» dos veces en 24-30 s.
 
 ## 3. Plantillas de guion para Tintalú (orgánico, con tomas reales)
 
@@ -386,6 +473,41 @@ El espejo de Magic Sort es un objeto físico con personas; el nuestro es el prop
 - Para YouTube (búsqueda). Se eligen los niveles donde más gente se atasca (cuando haya analítica: la tasa de abandono por nivel; mientras, los retos 46 y 60 y los de mecánica nueva).
 - Se puede publicar como **serie numerada** («Solución nivel 46», «nivel 47»…), que es lo que sostiene las vistas de Y.
 
+### Plantilla 10. «Tres niveles, medio minuto» (de AF, semana 48), 28-30 s
+| Tramo | Plano | Texto | Transición |
+|---|---|---|---|
+| 0-0,5 s | El tablero del primer nivel, quieto | ninguno | — |
+| 0,5-9 s | Los vertidos, el sellado y la victoria de un nivel corto (`s1-llegada-l30`) | contador H1 en «Quedan» | sin cortes |
+| 9-19 s | Lo mismo con el siguiente (`s1-llegada-l40`) | el contador vuelve a empezar | marea H2 |
+| 19-28 s | Y con el tercero (`s1-llegada-l50`) | — | marea H2 |
+| 28-30 s | Tarjeta | «Tintalú» | corte |
+
+- Cada ciclo es un nivel real entero, sin acelerar. Si un nivel no cabe en 10 s, se elige otro más corto con `momentos.py`.
+- Para probar (regla 12): se cambia solo el primer nivel.
+
+### Plantilla 11. «Un nivel, tres partes» (de AH, semana 48), 3 vídeos de 12-25 s
+| Parte | Plano | Texto | Día |
+|---|---|---|---|
+| 1. El atasco | El nivel 39 jugado hasta que se bloquea (`s4-atasco-marea-l39`) | «¿Dónde se torció?» | 1 |
+| 2. El rescate | La misma partida, salvada (`s4-atasco-rescate-l39`) | solo los del juego | 2 |
+| 3. La solución | La solución limpia del solver con toques H8 (plantilla 9) | título: «Tintalú nivel 39: solución» | 3 |
+
+- El atasco es real (lo busca `atasco.py`) y la solución es la del solver. Nada de «solo el 1 %».
+- Después del 39, los retos 46 y 60.
+
+### Plantilla 12. «El Reto del río de hoy» (de AH, serie diaria, semana 48), 10-12 s
+| Tramo | Plano | Texto |
+|---|---|---|
+| 0-1 s | La pantalla del Reto del río del día (`s3-reto`, `s4-reto` o `af_capture_screen daily`) | la fecha |
+| 1-9 s | Los **tres primeros vertidos** del tablero del día, con toques H8 | solo los del juego |
+| 9-11 s | Parado ahí | «Sigue tú» |
+
+- Mismo plano y mismo título todos los días; solo cambia la fecha.
+- No enseña la solución entera: el Reto es el mismo para todos ese día.
+- Necesita la toma diaria automática (H15 de `linea-de-produccion.md`).
+
+**Variante de la plantilla 7 para el público de hombres (de AD y AE, semana 48):** el tablero del Barro (`s2-mec-barro-l123`) desde el fotograma 0, sin antegancho ni rótulo, hasta que queda limpio y con color; contador en «Quedan». 20-25 s.
+
 ## 4. Lo que no copiamos (§0)
 
 - Las personas reales o generadas con tablero físico (Magic Sort «Only 1 %», Nut Sort).
@@ -404,6 +526,11 @@ El espejo de Magic Sort es un objeto físico con personas; el nuestro es el prop
   - la estantería física en la calle con gente y el cartel «Only 1% can solve this puzzle.» (Magic Sort, 4,33 M): personas y cifra sin fuente;
   - las reacciones de streamers en un recuadro (Tall Man Run);
   - los medidores de «IQ» (Brightika) y los «hacks» de monedas (vídeos de YouTube sobre Magic Sort).
+- Semana 48:
+  - el sketch con personas en un andén de Wood Crush (1,93 M);
+  - el medidor «% ACCURATE» de Coloring Match: en Tintalú no hay medidor de acierto del color, así que no se dibuja;
+  - el tetris físico con manos (YouTube);
+  - enseñar entera la solución del Reto del río del día.
 
 ## 5. Fuentes y límites de esta pasada
 
@@ -429,3 +556,8 @@ El espejo de Magic Sort es un objeto físico con personas; el nuestro es el prop
   - YouTube con el panel oculto: las miniaturas se ven cargando `i.ytimg.com/vi/<ID>/hqdefault.jpg` en una capa.
   - Instagram pide iniciar sesión.
   - Google: `?query=` en la URL no busca; hay que escribir en el cuadro.
+- **Cambios de la semana 48:**
+  - Meta: el diálogo «Link to ad» dice además si el anuncio está activo y, si no, su fecha de fin; así se supo que Magic Sort apagó M06, M09 y M03 el 23 de noviembre.
+  - TikTok sin sesión: la lista trae ya el vídeo de los 20 anuncios, y la búsqueda por palabra respondió (con el filtro de Games y Brasil). EE. UU. no cargó la lista ordenada.
+  - Instagram sigue pidiendo iniciar sesión.
+  - Google: solo se abrió la página de Grand Games (unos 2.000 anuncios en España).

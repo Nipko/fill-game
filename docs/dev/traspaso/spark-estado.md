@@ -6,6 +6,22 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+### 2026-11-23 · Tendencias semana 2026-48: HECHO
+- **93 referencias** en `semilla-2026-48.json`: 62 puestas al día y 31 nuevas; 161 en la biblioteca. Informe: `docs/marketing/tendencias/2026-48.md`. Hay 8 guiones desmontados con el visor (`guiones-que-funcionan.md` §1, Z a AG, y el orgánico en AH), las plantillas 10, 11 y 12, los formatos F12 y F13 y las herramientas H14 y H15 en `linea-de-produccion.md`.
+- **Cifras más altas:**
+  - Meta UE: **Magic Sort cierra en 4,69 M** (y 3,93 M con el mismo vídeo) y **los apagó el 23 de noviembre, a los 40 días**; los relanza con el mismo antegancho de la calle sobre otro nivel (614 k y 116 k). El activo con más alcance es Block Blast, 2,09 M en 20 días; Wood Crush, 1,93 M; Royal Match, 1,59 M.
+  - TikTok: Stacky Dash, 2,28 M «me gusta»; Block Blast, 1,03 M. Ningún juego de agua entre los anuncios de juegos con más alcance de Brasil.
+  - YouTube: una serie diaria de tetris físico llega a 1,40 M en 2 días; «PART 138» sigue en 14,5 M.
+- **Ganchos que suben:**
+  - G8, el espejo real: de 952 a 1.307 de peso. G5 (progreso) y G2 (transformación de color) se doblan por los bucles de TikTok.
+  - El tablero apagado que se despeja llega a hombres: Candy Crush en gris, 65 % hombres (622 k); Magic Sort oscuro, 69 % hombres (535 k, ya su primer anuncio por impresiones).
+  - El guion que gana se relanza con otra toma cada 5 o 6 semanas, sin cambiar la estructura.
+- **No se pudo ver:**
+  - Instagram (pide iniciar sesión, segunda semana).
+  - TikTok sin la sesión del dueño: solo la página 1 de Brasil (esta vez con vídeo y con búsqueda por palabra); ni EE. UU. ni México.
+  - Google Ads Transparency: solo la página de Grand Games; ningún anuncio suelto ni otros estudios.
+  - El alcance de los grupos de Hole.io, Screw Jam Handler y Water Sort.
+
 ### 2026-11-16 · Tendencias semana 2026-47: HECHO
 - **54 referencias** en `semilla-2026-47.json`: 40 puestas al día con cifra y 14 nuevas; 130 en la biblioteca. Informe: `docs/marketing/tendencias/2026-47.md`. Hay 8 anuncios desmontados con el visor (`guiones-que-funcionan.md` §1, Q a X), las plantillas 8 y 9 y los formatos F10 y F11 en `linea-de-produccion.md`. H4 (bucle) consta como hecho en `montar_hf.py`.
 - **Cifras más altas:**
