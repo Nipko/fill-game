@@ -4578,6 +4578,11 @@ Las toma el integrador con la recomendada, según la regla del dueño «si tiene
 - **Dato [V] de los 13 pueblos nuevos** (`datos_pueblos.csv`, con fuente y cita): es una propuesta y no entra en las tablas. Queda para un carril de `tools/river-map` cuando el dueño lo apruebe. Las citas de Indiana y Orellana son débiles (la de Orellana habla del distrito de Vargas Guerra): conviene reforzarlas en ese carril.
 - **Pendiente:** la prueba en el teléfono en los tres idiomas (guion r2).
 
+### D-054, añadido del 2026-11-22: los textos del aviso de rastreo de Apple, aprobados por el dueño
+
+- **Qué pasó:** el release firmado 1.1.0 (run 45497526986) lo paró `LocReleaseGate`. Las 4 filas `att_*` de `strings.csv` (el aviso previo al ATT y su descripción de uso; solo iOS, de `mac/m3-storekit`) estaban en `traducido` en inglés y portugués.
+- **Decisión del dueño (2026-11-22):** eligió la opción recomendada «Los apruebo tal cual», en lugar de mandarlos a Gemini o de excluir los textos de iOS de la compuerta de Android. Las 4 filas pasan a `revisado_nativo` en `en` y `pt-BR`, sin cambiar los textos.
+
 ### Q-LD-3, añadido del 2026-11-09: los tres audios nuevos de la 1.1, de Gemini
 
 - **Encargo:** el dueño pidió en el chat «encarga a gemini los audios nuevos». El encargo es `docs/audio/encargo-audios-1-1.md`. Cubre tres piezas que hasta ahora sonaban con un efecto prestado: el Aguapé al soltarse, la Lancha al atracar y la fanfarria del estreno de la Liga (Q-LD-3, «Encargar audio propio»). La Palizada y la Cocha pasan a la 1.2.
